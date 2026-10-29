@@ -178,7 +178,7 @@ export default function ClientsPage() {
           </>
         }
         bulkActions={[
-          exportAction<ClientDto>('client', 'clients.csv', [
+          exportAction<ClientDto>('client', 'clients.xlsx', [
             { header: 'Code', value: (c) => c.code },
             { header: 'Name', value: (c) => c.name },
             { header: 'Type', value: (c) => ORGANIZATION_TYPE_LABELS[c.organizationType] },

@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router';
 import type { Permission } from '@tsm/shared';
-import { FullScreenLoader } from '@/components/app/FullScreenLoader';
 import { ErrorState } from '@/components/app/States';
 import { ForbiddenPage } from '@/pages/ForbiddenPage';
 import { errorMessage } from '@/lib/api';
 import { useAuth } from './AuthProvider';
+import { SessionCheck } from './SessionCheck';
 
 /** Only allows relative in-app paths as post-login destinations (prevents open redirects). */
 export function safeNextPath(next: string | null | undefined) {
@@ -22,7 +22,7 @@ export function RequireAuth({ children }: { children?: ReactNode }) {
   const { status, meError, retryMe, signOut } = useAuth();
   const location = useLocation();
 
-  if (status === 'loading') return <FullScreenLoader label="Checking your session…" />;
+  if (status === 'loading') return <SessionCheck />;
   if (status === 'signedOut') {
     const next = `${location.pathname}${location.search}`;
     return <Navigate to={`/login?next=${encodeURIComponent(next)}`} replace />;

@@ -16,7 +16,7 @@ import {
   getKpis,
   type ActivityItem,
 } from './data/dashboardMockData';
-import { downloadDashboardCsv } from './exportCsv';
+import { downloadDashboardReport } from './exportReport';
 import { useDashboardRange } from './rangeStore';
 
 /**
@@ -62,10 +62,13 @@ export default function DemoDashboard() {
   }
 
   function exportReport() {
-    downloadDashboardCsv(range);
-    toast.success('Sample figures downloaded', {
-      description: 'This file holds the sample dashboard figures, not an official report.',
-    });
+    void downloadDashboardReport(range)
+      .then(() =>
+        toast.success('Sample figures downloaded', {
+          description: 'This file holds the sample dashboard figures, not an official report.',
+        }),
+      )
+      .catch(() => toast.error("We couldn't prepare that download. Try again in a moment."));
   }
 
   return (

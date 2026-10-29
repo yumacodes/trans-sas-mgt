@@ -194,7 +194,7 @@ export default function StockItemsPage() {
           </>
         }
         bulkActions={[
-          exportAction<StockItemDto>('item', 'stock-items.csv', [
+          exportAction<StockItemDto>('item', 'stock-items.xlsx', [
             { header: 'SKU', value: (i) => i.sku },
             { header: 'Name', value: (i) => i.name },
             { header: 'Category', value: (i) => i.category?.name },

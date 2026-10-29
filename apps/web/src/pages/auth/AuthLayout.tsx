@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Boxes, FileText, ShieldCheck, Wallet } from 'lucide-react';
+import { Boxes, FileText, Lock, ShieldCheck, Wallet } from 'lucide-react';
 import { BRAND } from '@/lib/brand';
 import { EquipmentShowcase } from './EquipmentShowcase';
 
@@ -10,7 +10,15 @@ const HIGHLIGHTS = [
   { icon: ShieldCheck, text: 'Role-based access with an audit trail' },
 ] as const;
 
-/** Two-panel layout for sign-in and password pages. */
+/**
+ * Sign-in, password-reset and recovery pages share this shell: one console panel
+ * centred on the company's navy, with the brand side on the left and the form on the
+ * right.
+ *
+ * The form is the only interactive region, so it keeps the reading order, the first
+ * focus and the full width on small screens; the brand side is decorative support that
+ * drops away when there is no room for it.
+ */
 export function AuthLayout({
   title,
   description,
@@ -21,61 +29,70 @@ export function AuthLayout({
   children: ReactNode;
 }) {
   return (
-    <div className="grid min-h-screen gap-3 p-3 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
-      <aside className="relative hidden flex-col justify-between overflow-hidden rounded-3xl bg-dark p-10 text-dark-ink lg:flex">
-        {/* Soft colour fields echoing the app canvas; decorative only. */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -right-28 -top-28 size-[28rem] rounded-full bg-[#4a4ad8]/35 blur-3xl"
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -bottom-36 -left-24 size-[26rem] rounded-full bg-accent/70 blur-3xl"
-        />
+    <div className="relative min-h-screen overflow-hidden bg-dark">
+      {/* Soft colour fields behind the panel; decorative only. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -right-40 -top-48 size-[42rem] rounded-full bg-[#4a4ad8]/40 blur-3xl"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -bottom-56 -left-40 size-[38rem] rounded-full bg-accent/70 blur-3xl"
+      />
 
-        <div className="relative">
-          <span className="inline-flex rounded-2xl bg-white px-4 py-3 shadow-overlay">
-            <img src={BRAND.logoSrc} alt={BRAND.fullName} className="h-10 w-auto" />
-          </span>
+      <main className="relative mx-auto flex min-h-screen w-full max-w-6xl items-center justify-center p-4 sm:p-6">
+        <div className="grid w-full overflow-hidden rounded-[1.75rem] shadow-[0_45px_90px_-35px_rgb(2_6_23_/_0.9)] ring-1 ring-white/15 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,25rem)] xl:grid-cols-[minmax(0,1.2fr)_minmax(0,27rem)]">
+          {/* Brand side */}
+          <section className="relative hidden flex-col justify-between gap-10 bg-dark-raised p-9 text-dark-ink lg:flex xl:p-11">
+            <img
+              src={BRAND.logoSrc}
+              alt=""
+              className="h-9 w-auto self-start rounded-lg bg-white p-1.5"
+            />
+
+            <div className="max-w-md">
+              <p className="eyebrow !text-highlight">Business management</p>
+              <h2 className="mt-3 text-[1.9rem] font-semibold leading-[1.12] tracking-tight text-white xl:text-[2.15rem]">
+                Everything Trans-SAS runs on, in one place.
+              </h2>
+              <ul className="mt-7 space-y-3">
+                {HIGHLIGHTS.map(({ icon: Icon, text }) => (
+                  <li
+                    key={text}
+                    className="flex items-start gap-3 text-sm leading-snug text-dark-ink/90"
+                  >
+                    <span className="mt-px flex size-7 shrink-0 items-center justify-center rounded-full bg-white/10">
+                      <Icon className="size-3.5 text-highlight" aria-hidden />
+                    </span>
+                    {text}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <EquipmentShowcase className="w-full" />
+          </section>
+
+          {/* Form side */}
+          <section className="flex flex-col justify-center bg-surface px-6 py-9 sm:px-9 sm:py-11">
+            <img src={BRAND.logoSrc} alt={BRAND.fullName} className="mb-8 h-9 w-auto lg:hidden" />
+
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight text-ink">{title}</h1>
+              {description && (
+                <p className="mt-2 text-sm leading-relaxed text-ink-muted">{description}</p>
+              )}
+            </div>
+
+            <div className="mt-7">{children}</div>
+
+            <p className="mt-9 flex items-start gap-2 border-t border-border pt-5 text-xs leading-relaxed text-ink-subtle">
+              <Lock className="mt-px size-3.5 shrink-0" aria-hidden />
+              Authorised personnel only. Activity on this system is recorded.
+            </p>
+          </section>
         </div>
-
-        <div className="relative flex items-center gap-7 xl:gap-10">
-          <div className="min-w-0 max-w-[19rem] xl:max-w-[20rem] 2xl:max-w-md">
-            <p className="eyebrow !text-highlight">Business management</p>
-            <h2 className="mt-3 text-[1.65rem] font-semibold leading-[1.1] tracking-tight text-white xl:text-3xl 2xl:text-4xl">
-              Everything Trans-SAS runs on, in one place.
-            </h2>
-            <ul className="mt-8 space-y-3.5">
-              {HIGHLIGHTS.map(({ icon: Icon, text }) => (
-                <li key={text} className="flex items-center gap-3 text-sm text-dark-ink/90">
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white/10">
-                    <Icon className="size-4 text-highlight" aria-hidden />
-                  </span>
-                  {text}
-                </li>
-              ))}
-            </ul>
-          </div>
-          <EquipmentShowcase className="w-[15rem] shrink-0 xl:w-[20rem] 2xl:w-[25rem]" />
-        </div>
-
-        <p className="relative text-xs text-dark-ink/60">
-          Authorised personnel only. Activity is recorded.
-        </p>
-      </aside>
-
-      <div className="flex items-center justify-center px-2 py-10">
-        <div className="w-full max-w-md rounded-3xl border border-white/80 bg-surface p-8 shadow-raised sm:p-10">
-          <img
-            src={BRAND.logoSrc}
-            alt={BRAND.fullName}
-            className="mb-7 h-10 w-auto lg:hidden"
-          />
-          <h1 className="text-2xl font-semibold tracking-tight text-ink">{title}</h1>
-          {description && <p className="mt-1.5 text-sm text-ink-muted">{description}</p>}
-          <div className="mt-6">{children}</div>
-        </div>
-      </div>
+      </main>
     </div>
   );
 }

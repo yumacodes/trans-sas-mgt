@@ -8,7 +8,7 @@ import { loginSchema, type LoginInput, type LoginResultDto } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
 import { safeNextPath } from '@/auth/guards';
 import { Field, FormError } from '@/components/app/form';
-import { FullScreenLoader } from '@/components/app/FullScreenLoader';
+import { SessionCheck } from '@/auth/SessionCheck';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { api, ApiError, errorMessage, NETWORK_ERROR_MESSAGE } from '@/lib/api';
@@ -35,6 +35,7 @@ export default function LoginPage() {
   const [params] = useSearchParams();
   const next = safeNextPath(params.get('next'));
   const [showPassword, setShowPassword] = useState(false);
+  const [capsLock, setCapsLock] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   const form = useForm<LoginInput>({
@@ -42,9 +43,10 @@ export default function LoginPage() {
     defaultValues: { identifier: '', password: '' },
   });
   const { errors, isSubmitting } = form.formState;
+  const password = form.register('password');
 
   if (status === 'signedIn') return <Navigate to={next} replace />;
-  if (status === 'loading' && !isSubmitting) return <FullScreenLoader label="Checking your session…" />;
+  if (status === 'loading' && !isSubmitting) return <SessionCheck />;
 
   const onSubmit = form.handleSubmit(async (values) => {
     setFormError(null);
@@ -91,12 +93,23 @@ export default function LoginPage() {
             {...form.register('identifier')}
           />
         </Field>
-        <Field label="Password" error={errors.password?.message} required>
+        <Field
+          label="Password"
+          error={errors.password?.message}
+          hint={capsLock ? 'Caps Lock is on.' : undefined}
+          required
+        >
           <PasswordInput
             visible={showPassword}
             onToggle={() => setShowPassword((v) => !v)}
             autoComplete="current-password"
-            {...form.register('password')}
+            {...password}
+            // Warn before the attempt fails, rather than explaining it afterwards.
+            onKeyUp={(e) => setCapsLock(e.getModifierState('CapsLock'))}
+            onBlur={(e) => {
+              setCapsLock(false);
+              return password.onBlur(e);
+            }}
           />
         </Field>
         <div className="flex justify-end">
@@ -121,11 +134,12 @@ type PasswordInputProps = InputHTMLAttributes<HTMLInputElement> & {
 export function PasswordInput({ visible, onToggle, ...props }: PasswordInputProps) {
   return (
     <div className="relative">
-      <Input type={visible ? 'text' : 'password'} className="pr-10" {...props} />
+      <Input type={visible ? 'text' : 'password'} className="pr-12" {...props} />
+      {/* Full height of the field and wide enough to be a comfortable touch target. */}
       <button
         type="button"
         onClick={onToggle}
-        className="absolute right-1 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded text-ink-subtle hover:text-ink"
+        className="absolute inset-y-0 right-0 flex w-11 cursor-pointer items-center justify-center rounded-r-xl text-ink-subtle transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         aria-label={visible ? 'Hide password' : 'Show password'}
         aria-pressed={visible}
       >

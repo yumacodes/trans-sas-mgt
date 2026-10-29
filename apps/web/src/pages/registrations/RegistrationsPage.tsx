@@ -160,7 +160,7 @@ export default function RegistrationsPage() {
           />
         }
         bulkActions={[
-          exportAction<RegistrationDto>('registration', 'registered-clients.csv', [
+          exportAction<RegistrationDto>('registration', 'registered-clients.xlsx', [
             { header: 'Registration no.', value: (r) => r.registrationNumber },
             { header: 'Client code', value: (r) => r.client.code },
             { header: 'Client', value: (r) => r.client.name },

@@ -208,7 +208,7 @@ export default function UsersPage() {
           </>
         }
         bulkActions={[
-          exportAction<UserDto>('user', 'users.csv', [
+          exportAction<UserDto>('user', 'users.xlsx', [
             { header: 'Name', value: (u) => u.fullName },
             { header: 'Username', value: (u) => u.username },
             { header: 'Email', value: (u) => u.email },

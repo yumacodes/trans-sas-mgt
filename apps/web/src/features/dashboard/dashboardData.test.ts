@@ -11,7 +11,7 @@ import {
   scheduleTotals,
   summariseRevenue,
 } from './data/dashboardMockData';
-import { buildDashboardCsv } from './exportCsv';
+import { buildDashboardSheet } from './exportReport';
 import { formatCompactMoney, formatMinutes } from './format';
 
 describe('dashboard sample data', () => {
@@ -66,10 +66,11 @@ describe('dashboard formatting and export', () => {
     expect(formatMinutes(150)).toBe('2h 30m');
   });
 
-  it('exports a labelled CSV with the displayed figures', () => {
-    const csv = buildDashboardCsv('quarter');
-    expect(csv.split('\r\n')[0]).toContain('not an official financial report');
-    expect(csv).toContain('Sales value · QTD,4280000,GHS,12.4');
-    expect(csv).toContain('Hospital Equipment,4100,22');
+  it('exports a labelled sheet with the displayed figures', () => {
+    const sheet = buildDashboardSheet('quarter');
+    expect(sheet[0]?.[0]).toContain('not an official financial report');
+    // Figures keep their type for the workbook instead of being flattened into text.
+    expect(sheet).toContainEqual(['Sales value · QTD', 4280000, 'GHS', 12.4, expect.any(String)]);
+    expect(sheet).toContainEqual(['Hospital Equipment', 4100, 22]);
   });
 });

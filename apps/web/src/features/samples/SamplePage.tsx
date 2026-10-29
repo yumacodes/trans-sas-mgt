@@ -12,7 +12,7 @@ import { EmptyState } from '@/components/app/States';
 import { useRouteTitle } from '@/layout/Topbar';
 import { formatDate, formatMoney } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import { cell, downloadCsvText } from '@/features/dashboard/exportCsv';
+import { downloadReportExcel } from '@/lib/exportExcel';
 import { formatCompactMoney } from '@/features/dashboard/format';
 import type { Col, Line, PageConfig, Row } from './sampleData';
 
@@ -97,25 +97,41 @@ export default function SamplePage({ config }: { config: PageConfig }) {
     });
   const toggleAll = () => setSelected(allSelected ? new Set() : new Set(visible.map((r) => r.id)));
 
-  function exportSelected() {
-    const lines = [
-      'Sample data - not real business records',
-      config.cols.map((c) => cell(c.label)).join(','),
-      ...selectedRows.map((r) => config.cols.map((c) => cell(plain(c, r))).join(',')),
-    ];
-    downloadCsvText(lines.join('\r\n'), `${config.exportName}-selected.csv`);
-    toast.success(`Exported ${selectedRows.length} sample row${selectedRows.length === 1 ? '' : 's'}`);
-    setSelected(new Set());
+  /** Sample rows as an Excel workbook, headed by a line saying they are not real. */
+  function exportRows(rows: Row[], filename: string) {
+    return downloadReportExcel(
+      filename,
+      [
+        ['Sample data - not real business records'],
+        [],
+        config.cols.map((c) => c.label),
+        ...rows.map((r) => config.cols.map((c) => plain(c, r))),
+      ],
+      { sheet: 'Sample', boldRows: (_row, index) => index === 0 || index === 2 },
+    ).then(
+      () => true,
+      () => {
+        toast.error("We couldn't prepare that download. Try again in a moment.");
+        return false;
+      },
+    );
   }
 
-  function exportCsv() {
-    const lines = [
-      'Sample data - not real business records',
-      config.cols.map((c) => cell(c.label)).join(','),
-      ...filtered.map((r) => config.cols.map((c) => cell(plain(c, r))).join(',')),
-    ];
-    downloadCsvText(lines.join('\r\n'), `${config.exportName}.csv`);
-    toast.success('Sample rows downloaded', { description: 'The file contains the rows currently shown, which are sample data.' });
+  function exportSelected() {
+    void exportRows(selectedRows, `${config.exportName}-selected.xlsx`).then((ok) => {
+      if (!ok) return;
+      toast.success(`Exported ${selectedRows.length} sample row${selectedRows.length === 1 ? '' : 's'}`);
+      setSelected(new Set());
+    });
+  }
+
+  function exportVisible() {
+    void exportRows(filtered, `${config.exportName}.xlsx`).then((ok) => {
+      if (!ok) return;
+      toast.success('Sample rows downloaded', {
+        description: 'The file contains the rows currently shown, which are sample data.',
+      });
+    });
   }
 
   return (
@@ -130,7 +146,7 @@ export default function SamplePage({ config }: { config: PageConfig }) {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="secondary" size="sm" onClick={exportCsv} disabled={filtered.length === 0}>
+          <Button variant="secondary" size="sm" onClick={exportVisible} disabled={filtered.length === 0}>
             <Download aria-hidden /> Export
           </Button>
           {config.newLabel && (

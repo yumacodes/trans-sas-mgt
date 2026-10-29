@@ -16,7 +16,8 @@ export const AlertDialogContent = React.forwardRef<
     <AlertPrimitive.Content
       ref={ref}
       className={cn(
-        'fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-white/80 bg-surface p-6 shadow-overlay animate-scale-in focus:outline-none',
+        // Translucent, like the central operation overlay these dialogs lead into.
+        'glass fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-3xl p-6 shadow-overlay animate-scale-in focus:outline-none',
         className,
       )}
       {...props}
