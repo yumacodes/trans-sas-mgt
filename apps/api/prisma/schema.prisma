@@ -1,0 +1,577 @@
+// Medical equipment business management system: database schema.
+//
+// Conventions
+// - UUID primary keys; table names are snake_case via @@map.
+// - Money: Decimal(18,2) for prices/totals, Decimal(18,4) for unit costs. Never Float.
+// - Quantities: Decimal(18,3) so non-unit measures (litres, kg) work.
+// - Business dates use @db.Date; events use timestamptz.
+// - Business references use onDelete: Restrict. Records are archived/deactivated, not deleted.
+// - Raw-SQL migrations add what Prisma cannot express: the pg_trgm extension, CHECK
+//   constraints, append-only triggers and RLS. Avoid expression or partial indexes in
+//   raw SQL: Prisma cannot represent them and would drop them in the next migration.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ───────────────────────────── Identity & access ─────────────────────────────
+
+/// Application profile for a Supabase Auth user. Supabase Auth is the source of identity
+/// and credentials; no passwords are stored here.
+model UserProfile {
+  id            String    @id @default(uuid()) @db.Uuid
+  authUserId    String    @unique @db.Uuid
+  email         String    @unique
+  /// Sign-in name, stored lower-case. Resolved to the email by POST /auth/login.
+  username      String    @unique
+  fullName      String
+  phone         String?
+  isActive      Boolean   @default(true)
+  deactivatedAt DateTime? @db.Timestamptz(6)
+  createdAt     DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime  @updatedAt @db.Timestamptz(6)
+
+  roles    UserRole[]
+  branches UserBranchAssignment[]
+
+  auditEntries        AuditLog[]
+  ownedClients        Client[]             @relation("ClientAccountOwner")
+  createdClients      Client[]             @relation("ClientCreatedBy")
+  createdRegistrations ClientRegistration[]
+  createdStockItems   StockItem[]
+  stockMovements      StockMovement[]
+  uploadedFiles       FileRecord[]
+  idempotencyRecords  IdempotencyRecord[]
+  passwordResetRequests PasswordResetRequest[] @relation("ResetRequestUser")
+  resolvedResetRequests PasswordResetRequest[] @relation("ResetRequestResolver")
+  managedBranches       Branch[]               @relation("BranchManager")
+  sentMessages          Message[]
+
+  @@index([isActive])
+  @@map("user_profiles")
+}
+
+model Role {
+  id          String   @id @default(uuid()) @db.Uuid
+  /// Stable machine key (e.g. "admin"). System roles are seeded; custom roles get a slug.
+  key         String   @unique
+  name        String   @unique
+  description String?
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(6)
+
+  permissions RolePermission[]
+  users       UserRole[]
+
+  @@map("roles")
+}
+
+/// Catalogue of permission keys, synchronised from packages/shared/src/permissions.ts.
+model Permission {
+  key         String @id
+  group       String
+  description String
+
+  roles RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId        String @db.Uuid
+  permissionKey String
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionKey], references: [key], onDelete: Cascade)
+
+  @@id([roleId, permissionKey])
+  @@map("role_permissions")
+}
+
+model UserRole {
+  userId    String   @db.Uuid
+  roleId    String   @db.Uuid
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  user UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role        @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  @@id([userId, roleId])
+  @@index([roleId])
+  @@map("user_roles")
+}
+
+model UserBranchAssignment {
+  userId    String   @db.Uuid
+  branchId  String   @db.Uuid
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  user   UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branch Branch      @relation(fields: [branchId], references: [id], onDelete: Restrict)
+
+  @@id([userId, branchId])
+  @@index([branchId])
+  @@map("user_branch_assignments")
+}
+
+/// Append-only audit trail. A database trigger rejects UPDATE and DELETE.
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  actorId    String?  @db.Uuid
+  action     String
+  entityType String
+  entityId   String?
+  summary    String
+  changes    Json?
+  requestId  String?
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+
+  actor UserProfile? @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([entityType, entityId])
+  @@index([actorId, createdAt])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+/// Stores the outcome of critical mutations so retried requests with the same
+/// Idempotency-Key return the original result instead of repeating the operation.
+model IdempotencyRecord {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @db.Uuid
+  key          String
+  method       String
+  path         String
+  requestHash  String
+  statusCode   Int?
+  responseBody Json?
+  createdAt    DateTime  @default(now()) @db.Timestamptz(6)
+  completedAt  DateTime? @db.Timestamptz(6)
+
+  user UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, key])
+  @@index([createdAt])
+  @@map("idempotency_records")
+}
+
+// ───────────────────────────── Company & branches ─────────────────────────────
+
+/// Single-row table (enforced by the unique singleton flag).
+model CompanyProfile {
+  id                 String   @id @default(uuid()) @db.Uuid
+  singleton          Boolean  @unique @default(true)
+  name               String
+  legalName          String?
+  email              String?
+  phone              String?
+  website            String?
+  addressLine1       String?
+  addressLine2       String?
+  city               String?
+  region             String?
+  country            String?
+  taxId              String?
+  registrationNumber String?
+  defaultCurrency    String   @db.Char(3)
+  /// Validated by companySettingsSchema in packages/shared.
+  settings           Json
+  logoFileId         String?  @unique @db.Uuid
+  createdAt          DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt          DateTime @updatedAt @db.Timestamptz(6)
+
+  logo FileRecord? @relation(fields: [logoFileId], references: [id], onDelete: SetNull)
+
+  @@map("company_profile")
+}
+
+/// Gap-free counters for business document numbers, locked per row while incrementing.
+model DocumentSequence {
+  id        String   @id @default(uuid()) @db.Uuid
+  docType   String
+  /// "global" or a branch id when numbering is branch-specific.
+  scopeKey  String
+  /// Calendar year when numbering resets yearly, otherwise 0.
+  year      Int
+  nextValue Int      @default(1)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  @@unique([docType, scopeKey, year])
+  @@map("document_sequences")
+}
+
+model Branch {
+  id           String   @id @default(uuid()) @db.Uuid
+  code         String   @unique
+  name         String
+  addressLine1 String?
+  city         String?
+  region       String?
+  phone        String?
+  email        String?
+  /// Staff member who manages the branch; the "branch managers" message audience.
+  managerUserId String? @db.Uuid
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(6)
+
+  manager         UserProfile?           @relation("BranchManager", fields: [managerUserId], references: [id], onDelete: SetNull)
+  userAssignments UserBranchAssignment[]
+  clients         Client[]
+  stockBalances   StockBalance[]
+  stockMovements  StockMovement[]
+
+  @@index([managerUserId])
+  @@map("branches")
+}
+
+// ───────────────────────────── Files ─────────────────────────────
+
+/// Metadata for objects in Supabase Storage. Downloads are authorised by the API
+/// against the owning record, never by the object path alone.
+model FileRecord {
+  id           String    @id @default(uuid()) @db.Uuid
+  bucket       String
+  path         String
+  originalName String
+  mimeType     String
+  sizeBytes    Int
+  category     String
+  ownerType    String
+  ownerId      String?
+  uploadedById String    @db.Uuid
+  createdAt    DateTime  @default(now()) @db.Timestamptz(6)
+  deletedAt    DateTime? @db.Timestamptz(6)
+
+  uploadedBy     UserProfile      @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
+  companyLogo    CompanyProfile?
+  stockItemImage StockItemImage?
+
+  @@unique([bucket, path])
+  @@index([ownerType, ownerId])
+  @@map("file_records")
+}
+
+// ───────────────────────────── Clients ─────────────────────────────
+
+enum OrganizationType {
+  public_hospital
+  private_hospital
+  clinic
+  laboratory
+  pharmacy
+  government_agency
+  ngo
+  distributor
+  individual
+  other
+}
+
+enum ClientStatus {
+  active
+  archived
+}
+
+model Client {
+  id               String           @id @default(uuid()) @db.Uuid
+  code             String           @unique
+  name             String
+  organizationType OrganizationType
+  contactPerson    String?
+  email            String?
+  phone            String?
+  billingAddress   String?
+  deliveryAddress  String?
+  taxId            String?
+  notes            String?
+  status           ClientStatus     @default(active)
+  archivedAt       DateTime?        @db.Timestamptz(6)
+  branchId         String?          @db.Uuid
+  accountOwnerId   String?          @db.Uuid
+  createdById      String           @db.Uuid
+  createdAt        DateTime         @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime         @updatedAt @db.Timestamptz(6)
+
+  branch        Branch?              @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  accountOwner  UserProfile?         @relation("ClientAccountOwner", fields: [accountOwnerId], references: [id], onDelete: Restrict)
+  createdBy     UserProfile          @relation("ClientCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  registrations ClientRegistration[]
+
+  @@index([status])
+  @@index([organizationType])
+  @@index([branchId])
+  @@index([name])
+  @@index([name(ops: raw("gin_trgm_ops"))], map: "clients_name_trgm", type: Gin)
+  @@index([code(ops: raw("gin_trgm_ops"))], map: "clients_code_trgm", type: Gin)
+  @@map("clients")
+}
+
+enum RegistrationStatus {
+  pending
+  active
+  suspended
+  expired
+  revoked
+}
+
+/// Registration lifecycle for a client. A "registered client" is a Client with an
+/// active registration; the client identity is never duplicated. At most one active
+/// registration per client: the API locks the client row while creating or activating
+/// a registration, then checks for another active one.
+model ClientRegistration {
+  id                 String             @id @default(uuid()) @db.Uuid
+  clientId           String             @db.Uuid
+  registrationNumber String             @unique
+  registeredOn       DateTime           @db.Date
+  validUntil         DateTime?          @db.Date
+  status             RegistrationStatus @default(active)
+  statusChangedAt    DateTime           @default(now()) @db.Timestamptz(6)
+  notes              String?
+  createdById        String             @db.Uuid
+  createdAt          DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt          DateTime           @updatedAt @db.Timestamptz(6)
+
+  client    Client      @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  createdBy UserProfile @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([clientId])
+  @@index([status])
+  @@index([registrationNumber(ops: raw("gin_trgm_ops"))], map: "client_registrations_number_trgm", type: Gin)
+  @@map("client_registrations")
+}
+
+// ───────────────────────────── Catalogue & inventory ─────────────────────────────
+
+enum TrackingMode {
+  none
+  serial
+  batch
+}
+
+enum StockMovementType {
+  opening_balance
+  purchase_receipt
+  sale_issue
+  sale_return
+  adjustment_in
+  adjustment_out
+  transfer_in
+  transfer_out
+}
+
+model StockCategory {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(6)
+
+  items StockItem[]
+
+  @@map("stock_categories")
+}
+
+model StockItem {
+  id             String       @id @default(uuid()) @db.Uuid
+  /// Stored upper-cased; unique.
+  sku            String       @unique
+  name           String
+  description    String?
+  categoryId     String?      @db.Uuid
+  brand          String?
+  model          String?
+  unit           String
+  purchaseCost   Decimal?     @db.Decimal(18, 4)
+  sellingPrice   Decimal      @db.Decimal(18, 2)
+  reorderLevel   Int          @default(0)
+  trackingMode   TrackingMode @default(none)
+  warrantyMonths Int?
+  tracksExpiry   Boolean      @default(false)
+  isActive       Boolean      @default(true)
+  createdById    String       @db.Uuid
+  createdAt      DateTime     @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime     @updatedAt @db.Timestamptz(6)
+
+  category  StockCategory?   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  createdBy UserProfile      @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  balances  StockBalance[]
+  movements StockMovement[]
+  images    StockItemImage[]
+
+  @@index([categoryId])
+  @@index([isActive])
+  @@index([name])
+  @@index([name(ops: raw("gin_trgm_ops"))], map: "stock_items_name_trgm", type: Gin)
+  @@index([sku(ops: raw("gin_trgm_ops"))], map: "stock_items_sku_trgm", type: Gin)
+  @@map("stock_items")
+}
+
+/// Product photographs for a stock item, ordered by `position`; the lowest position is
+/// the thumbnail. The image bytes live in Supabase Storage via FileRecord.
+model StockItemImage {
+  id        String   @id @default(uuid()) @db.Uuid
+  itemId    String   @db.Uuid
+  fileId    String   @unique @db.Uuid
+  position  Int      @default(0)
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  item StockItem  @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  file FileRecord @relation(fields: [fileId], references: [id], onDelete: Restrict)
+
+  // Positions are not unique per item on purpose: reordering renumbers several rows in
+  // one transaction, and a unique constraint would reject the intermediate states.
+  @@index([itemId, position])
+  @@map("stock_item_images")
+}
+
+/// Cached on-hand quantity per item and branch. The StockMovement ledger is the source
+/// of truth; this row is updated in the same transaction as each movement (row-locked)
+/// and can be rebuilt from the ledger (see docs/architecture.md, "Stock reconciliation").
+model StockBalance {
+  id               String   @id @default(uuid()) @db.Uuid
+  itemId           String   @db.Uuid
+  branchId         String   @db.Uuid
+  quantityOnHand   Decimal  @default(0) @db.Decimal(18, 3)
+  quantityReserved Decimal  @default(0) @db.Decimal(18, 3)
+  updatedAt        DateTime @updatedAt @db.Timestamptz(6)
+
+  item   StockItem @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  branch Branch    @relation(fields: [branchId], references: [id], onDelete: Restrict)
+
+  @@unique([itemId, branchId])
+  @@index([branchId])
+  @@map("stock_balances")
+}
+
+/// Append-only inventory ledger. Quantity is signed (+ in, − out). A trigger rejects
+/// UPDATE and DELETE; corrections are recorded as new movements.
+model StockMovement {
+  id         String            @id @default(uuid()) @db.Uuid
+  itemId     String            @db.Uuid
+  branchId   String            @db.Uuid
+  type       StockMovementType
+  quantity   Decimal           @db.Decimal(18, 3)
+  unitCost   Decimal?          @db.Decimal(18, 4)
+  sourceType String?
+  sourceId   String?
+  reference  String?
+  note       String?
+  actorId    String?           @db.Uuid
+  occurredAt DateTime          @default(now()) @db.Timestamptz(6)
+  createdAt  DateTime          @default(now()) @db.Timestamptz(6)
+
+  item   StockItem    @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  branch Branch       @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  actor  UserProfile? @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([itemId, occurredAt])
+  @@index([branchId, occurredAt])
+  @@index([sourceType, sourceId])
+  @@map("stock_movements")
+}
+
+/// A user asked an administrator to reset their password. Open while `resolvedAt` is null;
+/// the database allows only one open request per user.
+model PasswordResetRequest {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @db.Uuid
+  createdAt    DateTime  @default(now()) @db.Timestamptz(6)
+  resolvedAt   DateTime? @db.Timestamptz(6)
+  resolvedById String?   @db.Uuid
+
+  user       UserProfile  @relation("ResetRequestUser", fields: [userId], references: [id], onDelete: Restrict)
+  resolvedBy UserProfile? @relation("ResetRequestResolver", fields: [resolvedById], references: [id], onDelete: Restrict)
+
+  @@index([resolvedAt, createdAt])
+  @@map("password_reset_requests")
+}
+
+// ───────────────────────────── Communication ─────────────────────────────
+
+enum MessageAudience {
+  clients
+  users
+  branch_managers
+}
+
+enum MessageStatus {
+  queued
+  sending
+  sent
+  partially_sent
+  failed
+}
+
+enum MessageRecipientKind {
+  client
+  user
+  branch_manager
+}
+
+enum MessageRecipientStatus {
+  pending
+  sent
+  failed
+  skipped
+}
+
+/// One composed message and its delivery outcome. The recipient list is resolved on the
+/// server from `audience` + `filters` when the message is sent and then frozen, so this
+/// is a record of what was actually sent to whom.
+model Message {
+  id             String          @id @default(uuid()) @db.Uuid
+  audience       MessageAudience
+  /// Audience filters as validated by messageFiltersSchema in packages/shared.
+  filters        Json
+  subject        String
+  body           String
+  status         MessageStatus   @default(queued)
+  recipientCount Int             @default(0)
+  sentCount      Int             @default(0)
+  failedCount    Int             @default(0)
+  skippedCount   Int             @default(0)
+  createdById    String          @db.Uuid
+  createdAt      DateTime        @default(now()) @db.Timestamptz(6)
+  completedAt    DateTime?       @db.Timestamptz(6)
+
+  createdBy  UserProfile        @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  recipients MessageRecipient[]
+
+  @@index([createdAt])
+  @@index([status])
+  @@map("messages")
+}
+
+/// Per-recipient delivery record. The name and email address are copies taken when the
+/// message was sent: they must keep showing what was sent, even if the client, user or
+/// branch is edited afterwards. `recipientId` is therefore a plain reference, not a
+/// foreign key (the same reasoning as audit_logs.entityId).
+model MessageRecipient {
+  id          String                 @id @default(uuid()) @db.Uuid
+  messageId   String                 @db.Uuid
+  kind        MessageRecipientKind
+  recipientId String?                @db.Uuid
+  name        String
+  email       String?
+  /// Merge-field values for this recipient, applied to the message template when sent.
+  values      Json                   @default("{}")
+  status      MessageRecipientStatus @default(pending)
+  /// Reason a delivery failed, in language a business user can act on.
+  error       String?
+  sentAt      DateTime?              @db.Timestamptz(6)
+  createdAt   DateTime               @default(now()) @db.Timestamptz(6)
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId, status])
+  @@index([kind, recipientId])
+  @@map("message_recipients")
+}

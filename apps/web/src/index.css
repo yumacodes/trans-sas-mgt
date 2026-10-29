@@ -1,0 +1,235 @@
+@import '@fontsource-variable/figtree';
+@import 'tailwindcss';
+
+/*
+ * Design tokens. Every colour, radius and shadow used in the app comes from here so pages
+ * stay visually consistent.
+ *
+ * Identity: Trans-SAS indigo (taken from the logo) as the single brand accent, a soft warm
+ * canvas with rounded white surfaces, near-black indigo for emphasis, and one lime highlight
+ * used sparingly for positive emphasis. Semantic colours are reserved for status.
+ */
+@theme {
+  --font-sans:
+    'Figtree Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, 'Cascadia Mono', Menlo, Consolas, monospace;
+
+  /* Canvas, surfaces & text */
+  --color-canvas: #f0f0ed;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f6f6f3;
+  --color-border: #e7e7e2;
+  --color-border-strong: #d4d4cd;
+  --color-ink: #12122e;
+  --color-ink-muted: #4b4b63;
+  --color-ink-subtle: #6a6a80;
+
+  /* Dark emphasis (active navigation, highlighted cards, floating bars) */
+  --color-dark: #2e3094;
+  --color-dark-raised: #3c3eab;
+  --color-dark-ink: #e4e5fa;
+
+  /* Brand accent: Trans-SAS indigo */
+  --color-accent: #2e3094;
+  --color-accent-hover: #25277a;
+  --color-accent-soft: #e8e9f7;
+  --color-accent-ink: #ffffff;
+
+  /* Lime highlight: positive emphasis only, always with dark text */
+  --color-highlight: #d9f56a;
+  --color-highlight-soft: #f1fad0;
+  --color-highlight-ink: #1c2400;
+
+  /* Dashboard chart palette */
+  --color-sage: #b6c98c;
+  --color-deep-green: #245a3a;
+  --color-chart-navy: #2e3094;
+  --color-chart-teal: #17565a;
+  --color-chart-grid: #eeeeea;
+
+  /* Semantic */
+  --color-success: #17692f;
+  --color-success-soft: #dff5e5;
+  --color-warning: #94510a;
+  --color-warning-soft: #fdf0cf;
+  --color-danger: #b42318;
+  --color-danger-hover: #912018;
+  --color-danger-soft: #fde4e1;
+  --color-info: #1d4ed8;
+  --color-info-soft: #e1ebfd;
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --radius-2xl: 1.5rem;
+  --radius-3xl: 1.75rem;
+
+  --shadow-card: 0 1px 2px 0 rgb(20 20 58 / 0.04);
+  --shadow-raised: 0 1px 2px rgb(20 20 58 / 0.04), 0 10px 28px -14px rgb(20 20 58 / 0.16);
+  --shadow-overlay: 0 24px 56px -16px rgb(20 20 58 / 0.32);
+
+  --animate-fade-in: fade-in 150ms ease-out;
+  --animate-scale-in: scale-in 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-slide-up: slide-up 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-check: check-draw 320ms ease-out forwards;
+  --animate-pop: pop 460ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  --animate-rise: rise 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(16px) scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+  @keyframes pop {
+    0% {
+      opacity: 0;
+      transform: scale(0.4);
+    }
+    60% {
+      opacity: 1;
+      transform: scale(1.14);
+    }
+    80% {
+      transform: scale(0.95);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  @keyframes check-draw {
+    from {
+      stroke-dashoffset: 24;
+    }
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes shimmer {
+    from {
+      background-position: 200% 0;
+    }
+    to {
+      background-position: -200% 0;
+    }
+  }
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    @apply bg-canvas text-ink font-sans text-sm;
+    /* A faint lime glow in the top-right and indigo in the bottom-left, as in the reference. */
+    background-image:
+      radial-gradient(60rem 28rem at 105% -8%, rgb(217 245 106 / 0.28), transparent 60%),
+      radial-gradient(48rem 28rem at -8% 108%, rgb(40 40 140 / 0.07), transparent 60%);
+    background-attachment: fixed;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+  /* Tailwind's reset leaves buttons on the arrow cursor; a pointer reads as clickable. */
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  [role='radio']:not([aria-disabled='true']),
+  [role='tab']:not([aria-disabled='true']),
+  summary,
+  label[for],
+  select:not(:disabled) {
+    cursor: pointer;
+  }
+  [type='number'] {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer components {
+  /* Translucent surface for summary cards and dialogs. Text contrast stays high. */
+  .glass {
+    background-color: rgb(255 255 255 / 0.86);
+    backdrop-filter: blur(12px) saturate(140%);
+    -webkit-backdrop-filter: blur(12px) saturate(140%);
+    border: 1px solid rgb(255 255 255 / 0.9);
+    box-shadow: var(--shadow-raised);
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  /* Light sweeping across a placeholder block while real content loads. */
+  .shimmer {
+    background-image: linear-gradient(
+      90deg,
+      var(--color-surface-muted) 0%,
+      var(--color-surface-muted) 35%,
+      rgb(255 255 255 / 0.9) 50%,
+      var(--color-surface-muted) 65%,
+      var(--color-surface-muted) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.4s linear infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .shimmer {
+      animation: none;
+    }
+  }
+  /* Small spaced capitals used for section and metric labels. */
+  .eyebrow {
+    font-size: 0.6875rem;
+    line-height: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--color-ink-subtle);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

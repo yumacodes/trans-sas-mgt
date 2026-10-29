@@ -1,0 +1,23 @@
+/** Central query keys so mutations invalidate exactly the caches they affect. */
+export const qk = {
+  me: ['me'] as const,
+  dashboard: ['dashboard'] as const,
+  company: ['company'] as const,
+  branches: ['branches'] as const,
+  branchOptions: ['branches', 'options'] as const,
+  roles: ['roles'] as const,
+  users: ['users'] as const,
+  resetRequests: ['users', 'reset-requests'] as const,
+  userOptions: ['users', 'options'] as const,
+  clients: ['clients'] as const,
+  clientOptions: ['clients', 'options'] as const,
+  registrations: ['registrations'] as const,
+  stockCategories: ['stock-categories'] as const,
+  stockItems: ['stock-items'] as const,
+  stockItemImages: (itemId: string) => ['stock-items', 'images', itemId] as const,
+  stockBalances: ['stock-balances'] as const,
+  auditLogs: ['audit-logs'] as const,
+  messages: ['messages'] as const,
+  messageAudience: ['messages', 'audience'] as const,
+  emailConfig: ['messages', 'email-config'] as const,
+};
