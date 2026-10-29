@@ -13,6 +13,3 @@ coverage
 
 # Vercel CLI project link
 .vercel
-
-.vercel
-.env*
