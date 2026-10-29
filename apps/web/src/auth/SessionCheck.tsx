@@ -13,7 +13,7 @@ export function SessionCheck({ label = 'Checking your session' }: { label?: stri
       role="status"
       aria-live="polite"
       aria-busy="true"
-      className="flex min-h-screen items-center justify-center bg-canvas p-4"
+      className="flex min-h-screen items-center justify-center bg-white p-4"
     >
       <div className="w-full max-w-sm animate-rise">
         <img src={BRAND.logoSrc} alt={BRAND.fullName} className="mx-auto h-10 w-auto" />

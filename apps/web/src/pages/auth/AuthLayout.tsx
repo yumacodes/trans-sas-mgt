@@ -12,7 +12,7 @@ const HIGHLIGHTS = [
 
 /**
  * Sign-in, password-reset and recovery pages share this shell: one console panel
- * centred on the company's navy, with the brand side on the left and the form on the
+ * centred on a white page, with the brand side on the left and the form on the
  * right.
  *
  * The form is the only interactive region, so it keeps the reading order, the first
@@ -29,19 +29,19 @@ export function AuthLayout({
   children: ReactNode;
 }) {
   return (
-    <div className="relative min-h-screen overflow-hidden bg-dark">
+    <div className="relative min-h-screen overflow-hidden bg-white">
       {/* Soft colour fields behind the panel; decorative only. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute -right-40 -top-48 size-[42rem] rounded-full bg-[#4a4ad8]/40 blur-3xl"
+        className="pointer-events-none absolute -right-40 -top-48 size-[42rem] rounded-full bg-accent/10 blur-3xl"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute -bottom-56 -left-40 size-[38rem] rounded-full bg-accent/70 blur-3xl"
+        className="pointer-events-none absolute -bottom-56 -left-40 size-[38rem] rounded-full bg-highlight/25 blur-3xl"
       />
 
       <main className="relative mx-auto flex min-h-screen w-full max-w-6xl items-center justify-center p-4 sm:p-6">
-        <div className="grid w-full overflow-hidden rounded-[1.75rem] shadow-[0_45px_90px_-35px_rgb(2_6_23_/_0.9)] ring-1 ring-white/15 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,25rem)] xl:grid-cols-[minmax(0,1.2fr)_minmax(0,27rem)]">
+        <div className="grid w-full overflow-hidden rounded-[1.75rem] shadow-[0_35px_70px_-30px_rgb(46_48_148_/_0.3)] ring-1 ring-border lg:grid-cols-[minmax(0,1.1fr)_minmax(0,25rem)] xl:grid-cols-[minmax(0,1.2fr)_minmax(0,27rem)]">
           {/* Brand side */}
           <section className="relative hidden flex-col justify-between gap-10 bg-dark-raised p-9 text-dark-ink lg:flex xl:p-11">
             <img
