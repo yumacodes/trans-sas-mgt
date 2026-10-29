@@ -44,7 +44,7 @@ export function EquipmentShowcase({ className }: { className?: string }) {
     <div className={cn('[perspective:1000px]', className)}>
       <div
         className={cn(
-          'grid grid-cols-4 gap-3 auto-rows-[3.6rem] xl:auto-rows-[4.3rem] 2xl:auto-rows-[5rem]',
+          'grid grid-cols-4 gap-3 auto-rows-[4.2rem] xl:auto-rows-[5.1rem] 2xl:auto-rows-[5.8rem]',
           '[transform-style:preserve-3d] [transform:rotateX(7deg)_rotateY(-15deg)_rotateZ(1deg)]',
         )}
       >

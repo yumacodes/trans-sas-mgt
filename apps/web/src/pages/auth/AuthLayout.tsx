@@ -29,7 +29,7 @@ export function AuthLayout({
   children: ReactNode;
 }) {
   return (
-    <div className="relative min-h-screen overflow-hidden bg-white">
+    <div className="relative min-h-screen overflow-x-hidden bg-white">
       {/* Soft colour fields behind the panel; decorative only. */}
       <div
         aria-hidden
@@ -40,10 +40,10 @@ export function AuthLayout({
         className="pointer-events-none absolute -bottom-56 -left-40 size-[38rem] rounded-full bg-highlight/25 blur-3xl"
       />
 
-      <main className="relative mx-auto flex min-h-screen w-full max-w-6xl items-center justify-center p-4 sm:p-6">
-        <div className="grid w-full overflow-hidden rounded-[1.75rem] shadow-[0_35px_70px_-30px_rgb(46_48_148_/_0.3)] ring-1 ring-border lg:grid-cols-[minmax(0,1.1fr)_minmax(0,25rem)] xl:grid-cols-[minmax(0,1.2fr)_minmax(0,27rem)]">
+      <main className="relative mx-auto flex min-h-screen w-full max-w-7xl items-center justify-center p-4 sm:p-6 2xl:max-w-[88rem]">
+        <div className="grid w-full overflow-hidden rounded-[1.75rem] shadow-[0_35px_70px_-30px_rgb(46_48_148_/_0.3)] ring-1 ring-border lg:grid-cols-[minmax(0,1.1fr)_minmax(0,27rem)] xl:grid-cols-[minmax(0,1.2fr)_minmax(0,30rem)]">
           {/* Brand side */}
-          <section className="relative hidden flex-col justify-between gap-10 bg-dark-raised p-9 text-dark-ink lg:flex xl:p-11">
+          <section className="relative hidden flex-col justify-between gap-12 bg-dark-raised p-11 text-dark-ink lg:flex xl:p-14">
             <img
               src={BRAND.logoSrc}
               alt=""
@@ -52,7 +52,7 @@ export function AuthLayout({
 
             <div className="max-w-md">
               <p className="eyebrow !text-highlight">Business management</p>
-              <h2 className="mt-3 text-[1.9rem] font-semibold leading-[1.12] tracking-tight text-white xl:text-[2.15rem]">
+              <h2 className="mt-3 text-[2.1rem] font-semibold leading-[1.12] tracking-tight text-white xl:text-[2.5rem]">
                 Everything Trans-SAS runs on, in one place.
               </h2>
               <ul className="mt-7 space-y-3">
@@ -74,7 +74,7 @@ export function AuthLayout({
           </section>
 
           {/* Form side */}
-          <section className="flex flex-col justify-center bg-surface px-6 py-9 sm:px-9 sm:py-11">
+          <section className="flex flex-col justify-center bg-surface px-6 py-10 sm:px-11 sm:py-14">
             <img src={BRAND.logoSrc} alt={BRAND.fullName} className="mb-8 h-9 w-auto lg:hidden" />
 
             <div>
