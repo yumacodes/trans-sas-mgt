@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Boxes, FileText, ShieldCheck, Wallet } from 'lucide-react';
 import { BRAND } from '@/lib/brand';
+import { EquipmentShowcase } from './EquipmentShowcase';
 
 const HIGHLIGHTS = [
   { icon: FileText, text: 'Proformas, sales, waybills and acceptance letters' },
@@ -20,7 +21,7 @@ export function AuthLayout({
   children: ReactNode;
 }) {
   return (
-    <div className="grid min-h-screen gap-3 p-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
+    <div className="grid min-h-screen gap-3 p-3 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
       <aside className="relative hidden flex-col justify-between overflow-hidden rounded-3xl bg-dark p-10 text-dark-ink lg:flex">
         {/* Soft colour fields echoing the app canvas; decorative only. */}
         <div
@@ -38,21 +39,24 @@ export function AuthLayout({
           </span>
         </div>
 
-        <div className="relative max-w-md">
-          <p className="eyebrow !text-highlight">Business management</p>
-          <h2 className="mt-3 text-4xl font-semibold leading-[1.1] tracking-tight text-white">
-            Everything Trans-SAS runs on, in one place.
-          </h2>
-          <ul className="mt-8 space-y-3.5">
-            {HIGHLIGHTS.map(({ icon: Icon, text }) => (
-              <li key={text} className="flex items-center gap-3 text-sm text-dark-ink/90">
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white/10">
-                  <Icon className="size-4 text-highlight" aria-hidden />
-                </span>
-                {text}
-              </li>
-            ))}
-          </ul>
+        <div className="relative flex items-center gap-7 xl:gap-10">
+          <div className="min-w-0 max-w-[19rem] xl:max-w-[20rem] 2xl:max-w-md">
+            <p className="eyebrow !text-highlight">Business management</p>
+            <h2 className="mt-3 text-[1.65rem] font-semibold leading-[1.1] tracking-tight text-white xl:text-3xl 2xl:text-4xl">
+              Everything Trans-SAS runs on, in one place.
+            </h2>
+            <ul className="mt-8 space-y-3.5">
+              {HIGHLIGHTS.map(({ icon: Icon, text }) => (
+                <li key={text} className="flex items-center gap-3 text-sm text-dark-ink/90">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white/10">
+                    <Icon className="size-4 text-highlight" aria-hidden />
+                  </span>
+                  {text}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <EquipmentShowcase className="w-[15rem] shrink-0 xl:w-[20rem] 2xl:w-[25rem]" />
         </div>
 
         <p className="relative text-xs text-dark-ink/60">

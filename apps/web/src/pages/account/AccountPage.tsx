@@ -9,7 +9,8 @@ import {
   type MeDto,
   type ProfileUpdateInput,
 } from '@tsm/shared';
-import { useAuth, useMe } from '@/auth/AuthProvider';
+import { useMe } from '@/auth/AuthProvider';
+import { useSignOutConfirm } from '@/auth/useSignOutConfirm';
 import { applyServerErrors, Field } from '@/components/app/form';
 import { useOperation } from '@/components/app/OperationFeedback';
 import { PageHeader } from '@/components/app/PageHeader';
@@ -151,7 +152,7 @@ function changeFailure(code: string | undefined) {
 }
 
 function PasswordCard({ email }: { email: string }) {
-  const { signOut } = useAuth();
+  const { requestSignOut, signOutDialog } = useSignOutConfirm();
   const { run } = useOperation();
   const [show, setShow] = useState(false);
   const form = useForm<ChangePasswordInput>({
@@ -213,9 +214,10 @@ function PasswordCard({ email }: { email: string }) {
             />
           </Field>
           <div className="flex items-center justify-between gap-2">
-            <Button variant="link" size="sm" onClick={() => void signOut()}>
+            <Button variant="link" size="sm" onClick={requestSignOut}>
               Sign out
             </Button>
+            {signOutDialog}
             <Button type="submit">
               Change password
             </Button>

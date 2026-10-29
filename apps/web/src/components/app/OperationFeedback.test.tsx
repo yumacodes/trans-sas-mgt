@@ -56,7 +56,8 @@ describe('OperationFeedback', () => {
     await vi.waitFor(() => expect(onDone).toHaveBeenCalledWith({ ok: 'saved' }), {
       timeout: SUCCESS_DELAY_MS + 2000,
     });
-    expect(screen.queryByText('Client created')).not.toBeInTheDocument();
+    // The overlay closes just after the caller is resolved, not in the same tick.
+    await vi.waitFor(() => expect(screen.queryByText('Client created')).not.toBeInTheDocument());
   });
 
   it('shows an error, never a checkmark, when the operation fails', async () => {

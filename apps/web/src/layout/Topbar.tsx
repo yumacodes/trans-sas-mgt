@@ -1,6 +1,7 @@
 import { Link, useLocation, useMatches } from 'react-router';
 import { ChevronRight, LogOut, Menu, UserCog } from 'lucide-react';
 import { useAuth } from '@/auth/AuthProvider';
+import { useSignOutConfirm } from '@/auth/useSignOutConfirm';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -30,7 +31,8 @@ export function useRouteTitle(): RouteHandle | undefined {
 }
 
 export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
-  const { me, signOut } = useAuth();
+  const { me } = useAuth();
+  const { requestSignOut, signOutDialog } = useSignOutConfirm();
   const handle = useRouteTitle();
   const user = me?.user;
   const { pathname } = useLocation();
@@ -99,12 +101,15 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={() => void signOut()}>
+            {/* Opened on the next frame so the menu finishes closing and returning
+                focus before the dialog claims it. */}
+            <DropdownMenuItem onSelect={() => requestAnimationFrame(requestSignOut)}>
               <LogOut aria-hidden /> Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       )}
+      {signOutDialog}
     </header>
   );
 }
