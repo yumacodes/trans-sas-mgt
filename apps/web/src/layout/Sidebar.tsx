@@ -112,7 +112,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
           </button>
         </div>
 
-        <nav className="mt-4 flex-1 overflow-y-auto px-3 pb-3">
+        <nav className="scrollbar-slim mt-4 flex-1 overflow-y-auto px-3 pb-3">
           {sections.map(({ group, items: groupItems }) => (
             <NavSection key={group ?? 'top'} group={group}>
               {groupItems.map((item) => (
