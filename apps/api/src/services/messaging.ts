@@ -178,6 +178,11 @@ export function overRecipientLimit(recipients: unknown[]) {
 /** Messages currently being sent by this process, so a retry cannot double-send. */
 const inFlight = new Set<string>();
 
+/** True while this process is sending the message. */
+export function isDispatching(messageId: string) {
+  return inFlight.has(messageId);
+}
+
 /**
  * Send every pending recipient of a message, updating each row as it goes so the
  * Communication page can show progress. Runs after the HTTP response: a send of a few

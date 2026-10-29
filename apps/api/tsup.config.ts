@@ -1,7 +1,9 @@
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-  entry: ['src/server.ts'],
+  // server.ts is the long-running process (`pnpm start`); app.ts is imported by the
+  // Vercel function in api/index.js, which must not start a listener.
+  entry: ['src/server.ts', 'src/app.ts'],
   format: ['esm'],
   target: 'node22',
   platform: 'node',

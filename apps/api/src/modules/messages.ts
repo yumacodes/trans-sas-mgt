@@ -18,7 +18,7 @@ import {
 import { getAuth, requireAnyPermission, requirePermission } from '../middleware/auth';
 import { idempotent } from '../middleware/idempotency';
 import { AppError, invalidState, notFound } from '../lib/errors';
-import { logger } from '../lib/logger';
+import { runAfterResponse } from '../lib/background';
 import { orderBy, pageMeta, pageWindow } from '../lib/pagination';
 import { prisma } from '../lib/prisma';
 import { created, ok } from '../lib/respond';
@@ -30,6 +30,7 @@ import {
   assertEmailAvailable,
   dispatchMessage,
   finaliseMessage,
+  isDispatching,
   overRecipientLimit,
   recipientCreateData,
   resolveRecipients,
@@ -243,27 +244,32 @@ messagesRouter.post(
     });
 
     // Delivery continues after the response; the page follows the per-recipient progress.
-    void dispatchMessage(message.id).catch((err: unknown) =>
-      logger.error({ err, messageId: message.id }, 'background dispatch failed'),
-    );
+    runAfterResponse('message dispatch', dispatchMessage(message.id));
     created(res, toDto(message));
   },
 );
 
-/** Try the failed recipients of a message again, leaving those already sent alone. */
+/**
+ * Try the failed recipients of a message again, leaving those already sent alone.
+ * This also picks up recipients still waiting, which is how a send that was cut short
+ * (a redeployed or timed-out server) is resumed.
+ */
 messagesRouter.post('/:id/retry', requirePermission('messages.send'), async (req, res) => {
   const id = parse(uuid, req.params.id);
   assertEmailAvailable();
   const message = await prisma.message.findUnique({ where: { id } });
   if (!message) throw notFound('The message');
-  if (message.status === 'queued' || message.status === 'sending') {
+  if (isDispatching(id)) {
     throw invalidState('This message is still being sent. Wait for it to finish before retrying.');
   }
   const retried = await prisma.messageRecipient.updateMany({
     where: { messageId: id, status: 'failed' },
     data: { status: 'pending', error: null },
   });
-  if (retried.count === 0) {
+  const waiting = await prisma.messageRecipient.count({
+    where: { messageId: id, status: 'pending' },
+  });
+  if (waiting === 0) {
     throw invalidState('There are no failed deliveries to retry for this message.');
   }
   await prisma.$transaction(async (tx) => {
@@ -271,13 +277,11 @@ messagesRouter.post('/:id/retry', requirePermission('messages.send'), async (req
       action: 'message.retried',
       entityType: 'message',
       entityId: id,
-      summary: `Retrying ${retried.count} failed delivery(ies) of "${message.subject}"`,
+      summary: `Retrying ${waiting} delivery(ies) of "${message.subject}" (${retried.count} had failed)`,
     });
   });
   await finaliseMessage(id);
-  void dispatchMessage(id).catch((err: unknown) =>
-    logger.error({ err, messageId: id }, 'background dispatch failed'),
-  );
+  runAfterResponse('message dispatch', dispatchMessage(id));
   const row = await prisma.message.findUniqueOrThrow({ where: { id }, include });
   ok(res, toDto(row));
 });
