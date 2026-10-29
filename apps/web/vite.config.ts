@@ -42,9 +42,16 @@ const config: UserConfig = {
     rollupOptions: {
       output: {
         // Long-lived vendor chunks so application updates don't invalidate library caches.
+        // Every chunk here may depend on `react`, and `react` on nothing: a chunk that
+        // both imports and is imported by another builds a cycle, and circular ESM
+        // chunks fail at run time with "Cannot access 'x' before initialization".
+        // react-router therefore stays out of the react chunk — it pulls in `cookie`
+        // and `set-cookie-parser`, which would make react depend on vendor.
         manualChunks(id) {
           if (!id.includes('node_modules')) return undefined;
-          if (/[\\/](react|react-dom|scheduler|react-router)[\\/]/.test(id)) return 'react';
+          // Anchored on node_modules: a bare /react-dom/ also matches nested packages
+          // such as @floating-ui/react-dom, whose own dependency stays in `vendor`.
+          if (/[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/.test(id)) return 'react';
           if (id.includes('@supabase')) return 'supabase';
           if (id.includes('@radix-ui')) return 'radix';
           if (/[\\/](zod|decimal\.js|react-hook-form|@hookform)[\\/]/.test(id)) return 'forms';
