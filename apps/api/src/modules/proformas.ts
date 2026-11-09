@@ -12,26 +12,22 @@ import {
   PROFORMA_EMAIL_MAX_FILES,
   PROFORMA_EMAIL_MAX_FILE_BYTES,
   uuid,
-  type ProformaCustomerOptionDto,
   type ProformaDto,
-  type ProformaItemOptionDto,
 } from '@tsm/shared';
-import { z } from 'zod';
-import { can, getAuth, requirePermission } from '../middleware/auth';
+import { getAuth, requirePermission } from '../middleware/auth';
 import { idempotent } from '../middleware/idempotency';
-import { AppError, invalidState, notFound } from '../lib/errors';
+import { AppError, notFound } from '../lib/errors';
 import { orderBy, pageMeta, pageWindow } from '../lib/pagination';
 import { prisma } from '../lib/prisma';
 import { created, ok } from '../lib/respond';
 import { dateFromIso, decimalString, isoDateOnly, iso } from '../lib/serialize';
 import { parse } from '../lib/validate';
 import { actorFrom, recordAudit } from '../services/audit';
-import { optionalBranchWhere } from '../services/branch-scope';
 import { nextDocumentNumber, peekDocumentNumber } from '../services/document-numbers';
 import { EMAIL_NOT_CONFIGURED, emailConfigured, sendEmail } from '../services/email';
 import { pdfCompany } from '../services/pdf-company';
 import { renderProformaPdf } from '../services/proforma-pdf';
-import { findAccessibleClient } from './clients';
+import { assertStockItemsExist, customerOptions, resolveClient, stockItemOptions } from '../services/pickers';
 
 /**
  * Proforma invoices. A proforma is a quotation: it never moves stock or counts as
@@ -98,51 +94,12 @@ proformasRouter.get('/next-number', requirePermission('proformas.manage'), async
 
 /** Existing clients to pick from, with the details that fill the customer section. */
 proformasRouter.get('/customers', requirePermission('proformas.manage'), async (req, res) => {
-  const ctx = getAuth(req);
-  const { q } = parse(z.object({ q: z.string().trim().max(100).optional() }), req.query);
-  const rows = await prisma.client.findMany({
-    where: {
-      status: 'active',
-      ...optionalBranchWhere(ctx),
-      ...(q
-        ? { OR: [{ name: { contains: q, mode: 'insensitive' } }, { code: { contains: q, mode: 'insensitive' } }] }
-        : {}),
-    },
-    select: { id: true, code: true, name: true, billingAddress: true, email: true, phone: true },
-    orderBy: { name: 'asc' },
-    take: 20,
-  });
-  ok<ProformaCustomerOptionDto[]>(
-    res,
-    rows.map((c) => ({
-      id: c.id,
-      code: c.code,
-      name: c.name,
-      address: c.billingAddress,
-      email: c.email,
-      phone: c.phone,
-    })),
-  );
+  ok(res, await customerOptions(req));
 });
 
 /** Stock items to pick from; selecting one fills the unit and unit price. */
 proformasRouter.get('/items', requirePermission('proformas.manage'), async (req, res) => {
-  const { q } = parse(z.object({ q: z.string().trim().max(100).optional() }), req.query);
-  const rows = await prisma.stockItem.findMany({
-    where: {
-      isActive: true,
-      ...(q
-        ? { OR: [{ name: { contains: q, mode: 'insensitive' } }, { sku: { contains: q, mode: 'insensitive' } }] }
-        : {}),
-    },
-    select: { id: true, sku: true, name: true, unit: true, sellingPrice: true },
-    orderBy: { name: 'asc' },
-    take: 20,
-  });
-  ok<ProformaItemOptionDto[]>(
-    res,
-    rows.map((i) => ({ ...i, sellingPrice: decimalString(i.sellingPrice) })),
-  );
+  ok(res, await stockItemOptions(req));
 });
 
 proformasRouter.get('/', async (req, res) => {
@@ -201,51 +158,20 @@ proformasRouter.post('/', requirePermission('proformas.manage'), idempotent, asy
   const totals = calculateProformaTotals(input.items, 0, input.taxRate);
 
   const row = await prisma.$transaction(async (tx) => {
-    const stockIds = [...new Set(input.items.map((i) => i.stockItemId).filter((v): v is string => Boolean(v)))];
-    if (stockIds.length) {
-      const found = await tx.stockItem.count({ where: { id: { in: stockIds } } });
-      if (found !== stockIds.length) {
-        throw new AppError('VALIDATION_FAILED', 'One of the selected items no longer exists. Pick it again.', {
-          items: 'One of the selected items no longer exists. Pick it again.',
-        });
-      }
-    }
-
-    // Link to the client directory: the chosen client, an existing one with the same
-    // name, or (when allowed) a new client created from the details typed in.
-    let clientId: string | null = null;
-    if (input.clientId) {
-      const client = await findAccessibleClient(tx, ctx, input.clientId);
-      if (client.status !== 'active') throw invalidState('This client is archived. Restore it before raising a proforma.');
-      clientId = client.id;
-    } else {
-      const existing = await tx.client.findFirst({
-        where: { name: { equals: input.customerName, mode: 'insensitive' }, status: 'active', ...optionalBranchWhere(ctx) },
-        select: { id: true },
-      });
-      if (existing) {
-        clientId = existing.id;
-      } else if (can(ctx, 'clients.create')) {
-        const client = await tx.client.create({
-          data: {
-            code: await nextDocumentNumber(tx, 'client'),
-            name: input.customerName,
-            organizationType: 'other',
-            email: input.customerEmail ?? null,
-            phone: input.customerPhone ?? null,
-            billingAddress: input.customerAddress ?? null,
-            createdById: ctx.profileId,
-          },
-        });
-        await recordAudit(tx, actorFrom(req), {
-          action: 'client.created',
-          entityType: 'client',
-          entityId: client.id,
-          summary: `Client ${client.code} – ${client.name} created from a proforma`,
-        });
-        clientId = client.id;
-      }
-    }
+    await assertStockItemsExist(tx, input.items.map((i) => i.stockItemId));
+    const clientId = await resolveClient(
+      tx,
+      req,
+      ctx,
+      {
+        clientId: input.clientId,
+        name: input.customerName,
+        address: input.customerAddress,
+        email: input.customerEmail,
+        phone: input.customerPhone,
+      },
+      'proforma',
+    );
 
     const number = await nextDocumentNumber(tx, 'proforma', { date: dateFromIso(input.issueDate) });
     const proforma = await tx.proforma.create({

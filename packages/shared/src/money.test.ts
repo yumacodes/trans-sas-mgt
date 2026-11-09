@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isMoneyString, sumMoney, toMoneyString } from './money';
+import { amountInWords, isMoneyString, sumMoney, toMoneyString } from './money';
 import { moneyString } from './schemas/common';
 import { companySettingsSchema, DEFAULT_COMPANY_SETTINGS } from './schemas/company';
 
@@ -39,5 +39,38 @@ describe('company settings', () => {
   it('rejects tax rates above 100', () => {
     const result = companySettingsSchema.safeParse({ ...DEFAULT_COMPANY_SETTINGS, defaultTaxRate: '101' });
     expect(result.success).toBe(false);
+  });
+});
+
+describe('amountInWords', () => {
+  it('writes whole amounts the way the documents do', () => {
+    expect(amountInWords('7200.00', 'GHS')).toBe('SEVEN THOUSAND TWO HUNDRED GHANA CEDIS ONLY');
+    expect(amountInWords('1000000', 'USD')).toBe('ONE MILLION US DOLLARS ONLY');
+    expect(amountInWords('0', 'GHS')).toBe('ZERO GHANA CEDIS ONLY');
+  });
+
+  it('adds pesewas and hyphenates tens', () => {
+    expect(amountInWords('1234.56', 'GHS')).toBe(
+      'ONE THOUSAND TWO HUNDRED THIRTY-FOUR GHANA CEDIS AND FIFTY-SIX PESEWAS ONLY',
+    );
+    expect(amountInWords('12000015.05', 'USD')).toBe('TWELVE MILLION FIFTEEN US DOLLARS AND FIVE CENTS ONLY');
+  });
+});
+
+describe('calculateTenderTotals', () => {
+  it('adds tax per line and sums the lines into the grand total', async () => {
+    const { calculateTenderTotals } = await import('./schemas/tender');
+    const t = calculateTenderTotals(
+      [
+        { quantity: '2', unitPrice: '3000' },
+        { quantity: '3', unitPrice: '0.35' },
+      ],
+      '20',
+    );
+    expect(t.amounts).toEqual(['6000.00', '1.05']);
+    expect(t.amountsWithTax).toEqual(['7200.00', '1.26']);
+    expect(t.subtotal).toBe('6001.05');
+    expect(t.total).toBe('7201.26');
+    expect(t.taxAmount).toBe('1200.21');
   });
 });

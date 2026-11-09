@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Controller, useFieldArray, useForm } from 'react-hook-form';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2 } from 'lucide-react';
@@ -7,13 +7,11 @@ import {
   PROFORMA_CURRENCIES,
   PROFORMA_CURRENCY_LABELS,
   proformaInputSchema,
-  type ProformaCustomerOptionDto,
   type ProformaDto,
   type ProformaInput,
-  type ProformaItemOptionDto,
 } from '@tsm/shared';
 import type { z } from 'zod';
-import { ComboInput } from '@/components/app/ComboInput';
+import { CustomerInput, ItemNameInput } from '@/components/app/DocumentPickers';
 import { FormDialog } from '@/components/app/dialogs';
 import { Field, FormGrid, FormSection, useIdempotencyKey } from '@/components/app/form';
 import { useOperation } from '@/components/app/OperationFeedback';
@@ -49,87 +47,6 @@ const numeric = (v: unknown) => {
   const s = String(v ?? '').trim();
   return /^\d+(\.\d+)?$/.test(s) ? s : '0';
 };
-
-function useDebounced(value: string, ms = 250) {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const t = setTimeout(() => setDebounced(value.trim()), ms);
-    return () => clearTimeout(t);
-  }, [value, ms]);
-  return debounced;
-}
-
-function CustomerInput({
-  value,
-  onChange,
-  onPick,
-  invalid,
-}: {
-  value: string;
-  onChange: (text: string) => void;
-  onPick: (c: ProformaCustomerOptionDto) => void;
-  invalid?: boolean;
-}) {
-  const q = useDebounced(value);
-  const options = useQuery({
-    queryKey: [...qk.proformas, 'customers', q],
-    queryFn: ({ signal }) => api.get<ProformaCustomerOptionDto[]>('/proformas/customers', { q }, signal),
-  });
-  return (
-    <ComboInput
-      aria-invalid={invalid}
-      value={value}
-      onChange={onChange}
-      options={options.data ?? []}
-      loading={options.isLoading}
-      getKey={(c) => c.id}
-      onSelect={onPick}
-      placeholder="Search existing customers or type a new name"
-      emptyText="No existing customer matches. Keep typing to add a new one."
-      renderOption={(c) => (
-        <>
-          <span className="font-medium">{c.name}</span> <span className="text-xs text-ink-subtle">{c.code}</span>
-        </>
-      )}
-    />
-  );
-}
-
-function ItemNameInput({
-  value,
-  onChange,
-  onPick,
-  invalid,
-}: {
-  value: string;
-  onChange: (text: string) => void;
-  onPick: (i: ProformaItemOptionDto) => void;
-  invalid?: boolean;
-}) {
-  const q = useDebounced(value);
-  const options = useQuery({
-    queryKey: [...qk.proformas, 'items', q],
-    queryFn: ({ signal }) => api.get<ProformaItemOptionDto[]>('/proformas/items', { q }, signal),
-  });
-  return (
-    <ComboInput
-      aria-invalid={invalid}
-      value={value}
-      onChange={onChange}
-      options={options.data ?? []}
-      loading={options.isLoading}
-      getKey={(i) => i.id}
-      onSelect={onPick}
-      placeholder="Select or type an item"
-      emptyText="Not in stock items. Keep typing to enter it manually."
-      renderOption={(i) => (
-        <>
-          <span className="font-medium">{i.name}</span> <span className="text-xs text-ink-subtle">{i.sku}</span>
-        </>
-      )}
-    />
-  );
-}
 
 interface Props {
   open: boolean;
@@ -213,6 +130,7 @@ export function ProformaFormDialog({ open, onOpenChange, onSaved }: Props) {
                   name="customerName"
                   render={({ field }) => (
                     <CustomerInput
+                      base="/proformas"
                       value={field.value}
                       invalid={Boolean(errors.customerName)}
                       onChange={(text) => {
@@ -274,6 +192,7 @@ export function ProformaFormDialog({ open, onOpenChange, onSaved }: Props) {
                         name={`items.${index}.name`}
                         render={({ field: f }) => (
                           <ItemNameInput
+                            base="/proformas"
                             value={f.value}
                             invalid={Boolean(e?.name)}
                             onChange={(text) => {

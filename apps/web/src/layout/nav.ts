@@ -56,7 +56,7 @@ const ITEMS: NavItem[] = [
   { id: 'dashboard', group: 'Overview', label: 'Dashboard', icon: LayoutDashboard, to: '/', anyOf: ['dashboard.view'] },
   { id: 'proforma', to: '/proforma', group: 'Overview', label: 'Proforma', icon: FileText, anyOf: ['proformas.read'] },
   {
-    id: 'tender-schedule', to: samplePath('tender-schedule'), group: 'Overview',
+    id: 'tender-schedule', to: '/tender-schedule', group: 'Overview',
     label: 'Tender Price Schedule',
     icon: Gavel,
     anyOf: ['tenders.read'],
@@ -72,7 +72,7 @@ const ITEMS: NavItem[] = [
   },
   { id: 'clients', group: 'Records', label: 'Clients', icon: Users, to: '/clients', anyOf: ['clients.read'] },
   {
-    id: 'acceptance', to: samplePath('acceptance'), group: 'Overview',
+    id: 'acceptance', to: '/acceptance-letters', group: 'Overview',
     label: 'Acceptance Letter',
     icon: FileSignature,
     anyOf: ['acceptance.read'],

@@ -18,6 +18,9 @@ const db = vi.hoisted(() => ({
   stockItemImage: { findMany: vi.fn(), aggregate: vi.fn() },
   idempotencyRecord: { create: vi.fn(), findUnique: vi.fn(), update: vi.fn(), delete: vi.fn() },
   expense: { findUnique: vi.fn(), findMany: vi.fn(), count: vi.fn(), create: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
+  tender: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
+  tenderItem: { deleteMany: vi.fn() },
+  acceptanceLetter: { findUnique: vi.fn(), update: vi.fn() },
   $transaction: vi.fn(),
 }));
 vi.mock('../src/lib/prisma', () => ({ prisma: db }));
@@ -481,6 +484,60 @@ describe('expenses', () => {
       .send({ transactionDate: '2026-11-09', currency: 'GHS', amount: '200', category: 'Fuel', paymentMethod: 'cash' });
     expect(res.status).toBe(409);
     expect(db.expense.update).not.toHaveBeenCalled();
+  });
+});
+
+describe('tender price schedules and acceptance letters', () => {
+  const ID = '00000000-0000-4000-8000-0000000000c1';
+  const body = {
+    scheduleDate: '2026-10-30',
+    customerName: 'Keta Municipal Hospital',
+    currency: 'GHS',
+    taxLabel: 'VAT + NHIL',
+    taxRate: '20',
+    items: [{ description: 'Fetal doppler', quantity: '2', unit: 'pcs', unitPrice: '3000' }],
+  };
+
+  it('lets a support user read schedules but not create them', async () => {
+    db.userProfile.findUnique.mockResolvedValue(profile(['tenders.read']));
+    const res = await request(app)
+      .post('/api/v1/tenders')
+      .set('Authorization', `Bearer ${await token()}`)
+      .set('Idempotency-Key', '00000000-0000-4000-8000-0000000000c9')
+      .send(body);
+    expect(res.status).toBe(403);
+    expect(db.tender.create).not.toHaveBeenCalled();
+  });
+
+  it('refuses to edit a schedule that has been submitted', async () => {
+    db.userProfile.findUnique.mockResolvedValue(profile(['tenders.read', 'tenders.manage']));
+    db.tender.findUnique.mockResolvedValue({ id: ID, number: 'TD-1', status: 'submitted', items: [], createdBy: { fullName: 'x' } });
+    const res = await request(app).put(`/api/v1/tenders/${ID}`).set('Authorization', `Bearer ${await token()}`).send(body);
+    expect(res.status).toBe(409);
+    expect(db.tenderItem.deleteMany).not.toHaveBeenCalled();
+    expect(db.tender.update).not.toHaveBeenCalled();
+  });
+
+  it('will not send a submitted schedule back to draft', async () => {
+    db.userProfile.findUnique.mockResolvedValue(profile(['tenders.read', 'tenders.manage']));
+    db.tender.findUnique.mockResolvedValue({ id: ID, number: 'TD-1', status: 'submitted', items: [], createdBy: { fullName: 'x' } });
+    const res = await request(app)
+      .patch(`/api/v1/tenders/${ID}/status`)
+      .set('Authorization', `Bearer ${await token()}`)
+      .send({ status: 'draft' });
+    expect(res.status).toBe(409);
+    expect(db.tender.update).not.toHaveBeenCalled();
+  });
+
+  it('will not reopen a cancelled acceptance letter', async () => {
+    db.userProfile.findUnique.mockResolvedValue(profile(['acceptance.read', 'acceptance.manage']));
+    db.acceptanceLetter.findUnique.mockResolvedValue({ id: ID, number: 'AL-1', status: 'cancelled', tender: null, createdBy: { fullName: 'x' } });
+    const res = await request(app)
+      .patch(`/api/v1/acceptance-letters/${ID}/status`)
+      .set('Authorization', `Bearer ${await token()}`)
+      .send({ status: 'issued' });
+    expect(res.status).toBe(409);
+    expect(db.acceptanceLetter.update).not.toHaveBeenCalled();
   });
 });
 

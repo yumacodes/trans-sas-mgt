@@ -55,6 +55,8 @@ model UserProfile {
   proformas             Proforma[]
   recordedExpenses      Expense[]              @relation("ExpenseRecordedBy")
   approvedExpenses      Expense[]              @relation("ExpenseApprovedBy")
+  tenders               Tender[]
+  acceptanceLetters     AcceptanceLetter[]
 
   @@index([isActive])
   @@map("user_profiles")
@@ -303,11 +305,13 @@ model Client {
   createdAt        DateTime         @default(now()) @db.Timestamptz(6)
   updatedAt        DateTime         @updatedAt @db.Timestamptz(6)
 
-  branch        Branch?              @relation(fields: [branchId], references: [id], onDelete: Restrict)
-  accountOwner  UserProfile?         @relation("ClientAccountOwner", fields: [accountOwnerId], references: [id], onDelete: Restrict)
-  createdBy     UserProfile          @relation("ClientCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  registrations ClientRegistration[]
-  proformas     Proforma[]
+  branch            Branch?              @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  accountOwner      UserProfile?         @relation("ClientAccountOwner", fields: [accountOwnerId], references: [id], onDelete: Restrict)
+  createdBy         UserProfile          @relation("ClientCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  registrations     ClientRegistration[]
+  proformas         Proforma[]
+  tenders           Tender[]
+  acceptanceLetters AcceptanceLetter[]
 
   @@index([status])
   @@index([organizationType])
@@ -411,6 +415,7 @@ model StockItem {
   movements     StockMovement[]
   images        StockItemImage[]
   proformaItems ProformaItem[]
+  tenderItems   TenderItem[]
 
   @@index([categoryId])
   @@index([isActive])
@@ -707,4 +712,113 @@ model Expense {
   @@index([number(ops: raw("gin_trgm_ops"))], map: "expenses_number_trgm", type: Gin)
   @@index([counterparty(ops: raw("gin_trgm_ops"))], map: "expenses_counterparty_trgm", type: Gin)
   @@map("expenses")
+}
+
+enum TenderStatus {
+  draft
+  submitted
+  awarded
+  not_awarded
+  cancelled
+}
+
+/// A tender price schedule: the priced items submitted for one tender lot.
+model Tender {
+  id                 String       @id @default(uuid()) @db.Uuid
+  number             String       @unique
+  scheduleDate       DateTime     @db.Date
+  tenderReference    String?
+  submissionDeadline DateTime?    @db.Date
+  clientId           String?      @db.Uuid
+  customerName       String
+  customerAddress    String?
+  lot                String?
+  currency           String       @db.Char(3)
+  taxLabel           String
+  taxRate            Decimal      @db.Decimal(5, 2)
+  subtotal           Decimal      @db.Decimal(18, 2)
+  taxAmount          Decimal      @db.Decimal(18, 2)
+  total              Decimal      @db.Decimal(18, 2)
+  notes              String?
+  status             TenderStatus @default(draft)
+  createdById        String       @db.Uuid
+  createdAt          DateTime     @default(now()) @db.Timestamptz(6)
+  updatedAt          DateTime     @updatedAt @db.Timestamptz(6)
+
+  client            Client?            @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  createdBy         UserProfile        @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  items             TenderItem[]
+  acceptanceLetters AcceptanceLetter[]
+
+  @@index([scheduleDate])
+  @@index([status])
+  @@index([clientId])
+  @@index([customerName(ops: raw("gin_trgm_ops"))], map: "tenders_customer_trgm", type: Gin)
+  @@index([number(ops: raw("gin_trgm_ops"))], map: "tenders_number_trgm", type: Gin)
+  @@map("tenders")
+}
+
+model TenderItem {
+  id              String  @id @default(uuid()) @db.Uuid
+  tenderId        String  @db.Uuid
+  position        Int
+  stockItemId     String? @db.Uuid
+  description     String
+  quantity        Decimal @db.Decimal(18, 3)
+  unit            String
+  unitPrice       Decimal @db.Decimal(18, 2)
+  amount          Decimal @db.Decimal(18, 2)
+  amountWithTax   Decimal @db.Decimal(18, 2)
+  countryOfOrigin String?
+  manufacturer    String?
+  brand           String?
+  expiryDate      String?
+
+  tender    Tender     @relation(fields: [tenderId], references: [id], onDelete: Cascade)
+  stockItem StockItem? @relation(fields: [stockItemId], references: [id], onDelete: Restrict)
+
+  @@index([tenderId, position])
+  @@index([stockItemId])
+  @@map("tender_items")
+}
+
+enum AcceptanceStatus {
+  draft
+  issued
+  cancelled
+}
+
+/// The company's written acceptance of a contract award.
+model AcceptanceLetter {
+  id                String           @id @default(uuid()) @db.Uuid
+  number            String           @unique
+  letterDate        DateTime         @db.Date
+  yourReference     String?
+  clientId          String?          @db.Uuid
+  recipientName     String
+  recipientAddress  String?
+  contractNumber    String
+  awardLetterDate   DateTime?        @db.Date
+  supplyDescription String
+  subject           String
+  body              String
+  signatoryName     String
+  signatoryTitle    String?
+  tenderId          String?          @db.Uuid
+  status            AcceptanceStatus @default(draft)
+  createdById       String           @db.Uuid
+  createdAt         DateTime         @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime         @updatedAt @db.Timestamptz(6)
+
+  client    Client?     @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  tender    Tender?     @relation(fields: [tenderId], references: [id], onDelete: Restrict)
+  createdBy UserProfile @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([letterDate])
+  @@index([status])
+  @@index([clientId])
+  @@index([tenderId])
+  @@index([recipientName(ops: raw("gin_trgm_ops"))], map: "acceptance_letters_recipient_trgm", type: Gin)
+  @@index([number(ops: raw("gin_trgm_ops"))], map: "acceptance_letters_number_trgm", type: Gin)
+  @@map("acceptance_letters")
 }

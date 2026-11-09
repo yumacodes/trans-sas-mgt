@@ -13,6 +13,8 @@ const ResetPasswordPage = lazy(() => import('@/pages/auth/ResetPasswordPage'));
 const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
 const ClientsPage = lazy(() => import('@/pages/clients/ClientsPage'));
 const ProformaPage = lazy(() => import('@/pages/proforma/ProformaPage'));
+const TendersPage = lazy(() => import('@/pages/tenders/TendersPage'));
+const AcceptancePage = lazy(() => import('@/pages/acceptance/AcceptancePage'));
 const GeneralExpensesPage = lazy(() =>
   import('@/pages/expenses/ExpensesPage').then((m) => ({ default: m.GeneralExpensesPage })),
 );
@@ -64,6 +66,16 @@ export const routes: RouteObject[] = [
         children: [{ index: true, element: <ProformaPage />, handle: h('Proforma', 'Overview') }],
       },
       { path: 'registered-clients', element: <Navigate to="/clients" replace /> },
+      {
+        path: 'tender-schedule',
+        element: <RequirePermission anyOf={['tenders.read']} />,
+        children: [{ index: true, element: <TendersPage />, handle: h('Tender Price Schedule', 'Overview') }],
+      },
+      {
+        path: 'acceptance-letters',
+        element: <RequirePermission anyOf={['acceptance.read']} />,
+        children: [{ index: true, element: <AcceptancePage />, handle: h('Acceptance Letter', 'Overview') }],
+      },
       {
         path: 'expenses',
         element: <RequirePermission anyOf={['expenses.read']} />,

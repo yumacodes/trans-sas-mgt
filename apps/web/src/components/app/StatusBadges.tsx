@@ -1,8 +1,12 @@
 import {
+  ACCEPTANCE_STATUS_LABELS,
   EXPENSE_STATUS_LABELS,
+  TENDER_STATUS_LABELS,
   MESSAGE_STATUS_LABELS,
   PROFORMA_STATUS_LABELS,
+  type AcceptanceStatus,
   type ClientStatus,
+  type TenderStatus,
   type ExpenseStatus,
   type MessageStatus,
   type ProformaStatus,
@@ -101,6 +105,36 @@ export function ExpenseStatusBadge({ status }: { status: ExpenseStatus }) {
   return (
     <Badge tone={EXPENSE_TONES[status]} dot>
       {EXPENSE_STATUS_LABELS[status]}
+    </Badge>
+  );
+}
+
+const TENDER_TONES: Record<TenderStatus, BadgeProps['tone']> = {
+  draft: 'neutral',
+  submitted: 'info',
+  awarded: 'success',
+  not_awarded: 'danger',
+  cancelled: 'neutral',
+};
+
+export function TenderStatusBadge({ status }: { status: TenderStatus }) {
+  return (
+    <Badge tone={TENDER_TONES[status]} dot>
+      {TENDER_STATUS_LABELS[status]}
+    </Badge>
+  );
+}
+
+const ACCEPTANCE_TONES: Record<AcceptanceStatus, BadgeProps['tone']> = {
+  draft: 'neutral',
+  issued: 'success',
+  cancelled: 'danger',
+};
+
+export function AcceptanceStatusBadge({ status }: { status: AcceptanceStatus }) {
+  return (
+    <Badge tone={ACCEPTANCE_TONES[status]} dot>
+      {ACCEPTANCE_STATUS_LABELS[status]}
     </Badge>
   );
 }

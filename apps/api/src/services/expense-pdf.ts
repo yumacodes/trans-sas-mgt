@@ -1,4 +1,5 @@
 import PDFDocument from 'pdfkit';
+import { PDF_COLORS, signatureY } from './pdf-theme';
 import {
   EXPENSE_KIND_LABELS,
   EXPENSE_STATUS_LABELS,
@@ -7,12 +8,7 @@ import {
 } from '@tsm/shared';
 import type { PdfCompany } from './proforma-pdf';
 
-const NAVY = '#27298f';
-const ACCENT = '#4a4dc4';
-const MUTED = '#667085';
-const RULE = '#e4e7ec';
-const SHADE = '#f1f2fb';
-const INK = '#1d2939';
+const { NAVY, ACCENT, ON_NAVY, MUTED, RULE, SHADE, INK } = PDF_COLORS;
 
 const amountFormat = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const money = (value: string, currency: string) => `${currency} ${amountFormat.format(Number(value))}`;
@@ -58,7 +54,7 @@ export function renderExpensePdf(expense: ExpenseDto, company: PdfCompany): Prom
   doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(19).text(company.name.toUpperCase(), left, 30, { width: width * 0.62 });
   doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(17).text('INVOICE', left, 32, { width, align: 'right', characterSpacing: 1 });
   doc
-    .fillColor('#cfd1f5')
+    .fillColor(ON_NAVY)
     .font('Helvetica')
     .fontSize(10)
     .text(EXPENSE_KIND_LABELS[expense.kind].toUpperCase(), left, 54, { width, align: 'right', characterSpacing: 2 });
@@ -144,8 +140,7 @@ export function renderExpensePdf(expense: ExpenseDto, company: PdfCompany): Prom
   }
 
   // Signatures at the foot of the page
-  const sigY = pageH - 118;
-  if (bottom > sigY - 10) doc.addPage();
+  const sigY = signatureY(doc, bottom);
   const sigW = 190;
   const sig = (x: number, label: string, name: string) => {
     doc.moveTo(x, sigY).lineTo(x + sigW, sigY).strokeColor(MUTED).lineWidth(0.75).stroke();

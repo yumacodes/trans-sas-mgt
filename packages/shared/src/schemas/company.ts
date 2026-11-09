@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { optionalEmail, optionalPhone, optionalText, requiredText } from './common';
+import { optionalEmail, optionalText, requiredText } from './common';
 
 export const DOCUMENT_TYPES = [
   'client',

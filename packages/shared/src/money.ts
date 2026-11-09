@@ -47,3 +47,52 @@ export function formatMoney(value: MoneyInput | null | undefined, currency: stri
     return `${currency} ${fixed}`;
   }
 }
+
+const ONES = ['', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE', 'TEN', 'ELEVEN', 'TWELVE',
+  'THIRTEEN', 'FOURTEEN', 'FIFTEEN', 'SIXTEEN', 'SEVENTEEN', 'EIGHTEEN', 'NINETEEN'];
+const TENS = ['', '', 'TWENTY', 'THIRTY', 'FORTY', 'FIFTY', 'SIXTY', 'SEVENTY', 'EIGHTY', 'NINETY'];
+const SCALES = ['', 'THOUSAND', 'MILLION', 'BILLION', 'TRILLION'];
+
+function belowThousand(n: number): string {
+  const words: string[] = [];
+  if (n >= 100) {
+    words.push(`${ONES[Math.floor(n / 100)]} HUNDRED`);
+    n %= 100;
+  }
+  if (n >= 20) {
+    words.push(n % 10 ? `${TENS[Math.floor(n / 10)]}-${ONES[n % 10]}` : TENS[Math.floor(n / 10)]!);
+  } else if (n > 0) {
+    words.push(ONES[n]!);
+  }
+  return words.join(' ');
+}
+
+/** Whole number in English words, e.g. 7200 → "SEVEN THOUSAND TWO HUNDRED". */
+export function integerInWords(value: bigint): string {
+  if (value === 0n) return 'ZERO';
+  const groups: string[] = [];
+  let rest = value;
+  let scale = 0;
+  while (rest > 0n) {
+    const chunk = Number(rest % 1000n);
+    if (chunk) groups.unshift(`${belowThousand(chunk)}${SCALES[scale] ? ` ${SCALES[scale]}` : ''}`);
+    rest /= 1000n;
+    scale += 1;
+  }
+  return groups.join(' ');
+}
+
+const CURRENCY_WORDS: Record<string, [major: string, minor: string]> = {
+  GHS: ['GHANA CEDIS', 'PESEWAS'],
+  USD: ['US DOLLARS', 'CENTS'],
+};
+
+/** Amount in words for documents, e.g. "SEVEN THOUSAND TWO HUNDRED GHANA CEDIS ONLY". */
+export function amountInWords(value: MoneyInput, currency: string): string {
+  const fixed = toMoneyString(value);
+  const [whole, fraction] = fixed.replace('-', '').split('.') as [string, string];
+  const [major, minor] = CURRENCY_WORDS[currency] ?? [currency, 'CENTS'];
+  const cents = Number(fraction);
+  const main = `${integerInWords(BigInt(whole))} ${major}`;
+  return cents ? `${main} AND ${integerInWords(BigInt(cents))} ${minor} ONLY` : `${main} ONLY`;
+}

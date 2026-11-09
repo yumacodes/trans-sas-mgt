@@ -1,4 +1,5 @@
 import PDFDocument from 'pdfkit';
+import { PDF_COLORS, signatureY } from './pdf-theme';
 import { PROFORMA_STATUS_LABELS, type ProformaDto } from '@tsm/shared';
 
 export interface PdfCompany {
@@ -10,12 +11,7 @@ export interface PdfCompany {
   footer?: string;
 }
 
-const NAVY = '#27298f';
-const ACCENT = '#4a4dc4';
-const MUTED = '#667085';
-const RULE = '#e4e7ec';
-const SHADE = '#f1f2fb';
-const INK = '#1d2939';
+const { NAVY, ACCENT, ON_NAVY, MUTED, RULE, SHADE, INK } = PDF_COLORS;
 
 const amountFormat = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const quantityFormat = new Intl.NumberFormat('en-US', { maximumFractionDigits: 3 });
@@ -58,10 +54,10 @@ export function renderProformaPdf(proforma: ProformaDto, company: PdfCompany): P
   doc.rect(0, 104, pageW, 4).fill(ACCENT);
   doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(19).text(company.name.toUpperCase(), left, 30, { width: width * 0.62 });
   if (company.tagline) {
-    doc.fillColor('#cfd1f5').font('Helvetica').fontSize(8.5).text(company.tagline, left, doc.y + 3, { width: width * 0.62 });
+    doc.fillColor(ON_NAVY).font('Helvetica').fontSize(8.5).text(company.tagline, left, doc.y + 3, { width: width * 0.62 });
   }
   doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(17).text('PROFORMA', left, 32, { width, align: 'right', characterSpacing: 1 });
-  doc.fillColor('#cfd1f5').font('Helvetica').fontSize(10).text('INVOICE', left, 54, { width, align: 'right', characterSpacing: 4 });
+  doc.fillColor(ON_NAVY).font('Helvetica').fontSize(10).text('INVOICE', left, 54, { width, align: 'right', characterSpacing: 4 });
 
   // Company contact (left) and invoice meta (right)
   const top = 128;
@@ -127,13 +123,13 @@ export function renderProformaPdf(proforma: ProformaDto, company: PdfCompany): P
   y = header(y);
   proforma.items.forEach((item, i) => {
     doc.font('Helvetica').fontSize(9.5);
-    const rowH = Math.max(doc.heightOfString(item.name, { width: descW - 8 }), 12) + 14;
+    const rowH = Math.max(doc.heightOfString(item.name, { width: descW - 8 }), 12) + 10;
     if (y + rowH > bottomLimit - 20) {
       doc.addPage();
       y = header(40);
     }
     if (i % 2 === 1) doc.rect(left, y, width, rowH).fill(SHADE);
-    const t = y + 7;
+    const t = y + 5;
     doc.fillColor(MUTED).font('Helvetica').fontSize(9.5).text(String(i + 1), left + 8, t, { width: noW });
     doc.fillColor(INK).text(item.name, descX, t, { width: descW - 8 });
     doc.text(quantityFormat.format(Number(item.quantity)), qtyX, t, { width: qtyW - 8, align: 'right' });
@@ -146,7 +142,10 @@ export function renderProformaPdf(proforma: ProformaDto, company: PdfCompany): P
   y += 14;
 
   // Totals and notes side by side; kept together on one page.
-  if (y > bottomLimit - 120) {
+  const totalsH = (Number(proforma.taxRate) > 0 ? 3 : 2) * 17 + 34;
+  doc.font('Helvetica').fontSize(9);
+  const notesH = proforma.notes ? doc.heightOfString(proforma.notes, { width: right - 230 - left - 20 }) + 16 : 0;
+  if (y + Math.max(totalsH, notesH) > pageH - 56) {
     doc.addPage();
     y = 40;
   }
@@ -174,12 +173,7 @@ export function renderProformaPdf(proforma: ProformaDto, company: PdfCompany): P
     doc.fillColor(INK).font('Helvetica').fontSize(9).text(proforma.notes, left, doc.y + 4, { width: boxX - left - 20 });
     notesBottom = doc.y;
   }
-  y = Math.max(totalsBottom, notesBottom) + 24;
-
-  // Signatures sit at the foot of the last page, leaving the space above for the listing.
-  const sigY = pageH - 118;
-  if (y > sigY - 10) doc.addPage();
-  y = sigY;
+  y = signatureY(doc, Math.max(totalsBottom, notesBottom));
   const sigW = 190;
   const sig = (x: number, label: string, name: string) => {
     doc.moveTo(x, y).lineTo(x + sigW, y).strokeColor(MUTED).lineWidth(0.75).stroke();

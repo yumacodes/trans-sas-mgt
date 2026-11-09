@@ -13,3 +13,5 @@ export * from './schemas/dashboard';
 export * from './schemas/message';
 export * from './schemas/proforma';
 export * from './schemas/expense';
+export * from './schemas/tender';
+export * from './schemas/acceptance';

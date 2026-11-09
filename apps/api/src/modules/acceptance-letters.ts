@@ -1,0 +1,239 @@
+import { Router } from 'express';
+import type { Prisma } from '@prisma/client';
+import {
+  ACCEPTANCE_STATUS_LABELS,
+  acceptanceInputSchema,
+  acceptanceListQuerySchema,
+  acceptanceStatusSchema,
+  uuid,
+  type AcceptanceDefaultsDto,
+  type AcceptanceDto,
+} from '@tsm/shared';
+import type { z } from 'zod';
+import { getAuth, requirePermission } from '../middleware/auth';
+import { idempotent } from '../middleware/idempotency';
+import { AppError, invalidState, notFound } from '../lib/errors';
+import { orderBy, pageMeta, pageWindow } from '../lib/pagination';
+import { prisma, type Db, type Tx } from '../lib/prisma';
+import { created, ok } from '../lib/respond';
+import { dateFromIso, iso, isoDateOnly, optionalIsoDateOnly } from '../lib/serialize';
+import { parse } from '../lib/validate';
+import { renderAcceptancePdf } from '../services/acceptance-pdf';
+import { actorFrom, recordAudit } from '../services/audit';
+import { nextDocumentNumber, peekDocumentNumber } from '../services/document-numbers';
+import { pdfCompany } from '../services/pdf-company';
+import { customerOptions, resolveClient } from '../services/pickers';
+
+/**
+ * Acceptance letters for contract awards. A draft can be edited; "issued" records that the
+ * letter has gone to the client. Letters are cancelled rather than deleted.
+ */
+export const acceptanceLettersRouter = Router();
+
+const include = {
+  tender: { select: { id: true, number: true } },
+  createdBy: { select: { fullName: true } },
+} satisfies Prisma.AcceptanceLetterInclude;
+
+type LetterRow = Prisma.AcceptanceLetterGetPayload<{ include: typeof include }>;
+
+function toDto(l: LetterRow): AcceptanceDto {
+  return {
+    id: l.id,
+    number: l.number,
+    letterDate: isoDateOnly(l.letterDate),
+    yourReference: l.yourReference,
+    clientId: l.clientId,
+    recipientName: l.recipientName,
+    recipientAddress: l.recipientAddress,
+    contractNumber: l.contractNumber,
+    awardLetterDate: optionalIsoDateOnly(l.awardLetterDate),
+    supplyDescription: l.supplyDescription,
+    subject: l.subject,
+    body: l.body,
+    signatoryName: l.signatoryName,
+    signatoryTitle: l.signatoryTitle,
+    tender: l.tender,
+    status: l.status,
+    preparedBy: l.createdBy.fullName.trim(),
+    createdAt: iso(l.createdAt),
+    updatedAt: iso(l.updatedAt),
+  };
+}
+
+async function loadLetter(db: Db, id: string): Promise<LetterRow> {
+  const row = await db.acceptanceLetter.findUnique({ where: { id }, include });
+  if (!row) throw notFound('The acceptance letter');
+  return row;
+}
+
+async function checkTender(tx: Tx, tenderId: string | null | undefined) {
+  if (!tenderId) return;
+  const found = await tx.tender.count({ where: { id: tenderId } });
+  if (!found) {
+    const message = 'That price schedule no longer exists. Choose another or leave it empty.';
+    throw new AppError('VALIDATION_FAILED', message, { tenderId: message });
+  }
+}
+
+function fields(input: z.output<typeof acceptanceInputSchema>) {
+  return {
+    letterDate: dateFromIso(input.letterDate),
+    yourReference: input.yourReference ?? null,
+    recipientName: input.recipientName,
+    recipientAddress: input.recipientAddress ?? null,
+    contractNumber: input.contractNumber,
+    awardLetterDate: input.awardLetterDate ? dateFromIso(input.awardLetterDate) : null,
+    supplyDescription: input.supplyDescription,
+    subject: input.subject,
+    body: input.body,
+    signatoryName: input.signatoryName,
+    signatoryTitle: input.signatoryTitle ?? null,
+    tenderId: input.tenderId ?? null,
+  };
+}
+
+acceptanceLettersRouter.use(requirePermission('acceptance.read'));
+
+acceptanceLettersRouter.get('/next-number', requirePermission('acceptance.manage'), async (_req, res) => {
+  ok(res, { number: await peekDocumentNumber(prisma, 'acceptance') });
+});
+
+/** The signatory of the most recent letter, so the next one starts with it. */
+acceptanceLettersRouter.get('/defaults', requirePermission('acceptance.manage'), async (_req, res) => {
+  const last = await prisma.acceptanceLetter.findFirst({
+    orderBy: { createdAt: 'desc' },
+    select: { signatoryName: true, signatoryTitle: true },
+  });
+  ok<AcceptanceDefaultsDto>(res, { signatoryName: last?.signatoryName ?? null, signatoryTitle: last?.signatoryTitle ?? null });
+});
+
+acceptanceLettersRouter.get('/customers', requirePermission('acceptance.manage'), async (req, res) => {
+  ok(res, await customerOptions(req));
+});
+
+acceptanceLettersRouter.get('/', async (req, res) => {
+  const query = parse(acceptanceListQuerySchema, req.query);
+  const and: Prisma.AcceptanceLetterWhereInput[] = [];
+  if (query.status) and.push({ status: query.status });
+  if (query.dateFrom) and.push({ letterDate: { gte: dateFromIso(query.dateFrom) } });
+  if (query.dateTo) and.push({ letterDate: { lte: dateFromIso(query.dateTo) } });
+  if (query.q) {
+    and.push({
+      OR: [
+        { number: { contains: query.q, mode: 'insensitive' } },
+        { recipientName: { contains: query.q, mode: 'insensitive' } },
+        { contractNumber: { contains: query.q, mode: 'insensitive' } },
+        { yourReference: { contains: query.q, mode: 'insensitive' } },
+      ],
+    });
+  }
+  const where: Prisma.AcceptanceLetterWhereInput = { AND: and };
+  const sort = orderBy<Prisma.AcceptanceLetterOrderByWithRelationInput[]>(
+    query.sort,
+    {
+      number: (dir) => [{ number: dir }],
+      letterDate: (dir) => [{ letterDate: dir }, { number: dir }],
+      recipientName: (dir) => [{ recipientName: dir }],
+      status: (dir) => [{ status: dir }],
+    },
+    [{ letterDate: 'desc' }, { number: 'desc' }],
+  );
+  const [rows, total] = await Promise.all([
+    prisma.acceptanceLetter.findMany({ where, orderBy: sort, include, ...pageWindow(query) }),
+    prisma.acceptanceLetter.count({ where }),
+  ]);
+  ok(res, rows.map(toDto), pageMeta(query, total));
+});
+
+acceptanceLettersRouter.get('/:id', async (req, res) => {
+  ok(res, toDto(await loadLetter(prisma, parse(uuid, req.params.id))));
+});
+
+acceptanceLettersRouter.get('/:id/pdf', async (req, res) => {
+  const letter = toDto(await loadLetter(prisma, parse(uuid, req.params.id)));
+  const pdf = await renderAcceptancePdf(letter, await pdfCompany('Acceptance Letter'));
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="${letter.number}.pdf"`);
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.send(pdf);
+});
+
+acceptanceLettersRouter.post('/', requirePermission('acceptance.manage'), idempotent, async (req, res) => {
+  const ctx = getAuth(req);
+  const input = parse(acceptanceInputSchema, req.body);
+  const row = await prisma.$transaction(async (tx) => {
+    await checkTender(tx, input.tenderId);
+    const clientId = await resolveClient(
+      tx,
+      req,
+      ctx,
+      { clientId: input.clientId, name: input.recipientName, address: input.recipientAddress },
+      'acceptance letter',
+    );
+    const letter = await tx.acceptanceLetter.create({
+      data: {
+        ...fields(input),
+        number: await nextDocumentNumber(tx, 'acceptance', { date: dateFromIso(input.letterDate) }),
+        clientId,
+        createdById: ctx.profileId,
+      },
+      include,
+    });
+    await recordAudit(tx, actorFrom(req), {
+      action: 'acceptance.created',
+      entityType: 'acceptance',
+      entityId: letter.id,
+      summary: `Acceptance letter ${letter.number} created for ${letter.recipientName} (contract ${letter.contractNumber})`,
+    });
+    return letter;
+  });
+  created(res, toDto(row));
+});
+
+acceptanceLettersRouter.put('/:id', requirePermission('acceptance.manage'), async (req, res) => {
+  const ctx = getAuth(req);
+  const id = parse(uuid, req.params.id);
+  const input = parse(acceptanceInputSchema, req.body);
+  const row = await prisma.$transaction(async (tx) => {
+    const before = await loadLetter(tx, id);
+    if (before.status !== 'draft') throw invalidState('Only draft letters can be edited.');
+    await checkTender(tx, input.tenderId);
+    const clientId = await resolveClient(
+      tx,
+      req,
+      ctx,
+      { clientId: input.clientId, name: input.recipientName, address: input.recipientAddress },
+      'acceptance letter',
+    );
+    const updated = await tx.acceptanceLetter.update({ where: { id }, data: { ...fields(input), clientId }, include });
+    await recordAudit(tx, actorFrom(req), {
+      action: 'acceptance.updated',
+      entityType: 'acceptance',
+      entityId: id,
+      summary: `Acceptance letter ${before.number} updated`,
+    });
+    return updated;
+  });
+  ok(res, toDto(row));
+});
+
+acceptanceLettersRouter.patch('/:id/status', requirePermission('acceptance.manage'), async (req, res) => {
+  const id = parse(uuid, req.params.id);
+  const { status } = parse(acceptanceStatusSchema, req.body);
+  const row = await prisma.$transaction(async (tx) => {
+    const before = await loadLetter(tx, id);
+    if (before.status === status) return before;
+    if (before.status === 'cancelled') throw invalidState('A cancelled letter cannot be reopened. Create a new one instead.');
+    if (status === 'draft') throw invalidState('An issued letter cannot go back to draft.');
+    const updated = await tx.acceptanceLetter.update({ where: { id }, data: { status }, include });
+    await recordAudit(tx, actorFrom(req), {
+      action: 'acceptance.status_changed',
+      entityType: 'acceptance',
+      entityId: id,
+      summary: `Acceptance letter ${before.number} changed from ${ACCEPTANCE_STATUS_LABELS[before.status]} to ${ACCEPTANCE_STATUS_LABELS[status]}`,
+    });
+    return updated;
+  });
+  ok(res, toDto(row));
+});

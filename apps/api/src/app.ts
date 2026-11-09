@@ -15,6 +15,8 @@ import { branchesRouter } from './modules/branches';
 import { clientsRouter } from './modules/clients';
 import { proformasRouter } from './modules/proformas';
 import { expensesRouter } from './modules/expenses';
+import { tendersRouter } from './modules/tenders';
+import { acceptanceLettersRouter } from './modules/acceptance-letters';
 import { companyRouter } from './modules/company';
 import { dashboardRouter } from './modules/dashboard';
 import { meRouter } from './modules/me';
@@ -87,6 +89,8 @@ export function createApp() {
   api.use('/clients', clientsRouter);
   api.use('/proformas', proformasRouter);
   api.use('/expenses', expensesRouter);
+  api.use('/tenders', tendersRouter);
+  api.use('/acceptance-letters', acceptanceLettersRouter);
   api.use('/messages', messagesRouter);
   api.use('/registrations', registrationsRouter);
   api.use('/stock-categories', stockCategoriesRouter);

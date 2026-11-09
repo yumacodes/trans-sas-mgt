@@ -15,10 +15,8 @@ export interface SamplePageMeta {
 
 export const SAMPLE_PAGES: SamplePageMeta[] = [
   { id: 'proforma', path: '/proforma', title: 'Proforma', anyOf: ['proformas.read'] },
-  { id: 'tender-schedule', path: '/tender-schedule', title: 'Tender Price Schedule', anyOf: ['tenders.read'] },
   { id: 'sales', path: '/sales', title: 'Sales', anyOf: ['sales.read'] },
   { id: 'waybill', path: '/waybills', title: 'Way Bill', anyOf: ['waybills.read'] },
-  { id: 'acceptance', path: '/acceptance-letters', title: 'Acceptance Letter', anyOf: ['acceptance.read'] },
   { id: 'payment', path: '/payments', title: 'Payment', anyOf: ['payments.read'] },
   { id: 'purchase', path: '/purchases', title: 'Purchase', section: 'Stock Management', anyOf: ['purchases.read'] },
   { id: 'r-income', path: '/reports/income-statement', title: 'Income Statement', section: 'Reports', anyOf: ['reports.financial'] },

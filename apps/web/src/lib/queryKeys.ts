@@ -14,6 +14,8 @@ export const qk = {
   registrations: ['registrations'] as const,
   proformas: ['proformas'] as const,
   expenses: ['expenses'] as const,
+  tenders: ['tenders'] as const,
+  acceptanceLetters: ['acceptance-letters'] as const,
   stockCategories: ['stock-categories'] as const,
   stockItems: ['stock-items'] as const,
   stockItemImages: (itemId: string) => ['stock-items', 'images', itemId] as const,
