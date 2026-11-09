@@ -71,12 +71,13 @@ function EmailComposer({ proforma, onSent }: { proforma: ProformaDto; onSent: ()
     data.set('attachInvoice', String(attachInvoice));
     for (const f of files) data.append('files', f);
     setFiles([]);
-    onSent();
     try {
       await run(() => api.upload<ProformaDto>(`/proformas/${proforma.id}/email`, data), {
         pending: 'Sending email…',
         success: 'Email sent',
       });
+      // Refresh only once the server has answered: sending moves a draft to "issued".
+      onSent();
     } catch {
       // The toast already explained the failure.
     }
