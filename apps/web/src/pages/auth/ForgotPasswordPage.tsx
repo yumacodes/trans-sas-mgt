@@ -27,6 +27,7 @@ export default function ForgotPasswordPage() {
       await run(() => api.post('/auth/forgot-password', values), {
         pending: 'Sending your request…',
         success: 'Request sent',
+        blocking: true,
       });
       setSent(true);
     } catch (error) {

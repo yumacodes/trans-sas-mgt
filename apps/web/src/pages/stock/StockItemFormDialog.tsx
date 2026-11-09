@@ -91,6 +91,8 @@ export function StockItemFormDialog({ open, onOpenChange, item }: Props) {
     // Users who cannot see costs must not overwrite them with an empty value.
     const payload: Partial<Output> = { ...values };
     if (!canViewCost) delete payload.purchaseCost;
+    // Close straight away; the save carries on in the background with a toast.
+    onOpenChange(false);
     try {
       // The item is created first; its staged images are uploaded straight afterwards,
       // inside the same feedback dialog. An image that fails does not undo the item, so
@@ -121,8 +123,6 @@ export function StockItemFormDialog({ open, onOpenChange, item }: Props) {
       void queryClient.invalidateQueries({ queryKey: qk.stockItems });
       void queryClient.invalidateQueries({ queryKey: qk.stockCategories });
       void queryClient.invalidateQueries({ queryKey: qk.dashboard });
-      form.reset(form.getValues());
-      onOpenChange(false);
     } catch (error) {
       if (applyServerErrors(error, form.setError)) return;
       if (error instanceof ApiError && error.code === 'DUPLICATE') {

@@ -15,7 +15,7 @@ import {
 import type { z } from 'zod';
 import { ComboInput } from '@/components/app/ComboInput';
 import { FormDialog } from '@/components/app/dialogs';
-import { applyServerErrors, Field, FormGrid, FormSection, useIdempotencyKey } from '@/components/app/form';
+import { Field, FormGrid, FormSection, useIdempotencyKey } from '@/components/app/form';
 import { useOperation } from '@/components/app/OperationFeedback';
 import { Button } from '@/components/ui/button';
 import { DialogBody, DialogClose, DialogFooter } from '@/components/ui/dialog';
@@ -171,19 +171,18 @@ export function ProformaFormDialog({ open, onOpenChange, onSaved }: Props) {
   const currency = watched.currency ?? 'USD';
 
   const onSubmit = form.handleSubmit(async (values) => {
+    onOpenChange(false);
     try {
       const saved = await run(() => api.post<ProformaDto>('/proformas', values, idem.keyFor(values)), {
         pending: 'Creating proforma…',
         success: 'Proforma created',
       });
       idem.reset();
-      await queryClient.invalidateQueries({ queryKey: qk.proformas });
+      void queryClient.invalidateQueries({ queryKey: qk.proformas });
       void queryClient.invalidateQueries({ queryKey: qk.clients });
-      form.reset(blankForm());
-      onOpenChange(false);
       onSaved?.(saved);
-    } catch (error) {
-      applyServerErrors(error, form.setError);
+    } catch {
+      // The toast already explained the failure.
     }
   });
 

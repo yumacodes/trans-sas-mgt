@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { DualArc } from '@/components/ui/dual-arc';
 import { ApiError, errorMessage } from '@/lib/api';
@@ -27,6 +28,12 @@ export interface RunOptions {
   success?: string;
   /** How long the success state stays visible before closing. */
   successDelayMs?: number;
+  /**
+   * Block the screen with the centred overlay until the server answers. Off by default:
+   * operations run in the background with a toast so the UI never waits. Use it only where
+   * the next screen depends on the answer (signing out, password reset).
+   */
+  blocking?: boolean;
 }
 
 type Runner = <T>(fn: () => Promise<T>, opts?: RunOptions) => Promise<T>;
@@ -85,6 +92,7 @@ export function OperationFeedbackProvider({ children }: { children: ReactNode })
 
   const run = useCallback<Runner>(
     (fn, opts = {}) => {
+      if (!opts.blocking) return runInBackground(fn, opts);
       if (pendingRef.current) {
         return Promise.reject(new Error('Another operation is still in progress.'));
       }
@@ -175,6 +183,50 @@ export function OperationFeedbackProvider({ children }: { children: ReactNode })
       </DialogPrimitive.Root>
     </OperationContext.Provider>
   );
+}
+
+/**
+ * Non-blocking run: a loading toast while the request is in flight, then success or an
+ * error with "Try again" (same closure, so the same idempotency key). The returned promise
+ * settles with the server's answer, so callers can refresh data after it lands; on failure
+ * it rejects only once the user dismisses the error (or it times out) without retrying.
+ */
+function runInBackground<T>(fn: () => Promise<T>, opts: RunOptions): Promise<T> {
+  const id = toast.loading(opts.pending ?? 'Saving…');
+  return new Promise<T>((resolve, reject) => {
+    const attempt = async () => {
+      toast.loading(opts.pending ?? 'Saving…', { id, action: undefined, description: undefined });
+      try {
+        const result = await fn();
+        toast.success(opts.success ?? 'Saved successfully', { id, duration: 2500 });
+        resolve(result);
+      } catch (error) {
+        const canRetry =
+          error instanceof ApiError ? error.retryable || error.code === 'INTERNAL' : true;
+        let retried = false;
+        const giveUp = () => {
+          if (!retried) reject(error);
+        };
+        toast.error("This wasn't completed", {
+          id,
+          description: errorMessage(error),
+          duration: 15_000,
+          action: canRetry
+            ? {
+                label: 'Try again',
+                onClick: () => {
+                  retried = true;
+                  void attempt();
+                },
+              }
+            : undefined,
+          onDismiss: giveUp,
+          onAutoClose: giveUp,
+        });
+      }
+    };
+    void attempt();
+  });
 }
 
 function SuccessCheck() {

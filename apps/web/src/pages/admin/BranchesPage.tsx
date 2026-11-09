@@ -9,7 +9,7 @@ import { branchInputSchema, type BranchDto } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
 import { DataTable, FilterSelect } from '@/components/app/DataTable';
 import { ConfirmDialog, FormDialog } from '@/components/app/dialogs';
-import { applyServerErrors, Field, FormGrid } from '@/components/app/form';
+import { Field, FormGrid } from '@/components/app/form';
 import { useOperation } from '@/components/app/OperationFeedback';
 import { PageHeader } from '@/components/app/PageHeader';
 import { DetailList, RecordModal } from '@/components/app/RecordModal';
@@ -249,16 +249,15 @@ function BranchFormDialog({
   }, [open, branch, form]);
 
   const onSubmit = form.handleSubmit(async (values) => {
+    onOpenChange(false);
     try {
       await run(
         () => (branch ? api.put(`/branches/${branch.id}`, values) : api.post('/branches', values)),
         { pending: 'Saving branch…', success: branch ? 'Branch updated' : 'Branch created' },
       );
       onSaved();
-      form.reset(form.getValues());
-      onOpenChange(false);
-    } catch (error) {
-      applyServerErrors(error, form.setError);
+    } catch {
+      // The toast already explained the failure.
     }
   });
 

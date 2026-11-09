@@ -15,7 +15,7 @@ import {
 } from '@tsm/shared';
 import { ClientPicker } from '@/components/app/ClientPicker';
 import { FormDialog } from '@/components/app/dialogs';
-import { applyServerErrors, Field, FormError, FormGrid, useIdempotencyKey } from '@/components/app/form';
+import { Field, FormError, FormGrid, useIdempotencyKey } from '@/components/app/form';
 import { useOperation } from '@/components/app/OperationFeedback';
 import { REGISTRATION_STATUS_LABELS } from '@/components/app/StatusBadges';
 import { Button } from '@/components/ui/button';
@@ -77,6 +77,7 @@ export function RegisterClientDialog({
   }, [open]);
 
   const onSubmit = form.handleSubmit(async (values) => {
+    onOpenChange(false);
     try {
       await run(() => api.post<RegistrationDto>('/registrations', values, idem.keyFor(values)), {
         pending: 'Registering client…',
@@ -84,10 +85,8 @@ export function RegisterClientDialog({
       });
       idem.reset();
       invalidate();
-      form.reset(createDefaults());
-      onOpenChange(false);
-    } catch (error) {
-      applyServerErrors(error, form.setError);
+    } catch {
+      // The toast already explained the failure.
     }
   });
 
@@ -177,16 +176,15 @@ export function EditRegistrationDialog({
 
   const onSubmit = form.handleSubmit(async (values) => {
     if (!registration) return;
+    onOpenChange(false);
     try {
       await run(() => api.put(`/registrations/${registration.id}`, values), {
         pending: 'Saving registration…',
         success: 'Registration updated',
       });
       invalidate();
-      form.reset(form.getValues());
-      onOpenChange(false);
-    } catch (error) {
-      applyServerErrors(error, form.setError);
+    } catch {
+      // The toast already explained the failure.
     }
   });
 
@@ -260,6 +258,8 @@ export function RegistrationStatusDialog({
       setError('Select the new status.');
       return;
     }
+    onOpenChange(false);
+    form.reset({ status: '', reason: '' });
     try {
       await run(
         () =>
@@ -270,8 +270,6 @@ export function RegistrationStatusDialog({
         { pending: 'Updating status…', success: `Registration ${REGISTRATION_STATUS_LABELS[status].toLowerCase()}` },
       );
       invalidate();
-      form.reset({ status: '', reason: '' });
-      onOpenChange(false);
     } catch {
       /* explained in the feedback dialog */
     }

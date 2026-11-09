@@ -28,7 +28,7 @@ export function useSignOutConfirm() {
       }
       confirmLabel="Sign out"
       onConfirm={() =>
-        void run(() => signOut(), { pending: 'Signing you out…', success: 'Logged out' })
+        void run(() => signOut(), { pending: 'Signing you out…', success: 'Logged out', blocking: true })
       }
     />
   );

@@ -171,7 +171,7 @@ function PasswordCard({ email }: { email: string }) {
           const { error } = await supabase.auth.updateUser({ password });
           if (error) throw changeFailure(error.code);
         },
-        { pending: 'Changing your password…', success: 'Password changed' },
+        { pending: 'Changing your password…', success: 'Password changed', blocking: true },
       );
       form.reset();
     } catch (error) {

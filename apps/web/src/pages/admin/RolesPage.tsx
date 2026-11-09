@@ -14,7 +14,7 @@ import {
   type RoleInput,
 } from '@tsm/shared';
 import { ConfirmDialog, FormDialog } from '@/components/app/dialogs';
-import { applyServerErrors, Field, FormGrid } from '@/components/app/form';
+import { Field, FormGrid } from '@/components/app/form';
 import { SectionLoader } from '@/components/app/FullScreenLoader';
 import { useOperation } from '@/components/app/OperationFeedback';
 import { PageHeader } from '@/components/app/PageHeader';
@@ -168,6 +168,7 @@ function RoleFormDialog({
   }, [open, defaults, form]);
 
   const onSubmit = form.handleSubmit(async (values) => {
+    onOpenChange(false);
     try {
       await run(() => (role ? api.put(`/roles/${role.id}`, values) : api.post('/roles', values)), {
         pending: 'Saving role…',
@@ -175,10 +176,8 @@ function RoleFormDialog({
       });
       void queryClient.invalidateQueries({ queryKey: qk.roles });
       void queryClient.invalidateQueries({ queryKey: qk.me });
-      form.reset(form.getValues());
-      onOpenChange(false);
-    } catch (error) {
-      applyServerErrors(error, form.setError);
+    } catch {
+      // The toast already explained the failure.
     }
   });
 

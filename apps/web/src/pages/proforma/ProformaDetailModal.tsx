@@ -70,16 +70,15 @@ function EmailComposer({ proforma, onSent }: { proforma: ProformaDto; onSent: ()
     data.set('body', body);
     data.set('attachInvoice', String(attachInvoice));
     for (const f of files) data.append('files', f);
+    setFiles([]);
+    onSent();
     try {
       await run(() => api.upload<ProformaDto>(`/proformas/${proforma.id}/email`, data), {
         pending: 'Sending email…',
         success: 'Email sent',
       });
-      setFiles([]);
-      onSent();
-    } catch (error) {
-      const fields = (error as { fields?: Record<string, string> }).fields;
-      if (fields) setErrors(fields);
+    } catch {
+      // The toast already explained the failure.
     }
   };
 

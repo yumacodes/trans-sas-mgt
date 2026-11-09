@@ -89,7 +89,7 @@ export default function ResetPasswordPage() {
           const { error } = await supabase.auth.updateUser({ password });
           if (error) throw passwordError(error.code);
         },
-        { pending: 'Updating your password…', success: 'Password updated' },
+        { pending: 'Updating your password…', success: 'Password updated', blocking: true },
       );
       navigate('/', { replace: true });
     } catch (error) {

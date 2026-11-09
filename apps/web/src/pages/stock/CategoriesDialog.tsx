@@ -11,7 +11,7 @@ import {
   type StockCategoryInput,
 } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
-import { applyServerErrors, Field } from '@/components/app/form';
+import { Field } from '@/components/app/form';
 import { SectionLoader } from '@/components/app/FullScreenLoader';
 import { useOperation } from '@/components/app/OperationFeedback';
 import { ActiveBadge } from '@/components/app/StatusBadges';
@@ -140,6 +140,7 @@ function CategoryForm({ category, onDone }: { category?: StockCategoryDto; onDon
   const { errors } = form.formState;
 
   const onSubmit = form.handleSubmit(async (values) => {
+    onDone();
     try {
       await run(
         () =>
@@ -152,9 +153,8 @@ function CategoryForm({ category, onDone }: { category?: StockCategoryDto; onDon
         },
       );
       void queryClient.invalidateQueries({ queryKey: qk.stockCategories });
-      onDone();
-    } catch (error) {
-      applyServerErrors(error, form.setError);
+    } catch {
+      // The toast already explained the failure.
     }
   });
 

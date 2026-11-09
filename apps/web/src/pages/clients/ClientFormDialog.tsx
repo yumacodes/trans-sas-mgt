@@ -11,7 +11,7 @@ import {
   type ClientInput,
 } from '@tsm/shared';
 import { FormDialog } from '@/components/app/dialogs';
-import { applyServerErrors, Field, FormGrid, useIdempotencyKey } from '@/components/app/form';
+import { Field, FormGrid, useIdempotencyKey } from '@/components/app/form';
 import { useOperation } from '@/components/app/OperationFeedback';
 import { Button } from '@/components/ui/button';
 import { DialogBody, DialogClose, DialogFooter } from '@/components/ui/dialog';
@@ -69,6 +69,8 @@ export function ClientFormDialog({ open, onOpenChange, client, onSaved }: Props)
   }, [open, client, form]);
 
   const onSubmit = form.handleSubmit(async (values) => {
+    // Close straight away; the save carries on in the background with a toast.
+    onOpenChange(false);
     try {
       const saved = await run(
         () =>
@@ -81,13 +83,11 @@ export function ClientFormDialog({ open, onOpenChange, client, onSaved }: Props)
         },
       );
       idem.reset();
-      await queryClient.invalidateQueries({ queryKey: qk.clients });
+      void queryClient.invalidateQueries({ queryKey: qk.clients });
       void queryClient.invalidateQueries({ queryKey: qk.dashboard });
-      form.reset(toFormValues(saved));
-      onOpenChange(false);
       onSaved?.(saved);
-    } catch (error) {
-      applyServerErrors(error, form.setError);
+    } catch {
+      // The toast already explained the failure.
     }
   });
 

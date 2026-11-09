@@ -16,7 +16,6 @@ import {
 } from '@tsm/shared';
 import { FormDialog } from '@/components/app/dialogs';
 import {
-  applyServerErrors,
   Field,
   FormGrid,
   FormSection,
@@ -139,6 +138,8 @@ export function CreateUserDialog({ open, onOpenChange }: { open: boolean; onOpen
   }, [open, form]);
 
   const onSubmit = form.handleSubmit(async (values) => {
+    onOpenChange(false);
+    form.reset(createDefaults);
     try {
       await run(() => api.post<UserDto>('/users', values, idem.keyFor(values)), {
         pending: 'Creating user account…',
@@ -146,10 +147,8 @@ export function CreateUserDialog({ open, onOpenChange }: { open: boolean; onOpen
       });
       idem.reset();
       invalidate();
-      form.reset(createDefaults);
-      onOpenChange(false);
-    } catch (error) {
-      applyServerErrors(error, form.setError);
+    } catch {
+      // The toast already explained the failure.
     }
   });
 
@@ -240,16 +239,15 @@ export function EditUserDialog({ user, onOpenChange }: { user: UserDto | null; o
 
   const onSubmit = form.handleSubmit(async (values) => {
     if (!user) return;
+    onOpenChange(false);
     try {
       await run(() => api.put(`/users/${user.id}`, values), {
         pending: 'Saving user…',
         success: 'User updated',
       });
       invalidate();
-      form.reset(form.getValues());
-      onOpenChange(false);
-    } catch (error) {
-      applyServerErrors(error, form.setError);
+    } catch {
+      // The toast already explained the failure.
     }
   });
 
@@ -307,16 +305,15 @@ export function UserAccessDialog({ user, onOpenChange }: { user: UserDto | null;
 
   const onSubmit = form.handleSubmit(async (values) => {
     if (!user) return;
+    onOpenChange(false);
     try {
       await run(() => api.put(`/users/${user.id}/access`, values), {
         pending: 'Updating access…',
         success: 'Access updated',
       });
       invalidate();
-      form.reset(values);
-      onOpenChange(false);
-    } catch (error) {
-      applyServerErrors(error, form.setError);
+    } catch {
+      // The toast already explained the failure.
     }
   });
 
@@ -386,6 +383,8 @@ export function TemporaryPasswordDialog({
 
   const onSubmit = form.handleSubmit(async (values) => {
     if (!user) return;
+    onClose();
+    form.reset({ temporaryPassword: '' });
     try {
       await run(() => api.post(`/users/${user.id}/temporary-password`, values, idem.keyFor(values)), {
         pending: 'Setting temporary password…',
@@ -393,10 +392,8 @@ export function TemporaryPasswordDialog({
       });
       idem.reset();
       invalidate();
-      form.reset({ temporaryPassword: '' });
-      onClose();
-    } catch (error) {
-      applyServerErrors(error, form.setError);
+    } catch {
+      // The toast already explained the failure.
     }
   });
 

@@ -19,7 +19,7 @@ function Harness({ fn, onDone }: { fn: () => Promise<unknown>; onDone: (r: unkno
   return (
     <button
       onClick={() =>
-        run(fn, { pending: 'Saving client…', success: 'Client created', successDelayMs: 400 }).then(
+        run(fn, { pending: 'Saving client…', success: 'Client created', successDelayMs: 400, blocking: true }).then(
           (r) => onDone({ ok: r }),
           (e) => onDone({ error: e }),
         )
