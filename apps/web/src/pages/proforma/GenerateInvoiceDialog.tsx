@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FileDown, Search } from 'lucide-react';
+import { FileDown, Printer, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ProformaDto } from '@tsm/shared';
 import { ProformaStatusBadge } from '@/components/app/StatusBadges';
@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { downloadFile, errorMessage } from '@/lib/api';
+import { downloadFile, errorMessage, printFile } from '@/lib/api';
 import { formatDate, formatMoney } from '@/lib/format';
 import { useListQuery } from '@/lib/queries';
 import { qk } from '@/lib/queryKeys';
@@ -38,10 +38,21 @@ export function GenerateInvoiceDialog({ open, onOpenChange }: Props) {
   const rows = result.data?.data ?? [];
 
   const download = async (p: ProformaDto) => {
-    setBusyId(p.id);
+    setBusyId(`download:${p.id}`);
     try {
       await downloadFile(`/proformas/${p.id}/pdf`, `${p.number}.pdf`);
       toast.success(`Invoice ${p.number} downloaded`);
+    } catch (error) {
+      toast.error(errorMessage(error));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const print = async (p: ProformaDto) => {
+    setBusyId(`print:${p.id}`);
+    try {
+      await printFile(`/proformas/${p.id}/pdf`);
     } catch (error) {
       toast.error(errorMessage(error));
     } finally {
@@ -54,7 +65,7 @@ export function GenerateInvoiceDialog({ open, onOpenChange }: Props) {
       <DialogContent size="md">
         <DialogHeader>
           <DialogTitle>Generate Invoice</DialogTitle>
-          <DialogDescription>Choose a proforma to download as an A4 PDF.</DialogDescription>
+          <DialogDescription>Choose a proforma to print or download as an A4 PDF.</DialogDescription>
         </DialogHeader>
         <DialogBody className="space-y-3">
           <div className="relative">
@@ -91,9 +102,24 @@ export function GenerateInvoiceDialog({ open, onOpenChange }: Props) {
                       {p.customerName} · {formatDate(p.issueDate)} · {formatMoney(p.total, p.currency)}
                     </p>
                   </div>
-                  <Button size="sm" variant="secondary" loading={busyId === p.id} onClick={() => void download(p)}>
-                    <FileDown aria-hidden /> Download
-                  </Button>
+                  <div className="flex shrink-0 gap-2">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      loading={busyId === `print:${p.id}`}
+                      onClick={() => void print(p)}
+                    >
+                      <Printer aria-hidden /> Print
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      loading={busyId === `download:${p.id}`}
+                      onClick={() => void download(p)}
+                    >
+                      <FileDown aria-hidden /> Download
+                    </Button>
+                  </div>
                 </li>
               ))}
             </ul>

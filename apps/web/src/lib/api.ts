@@ -182,8 +182,7 @@ export const api = {
     request<T>('POST', path, { formData }).then((r) => r.data),
 };
 
-/** Fetches a file with the signed-in user's session and saves it through the browser. */
-export async function downloadFile(path: string, fallbackName: string): Promise<void> {
+async function fetchFile(path: string): Promise<Response> {
   const headers: Record<string, string> = {};
   const token = await accessToken();
   if (token) headers.Authorization = `Bearer ${token}`;
@@ -194,6 +193,41 @@ export async function downloadFile(path: string, fallbackName: string): Promise<
     throw new ApiError({ status: 0, code: 'NETWORK', message: NETWORK_ERROR_MESSAGE });
   }
   if (!res.ok) throw await parseErrorResponse(res);
+  return res;
+}
+
+/**
+ * Fetches a PDF with the signed-in user's session and opens the browser's print dialog for
+ * it, using a hidden frame so the app stays where it is. Browsers that refuse to print a
+ * framed PDF get it in a new tab instead, where it can be printed from the viewer.
+ */
+export async function printFile(path: string): Promise<void> {
+  const res = await fetchFile(path);
+  const url = URL.createObjectURL(new Blob([await res.blob()], { type: 'application/pdf' }));
+  document.querySelector('iframe[data-print-frame]')?.remove();
+  const frame = document.createElement('iframe');
+  frame.dataset.printFrame = '';
+  frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+  frame.src = url;
+  frame.onload = () => {
+    try {
+      frame.contentWindow?.focus();
+      frame.contentWindow?.print();
+    } catch {
+      window.open(url, '_blank', 'noopener');
+    }
+    // Keep the frame alive long enough for the print dialog to read it.
+    setTimeout(() => {
+      frame.remove();
+      URL.revokeObjectURL(url);
+    }, 60_000);
+  };
+  document.body.append(frame);
+}
+
+/** Fetches a file with the signed-in user's session and saves it through the browser. */
+export async function downloadFile(path: string, fallbackName: string): Promise<void> {
+  const res = await fetchFile(path);
   const name = /filename="([^"]+)"/.exec(res.headers.get('Content-Disposition') ?? '')?.[1] ?? fallbackName;
   const url = URL.createObjectURL(await res.blob());
   const link = document.createElement('a');
