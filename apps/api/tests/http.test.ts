@@ -17,6 +17,7 @@ const db = vi.hoisted(() => ({
   companyProfile: { findFirst: vi.fn() },
   stockItemImage: { findMany: vi.fn(), aggregate: vi.fn() },
   idempotencyRecord: { create: vi.fn(), findUnique: vi.fn(), update: vi.fn(), delete: vi.fn() },
+  expense: { findUnique: vi.fn(), findMany: vi.fn(), count: vi.fn(), create: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
   $transaction: vi.fn(),
 }));
 vi.mock('../src/lib/prisma', () => ({ prisma: db }));
@@ -373,6 +374,113 @@ describe('stock item images', () => {
       .delete('/api/v1/stock-items/00000000-0000-4000-8000-0000000000e1/images/00000000-0000-4000-8000-0000000000e2')
       .set('Authorization', `Bearer ${await token()}`);
     expect(res.status).toBe(403);
+  });
+});
+
+describe('expenses', () => {
+  const ID = '00000000-0000-4000-8000-0000000000f1';
+  const row = (over: Record<string, unknown> = {}) => ({
+    id: ID,
+    number: 'EX-2026-0001',
+    kind: 'general',
+    transactionDate: new Date('2026-11-09T00:00:00Z'),
+    currency: 'GHS',
+    amount: { toFixed: (dp: number) => (150).toFixed(dp) },
+    category: 'Fuel',
+    counterparty: 'Shell',
+    tenderReference: null,
+    paymentMethod: 'cash',
+    paymentReference: null,
+    description: null,
+    status: 'pending',
+    statusReason: null,
+    branchId: null,
+    branch: null,
+    createdById: '00000000-0000-4000-8000-0000000000aa',
+    createdBy: { fullName: 'Test User' },
+    approvedBy: null,
+    approvedAt: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...over,
+  });
+  const status = async (permissions: string[], body: Record<string, unknown>) => {
+    db.userProfile.findUnique.mockResolvedValue(profile(permissions));
+    return request(app)
+      .post(`/api/v1/expenses/${ID}/status`)
+      .set('Authorization', `Bearer ${await token()}`)
+      .send(body);
+  };
+
+  it('hides expenses from users without expenses.read', async () => {
+    db.userProfile.findUnique.mockResolvedValue(profile(['clients.read']));
+    const res = await request(app).get('/api/v1/expenses?kind=general').set('Authorization', `Bearer ${await token()}`);
+    expect(res.status).toBe(403);
+    expect(db.expense.findMany).not.toHaveBeenCalled();
+  });
+
+  it('rejects a zero amount before touching the database', async () => {
+    db.userProfile.findUnique.mockResolvedValue(profile(['expenses.read', 'expenses.manage']));
+    const res = await request(app)
+      .post('/api/v1/expenses')
+      .set('Authorization', `Bearer ${await token()}`)
+      .set('Idempotency-Key', '00000000-0000-4000-8000-0000000000f9')
+      .send({ kind: 'general', transactionDate: '2026-11-09', currency: 'GHS', amount: '0', category: 'Fuel', paymentMethod: 'cash' });
+    expect(res.status).toBe(422);
+    expect(res.body.error.fields.amount).toBeTruthy();
+    expect(db.expense.create).not.toHaveBeenCalled();
+  });
+
+  it('lets only approvers approve', async () => {
+    const res = await status(['expenses.read', 'expenses.manage'], { status: 'approved' });
+    expect(res.status).toBe(403);
+    expect(db.expense.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('approves a pending record and stamps the approver', async () => {
+    db.expense.findUnique.mockResolvedValueOnce(row()).mockResolvedValueOnce(row({ status: 'approved', approvedBy: { fullName: 'Test User' } }));
+    db.expense.updateMany.mockResolvedValue({ count: 1 });
+    const res = await status(['expenses.read', 'expenses.approve'], { status: 'approved' });
+    expect(res.status).toBe(200);
+    expect(res.body.data.status).toBe('approved');
+    expect(db.expense.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: ID, status: 'pending' },
+        data: expect.objectContaining({ status: 'approved', approvedById: '00000000-0000-4000-8000-0000000000aa' }),
+      }),
+    );
+  });
+
+  it('refuses to approve a rejected record', async () => {
+    db.expense.findUnique.mockResolvedValue(row({ status: 'rejected' }));
+    const res = await status(['expenses.read', 'expenses.approve'], { status: 'approved' });
+    expect(res.status).toBe(409);
+    expect(db.expense.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('requires a reason to void', async () => {
+    db.expense.findUnique.mockResolvedValue(row({ status: 'approved' }));
+    const res = await status(['expenses.read', 'expenses.approve'], { status: 'voided' });
+    expect(res.status).toBe(422);
+    expect(res.body.error.fields.reason).toBeTruthy();
+  });
+
+  it('reports a concurrent status change instead of overwriting it', async () => {
+    db.expense.findUnique.mockResolvedValue(row());
+    db.expense.updateMany.mockResolvedValue({ count: 0 });
+    const res = await status(['expenses.read', 'expenses.approve'], { status: 'approved' });
+    expect(res.status).toBe(409);
+  });
+
+  it('refuses to edit an approved record', async () => {
+    db.userProfile.findUnique.mockResolvedValue(profile(['expenses.read', 'expenses.manage']));
+    db.expense.findUnique.mockResolvedValue(row({ status: 'approved' }));
+    const res = await request(app)
+      .put(`/api/v1/expenses/${ID}`)
+      .set('Authorization', `Bearer ${await token()}`)
+      .send({ transactionDate: '2026-11-09', currency: 'GHS', amount: '200', category: 'Fuel', paymentMethod: 'cash' });
+    expect(res.status).toBe(409);
+    expect(db.expense.update).not.toHaveBeenCalled();
   });
 });
 

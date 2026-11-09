@@ -1,7 +1,9 @@
 import {
+  EXPENSE_STATUS_LABELS,
   MESSAGE_STATUS_LABELS,
   PROFORMA_STATUS_LABELS,
   type ClientStatus,
+  type ExpenseStatus,
   type MessageStatus,
   type ProformaStatus,
   type RegistrationStatus,
@@ -84,6 +86,21 @@ export function ProformaStatusBadge({ status }: { status: ProformaStatus }) {
   return (
     <Badge tone={PROFORMA_TONES[status]} dot>
       {PROFORMA_STATUS_LABELS[status]}
+    </Badge>
+  );
+}
+
+const EXPENSE_TONES: Record<ExpenseStatus, BadgeProps['tone']> = {
+  pending: 'warning',
+  approved: 'success',
+  rejected: 'danger',
+  voided: 'neutral',
+};
+
+export function ExpenseStatusBadge({ status }: { status: ExpenseStatus }) {
+  return (
+    <Badge tone={EXPENSE_TONES[status]} dot>
+      {EXPENSE_STATUS_LABELS[status]}
     </Badge>
   );
 }

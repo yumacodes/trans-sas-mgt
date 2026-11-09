@@ -40,19 +40,21 @@ model UserProfile {
   roles    UserRole[]
   branches UserBranchAssignment[]
 
-  auditEntries        AuditLog[]
-  ownedClients        Client[]             @relation("ClientAccountOwner")
-  createdClients      Client[]             @relation("ClientCreatedBy")
-  createdRegistrations ClientRegistration[]
-  createdStockItems   StockItem[]
-  stockMovements      StockMovement[]
-  uploadedFiles       FileRecord[]
-  idempotencyRecords  IdempotencyRecord[]
+  auditEntries          AuditLog[]
+  ownedClients          Client[]               @relation("ClientAccountOwner")
+  createdClients        Client[]               @relation("ClientCreatedBy")
+  createdRegistrations  ClientRegistration[]
+  createdStockItems     StockItem[]
+  stockMovements        StockMovement[]
+  uploadedFiles         FileRecord[]
+  idempotencyRecords    IdempotencyRecord[]
   passwordResetRequests PasswordResetRequest[] @relation("ResetRequestUser")
   resolvedResetRequests PasswordResetRequest[] @relation("ResetRequestResolver")
   managedBranches       Branch[]               @relation("BranchManager")
   sentMessages          Message[]
   proformas             Proforma[]
+  recordedExpenses      Expense[]              @relation("ExpenseRecordedBy")
+  approvedExpenses      Expense[]              @relation("ExpenseApprovedBy")
 
   @@index([isActive])
   @@map("user_profiles")
@@ -209,25 +211,26 @@ model DocumentSequence {
 }
 
 model Branch {
-  id           String   @id @default(uuid()) @db.Uuid
-  code         String   @unique
-  name         String
-  addressLine1 String?
-  city         String?
-  region       String?
-  phone        String?
-  email        String?
+  id            String   @id @default(uuid()) @db.Uuid
+  code          String   @unique
+  name          String
+  addressLine1  String?
+  city          String?
+  region        String?
+  phone         String?
+  email         String?
   /// Staff member who manages the branch; the "branch managers" message audience.
-  managerUserId String? @db.Uuid
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt    DateTime @updatedAt @db.Timestamptz(6)
+  managerUserId String?  @db.Uuid
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @db.Timestamptz(6)
 
   manager         UserProfile?           @relation("BranchManager", fields: [managerUserId], references: [id], onDelete: SetNull)
   userAssignments UserBranchAssignment[]
   clients         Client[]
   stockBalances   StockBalance[]
   stockMovements  StockMovement[]
+  expenses        Expense[]
 
   @@index([managerUserId])
   @@map("branches")
@@ -251,7 +254,7 @@ model FileRecord {
   createdAt    DateTime  @default(now()) @db.Timestamptz(6)
   deletedAt    DateTime? @db.Timestamptz(6)
 
-  uploadedBy     UserProfile      @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
+  uploadedBy     UserProfile     @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
   companyLogo    CompanyProfile?
   stockItemImage StockItemImage?
 
@@ -402,11 +405,11 @@ model StockItem {
   createdAt      DateTime     @default(now()) @db.Timestamptz(6)
   updatedAt      DateTime     @updatedAt @db.Timestamptz(6)
 
-  category  StockCategory?   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  createdBy UserProfile      @relation(fields: [createdById], references: [id], onDelete: Restrict)
-  balances  StockBalance[]
-  movements StockMovement[]
-  images    StockItemImage[]
+  category      StockCategory?   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  createdBy     UserProfile      @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  balances      StockBalance[]
+  movements     StockMovement[]
+  images        StockItemImage[]
   proformaItems ProformaItem[]
 
   @@index([categoryId])
@@ -617,8 +620,8 @@ model Proforma {
   createdAt       DateTime       @default(now()) @db.Timestamptz(6)
   updatedAt       DateTime       @updatedAt @db.Timestamptz(6)
 
-  client    Client?         @relation(fields: [clientId], references: [id], onDelete: Restrict)
-  createdBy UserProfile     @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  client    Client?        @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  createdBy UserProfile    @relation(fields: [createdById], references: [id], onDelete: Restrict)
   items     ProformaItem[]
 
   @@index([issueDate])
@@ -630,15 +633,15 @@ model Proforma {
 }
 
 model ProformaItem {
-  id          String   @id @default(uuid()) @db.Uuid
-  proformaId  String   @db.Uuid
+  id          String  @id @default(uuid()) @db.Uuid
+  proformaId  String  @db.Uuid
   position    Int
-  stockItemId String?  @db.Uuid
+  stockItemId String? @db.Uuid
   name        String
-  quantity    Decimal  @db.Decimal(18, 3)
+  quantity    Decimal @db.Decimal(18, 3)
   unit        String
-  unitPrice   Decimal  @db.Decimal(18, 2)
-  amount      Decimal  @db.Decimal(18, 2)
+  unitPrice   Decimal @db.Decimal(18, 2)
+  amount      Decimal @db.Decimal(18, 2)
 
   proforma  Proforma   @relation(fields: [proformaId], references: [id], onDelete: Cascade)
   stockItem StockItem? @relation(fields: [stockItemId], references: [id], onDelete: Restrict)
@@ -646,4 +649,62 @@ model ProformaItem {
   @@index([proformaId, position])
   @@index([stockItemId])
   @@map("proforma_items")
+}
+
+enum ExpenseKind {
+  general
+  tender_in
+  tender_out
+}
+
+enum ExpenseStatus {
+  pending
+  approved
+  rejected
+  voided
+}
+
+enum PaymentMethod {
+  cash
+  bank_transfer
+  cheque
+  mobile_money
+  card
+  other
+}
+
+/// General expenses and tender-related incoming/outgoing transactions. One table, kept
+/// apart by `kind`; amounts are never summed across kinds or currencies.
+model Expense {
+  id               String        @id @default(uuid()) @db.Uuid
+  number           String        @unique
+  kind             ExpenseKind
+  transactionDate  DateTime      @db.Date
+  currency         String        @db.Char(3)
+  amount           Decimal       @db.Decimal(18, 2)
+  category         String
+  counterparty     String?
+  tenderReference  String?
+  paymentMethod    PaymentMethod
+  paymentReference String?
+  description      String?
+  status           ExpenseStatus @default(pending)
+  statusReason     String?
+  branchId         String?       @db.Uuid
+  createdById      String        @db.Uuid
+  approvedById     String?       @db.Uuid
+  approvedAt       DateTime?     @db.Timestamptz(6)
+  createdAt        DateTime      @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime      @updatedAt @db.Timestamptz(6)
+
+  branch     Branch?      @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  createdBy  UserProfile  @relation("ExpenseRecordedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  approvedBy UserProfile? @relation("ExpenseApprovedBy", fields: [approvedById], references: [id], onDelete: Restrict)
+
+  @@index([kind, transactionDate])
+  @@index([kind, status])
+  @@index([branchId])
+  @@index([number(ops: raw("gin_trgm_ops"))], map: "expenses_number_trgm", type: Gin)
+  @@index([counterparty(ops: raw("gin_trgm_ops"))], map: "expenses_counterparty_trgm", type: Gin)
+  @@map("expenses")
 }

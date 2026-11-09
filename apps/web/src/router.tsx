@@ -13,6 +13,11 @@ const ResetPasswordPage = lazy(() => import('@/pages/auth/ResetPasswordPage'));
 const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
 const ClientsPage = lazy(() => import('@/pages/clients/ClientsPage'));
 const ProformaPage = lazy(() => import('@/pages/proforma/ProformaPage'));
+const GeneralExpensesPage = lazy(() =>
+  import('@/pages/expenses/ExpensesPage').then((m) => ({ default: m.GeneralExpensesPage })),
+);
+const TenderInPage = lazy(() => import('@/pages/expenses/ExpensesPage').then((m) => ({ default: m.TenderInPage })));
+const TenderOutPage = lazy(() => import('@/pages/expenses/ExpensesPage').then((m) => ({ default: m.TenderOutPage })));
 const StockItemsPage = lazy(() => import('@/pages/stock/StockItemsPage'));
 const CommunicationPage = lazy(() => import('@/pages/communication/CommunicationPage'));
 const StockBalancesPage = lazy(() => import('@/pages/stock/StockBalancesPage'));
@@ -59,6 +64,16 @@ export const routes: RouteObject[] = [
         children: [{ index: true, element: <ProformaPage />, handle: h('Proforma', 'Overview') }],
       },
       { path: 'registered-clients', element: <Navigate to="/clients" replace /> },
+      {
+        path: 'expenses',
+        element: <RequirePermission anyOf={['expenses.read']} />,
+        children: [
+          { index: true, element: <Navigate to="/expenses/general" replace /> },
+          { path: 'general', element: <GeneralExpensesPage />, handle: h('General Expenses', 'Expenses') },
+          { path: 'tender-in', element: <TenderInPage />, handle: h('Tender-In', 'Expenses') },
+          { path: 'tender-out', element: <TenderOutPage />, handle: h('Tender-Out', 'Expenses') },
+        ],
+      },
       {
         path: 'communication',
         element: <RequirePermission anyOf={['messages.read', 'messages.send']} />,

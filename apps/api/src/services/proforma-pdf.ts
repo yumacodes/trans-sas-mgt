@@ -193,6 +193,8 @@ export function renderProformaPdf(proforma: ProformaDto, company: PdfCompany): P
   const range = doc.bufferedPageRange();
   for (let i = range.start; i < range.start + range.count; i++) {
     doc.switchToPage(i);
+    // The footer sits inside the bottom margin; without this PDFKit starts a new page for it.
+    doc.page.margins.bottom = 0;
     doc.moveTo(left, pageH - 48).lineTo(right, pageH - 48).strokeColor(RULE).lineWidth(0.75).stroke();
     doc.fillColor(MUTED).font('Helvetica').fontSize(7.5);
     doc.text(company.footer ?? company.name, left, pageH - 40, { width: width - 70, lineBreak: false });

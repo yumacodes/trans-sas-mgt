@@ -29,6 +29,7 @@ import { actorFrom, recordAudit } from '../services/audit';
 import { optionalBranchWhere } from '../services/branch-scope';
 import { nextDocumentNumber, peekDocumentNumber } from '../services/document-numbers';
 import { EMAIL_NOT_CONFIGURED, emailConfigured, sendEmail } from '../services/email';
+import { pdfCompany } from '../services/pdf-company';
 import { renderProformaPdf } from '../services/proforma-pdf';
 import { findAccessibleClient } from './clients';
 
@@ -182,22 +183,7 @@ proformasRouter.get('/:id', async (req, res) => {
 });
 
 async function pdfFor(proforma: ProformaDto) {
-  const company = await prisma.companyProfile.findFirst();
-  const address = [company?.addressLine1, company?.addressLine2, [company?.city, company?.region].filter(Boolean).join(', '), company?.country]
-    .filter((l): l is string => Boolean(l));
-  const phones = (company?.phone ?? '')
-    .split(/[,;\n]+/)
-    .map((n) => n.trim())
-    .filter(Boolean)
-    .map((n, i) => `${i === 0 ? 'Tel:' : '        '} ${n}`);
-  const contact = [...phones, company?.email && `Email: ${company.email}`, company?.website]
-    .filter((l): l is string => Boolean(l));
-  const name = company?.legalName || company?.name || 'Proforma';
-  return renderProformaPdf(proforma, {
-    name,
-    lines: [...address, ...contact, company?.taxId ? `Tax ID: ${company.taxId}` : ''].filter(Boolean),
-    footer: [name, ...address.slice(0, 2)].join('  |  '),
-  });
+  return renderProformaPdf(proforma, await pdfCompany('Proforma'));
 }
 
 proformasRouter.get('/:id/pdf', async (req, res) => {

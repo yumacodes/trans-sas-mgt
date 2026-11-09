@@ -12,3 +12,4 @@ export * from './schemas/stock';
 export * from './schemas/dashboard';
 export * from './schemas/message';
 export * from './schemas/proforma';
+export * from './schemas/expense';
