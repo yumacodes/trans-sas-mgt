@@ -18,7 +18,6 @@ import { PageHeader } from '@/components/app/PageHeader';
 import { EntityTile, StatStrip, useTotal } from '@/components/app/StatStrip';
 import { ClientStatusBadge } from '@/components/app/StatusBadges';
 import { useTableState } from '@/components/app/useTableState';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import { useBranchOptions, useListQuery } from '@/lib/queries';
@@ -36,7 +35,6 @@ export default function ClientsPage() {
   const total = useTotal(qk.clients, '/clients');
   const active = useTotal(qk.clients, '/clients', { status: 'active' });
   const archived = useTotal(qk.clients, '/clients', { status: 'archived' });
-  const registered = useTotal(qk.registrations, '/registrations', { status: 'active' });
 
   const [viewId, setViewId] = useState<string | null>(null);
   const [form, setForm] = useState<{ open: boolean; client: ClientDto | null }>({
@@ -105,16 +103,6 @@ export default function ClientsPage() {
       cell: ({ row }) => row.original.branch?.code ?? <span className="text-ink-subtle">All</span>,
     },
     {
-      id: 'registration',
-      header: 'Registration',
-      cell: ({ row }) =>
-        row.original.activeRegistration ? (
-          <Badge tone="accent">Registered</Badge>
-        ) : (
-          <span className="text-ink-subtle">—</span>
-        ),
-    },
-    {
       id: 'status',
       header: 'Status',
       cell: ({ row }) => <ClientStatusBadge status={row.original.status} />,
@@ -138,7 +126,6 @@ export default function ClientsPage() {
         stats={[
           { label: 'All clients', value: total.data, caption: 'Active and archived' },
           { label: 'Active', value: active.data, caption: 'Open for new documents', onSelect: () => state.setFilter('status', 'active'), active: state.filters.status === 'active' },
-          { label: 'Registered', value: registered.data, caption: 'Hold an active registration' },
           { label: 'Archived', value: archived.data, caption: 'History kept, hidden from new work', onSelect: () => state.setFilter('status', 'archived'), active: state.filters.status === 'archived' },
         ]}
       />

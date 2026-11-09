@@ -37,6 +37,8 @@ export interface PageConfig {
   note?: string;
   detailTitle: (row: Row) => string;
   exportName: string;
+  /** Hide the Export buttons on this page. */
+  noExport?: boolean;
 }
 
 /* ---------------------------------------------------------------- helpers */
@@ -414,6 +416,7 @@ export const SAMPLE_CONFIGS: Record<string, PageConfig> = {
     note: 'A price schedule does not mean a tender has been awarded. Only the Awarded status does.',
     detailTitle: (r) => String(r.title),
     exportName: 'tender-schedules-sample',
+    noExport: true,
   },
   sales: {
     description: 'Sales issued to clients, with payments and balances.',
@@ -471,6 +474,7 @@ export const SAMPLE_CONFIGS: Record<string, PageConfig> = {
     note: 'A letter is only shown as Signed once the signed copy has actually been received.',
     detailTitle: (r) => String(r.ref),
     exportName: 'acceptance-letters-sample',
+    noExport: true,
   },
   payment: {
     description: 'Customer payments recorded against sales and invoices.',

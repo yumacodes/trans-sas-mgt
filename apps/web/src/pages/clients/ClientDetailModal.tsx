@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import { Link, useNavigate } from 'react-router';
 import {
   Building2,
   CalendarDays,
@@ -23,10 +22,8 @@ import { EntityHistory } from '@/components/app/EntityHistory';
 import { InfoRows, ProfileModal, type ProfileTab } from '@/components/app/ProfileModal';
 import { ClientStatusBadge } from '@/components/app/StatusBadges';
 import { EmptyState } from '@/components/app/States';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { api, errorMessage } from '@/lib/api';
-import { formatDate, formatDateTime } from '@/lib/format';
+import { formatDateTime } from '@/lib/format';
 import { qk } from '@/lib/queryKeys';
 
 interface Props {
@@ -39,7 +36,6 @@ interface Props {
 
 export function ClientDetailModal({ clientId, onOpenChange, onEdit, menu }: Props) {
   const { can } = useAuth();
-  const navigate = useNavigate();
   const query = useQuery({
     queryKey: [...qk.clients, 'detail', clientId],
     queryFn: ({ signal }) => api.get<ClientDto>(`/clients/${clientId}`, undefined, signal),
@@ -89,37 +85,13 @@ export function ClientDetailModal({ clientId, onOpenChange, onEdit, menu }: Prop
         },
         {
           value: 'related',
-          label: 'Registration',
+          label: 'Related',
           content: (
-            <div className="space-y-5">
-              <section>
-                {c.activeRegistration ? (
-                  <div className="rounded-2xl border border-border p-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-mono text-sm">{c.activeRegistration.registrationNumber}</span>
-                      <Badge tone="success" dot>
-                        Active
-                      </Badge>
-                    </div>
-                    <p className="mt-1 text-xs text-ink-muted">
-                      Valid until {c.activeRegistration.validUntil ? formatDate(c.activeRegistration.validUntil) : 'no end date'}
-                    </p>
-                  </div>
-                ) : (
-                  <p className="text-sm text-ink-muted">This client has no active registration.</p>
-                )}
-                {can('registrations.read') && (
-                  <Button asChild variant="link" size="sm" className="mt-2">
-                    <Link to={`/registered-clients?clientId=${c.id}`}>View registration history</Link>
-                  </Button>
-                )}
-              </section>
-              <EmptyState
-                className="rounded-2xl border border-dashed border-border py-8"
-                title="No linked documents yet"
-                description="Proformas, sales, waybills, acceptance letters and payments for this client will be listed here once those modules are available."
-              />
-            </div>
+            <EmptyState
+              className="rounded-2xl border border-dashed border-border py-8"
+              title="No linked documents yet"
+              description="Proformas, sales, waybills, acceptance letters and payments for this client will be listed here once those modules are available."
+            />
           ),
         },
         ...(can('audit.read')
@@ -163,15 +135,6 @@ export function ClientDetailModal({ clientId, onOpenChange, onEdit, menu }: Prop
       menu={[
         ...(c && menu ? menu(c) : []),
         { label: 'Copy client code', icon: <Copy />, onSelect: () => void copyCode(), separatorBefore: true },
-        ...(c && can('registrations.read')
-          ? [
-              {
-                label: 'View registrations',
-                icon: <UserCheck />,
-                onSelect: () => navigate(`/registered-clients?clientId=${c.id}`),
-              },
-            ]
-          : []),
       ]}
       loading={query.isLoading}
       error={query.isError ? errorMessage(query.error) : null}

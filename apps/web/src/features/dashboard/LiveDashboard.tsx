@@ -45,13 +45,6 @@ const METRICS: MetricDef[] = [
     to: '/clients?status=active',
   },
   {
-    key: 'registeredClients',
-    label: 'Registered clients',
-    definition: 'Clients holding an active registration',
-    icon: <UserCheck className="size-4" aria-hidden />,
-    to: '/registered-clients?status=active',
-  },
-  {
     key: 'activeStockItems',
     label: 'Stock items',
     definition: 'Catalogue items marked active',

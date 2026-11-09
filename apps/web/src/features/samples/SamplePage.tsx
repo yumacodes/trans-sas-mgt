@@ -139,9 +139,11 @@ export default function SamplePage({ config }: { config: PageConfig }) {
           <p className="mt-1.5 max-w-2xl text-sm text-ink-muted">{config.description}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="secondary" size="sm" onClick={exportVisible} disabled={filtered.length === 0}>
-            <Download aria-hidden /> Export
-          </Button>
+          {!config.noExport && (
+            <Button variant="secondary" size="sm" onClick={exportVisible} disabled={filtered.length === 0}>
+              <Download aria-hidden /> Export
+            </Button>
+          )}
           {config.newLabel && (
             <Button variant="dark" size="sm" disabled title="This workflow is not built yet">
               <Plus aria-hidden /> {config.newLabel}
@@ -293,13 +295,13 @@ export default function SamplePage({ config }: { config: PageConfig }) {
 
       {selectedRows.length > 0 && (
         <BulkBar count={selectedRows.length} onDiscard={() => setSelected(new Set())}>
-          <button
+          {!config.noExport && <button
             type="button"
             onClick={exportSelected}
             className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium text-white/90 transition-colors hover:bg-white/10 hover:text-white [&_svg]:size-4"
           >
             <Download aria-hidden /> Export
-          </button>
+          </button>}
         </BulkBar>
       )}
 

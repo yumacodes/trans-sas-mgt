@@ -13,7 +13,6 @@ const ResetPasswordPage = lazy(() => import('@/pages/auth/ResetPasswordPage'));
 const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
 const ClientsPage = lazy(() => import('@/pages/clients/ClientsPage'));
 const ProformaPage = lazy(() => import('@/pages/proforma/ProformaPage'));
-const RegistrationsPage = lazy(() => import('@/pages/registrations/RegistrationsPage'));
 const StockItemsPage = lazy(() => import('@/pages/stock/StockItemsPage'));
 const CommunicationPage = lazy(() => import('@/pages/communication/CommunicationPage'));
 const StockBalancesPage = lazy(() => import('@/pages/stock/StockBalancesPage'));
@@ -59,13 +58,7 @@ export const routes: RouteObject[] = [
         element: <RequirePermission anyOf={['proformas.read']} />,
         children: [{ index: true, element: <ProformaPage />, handle: h('Proforma', 'Overview') }],
       },
-      {
-        path: 'registered-clients',
-        element: <RequirePermission anyOf={['registrations.read']} />,
-        children: [
-          { index: true, element: <RegistrationsPage />, handle: h('Registered Clients', 'Records') },
-        ],
-      },
+      { path: 'registered-clients', element: <Navigate to="/clients" replace /> },
       {
         path: 'communication',
         element: <RequirePermission anyOf={['messages.read', 'messages.send']} />,

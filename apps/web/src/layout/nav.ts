@@ -17,7 +17,6 @@ import {
   ShoppingBag,
   ShoppingCart,
   Truck,
-  UserCheck,
   Users,
   Wallet,
 } from 'lucide-react';
@@ -86,13 +85,6 @@ const ITEMS: NavItem[] = [
     anyOf: ['messages.read', 'messages.send'],
   },
   { id: 'payment', to: samplePath('payment'), group: 'Finance', label: 'Payment', icon: Banknote, anyOf: ['payments.read'] },
-  {
-    id: 'registered-clients', group: 'Records',
-    label: 'Registered Clients',
-    icon: UserCheck,
-    to: '/registered-clients',
-    anyOf: ['registrations.read'],
-  },
   { id: 'expenses-general', to: samplePath('expenses-general'), group: 'Expenses', label: 'General', icon: Wallet, anyOf: ['expenses.read'] },
   { id: 'tender-in', to: samplePath('tender-in'), group: 'Expenses', label: 'Tender-In', icon: ArrowDownToLine, anyOf: ['expenses.read'] },
   { id: 'tender-out', to: samplePath('tender-out'), group: 'Expenses', label: 'Tender-Out', icon: ArrowUpFromLine, anyOf: ['expenses.read'] },
