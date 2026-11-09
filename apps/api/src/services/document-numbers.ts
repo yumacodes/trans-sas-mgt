@@ -1,5 +1,5 @@
 import type { DocumentNumbering, DocumentType } from '@tsm/shared';
-import type { Tx } from '../lib/prisma';
+import type { Db, Tx } from '../lib/prisma';
 import { getCompanySettings } from './company-settings';
 
 export function formatDocumentNumber(
@@ -37,4 +37,18 @@ export async function nextDocumentNumber(
   const value = Number(rows[0]?.value);
   if (!Number.isInteger(value) || value < 1) throw new Error('document sequence returned no value');
   return formatDocumentNumber(numbering, docType, year, value);
+}
+
+/**
+ * The number the next document of this type would receive, without reserving it. For
+ * showing "next number" on a form; the real number is allocated when the document is saved
+ * and may differ if someone else saves first.
+ */
+export async function peekDocumentNumber(db: Db, docType: DocumentType, date = new Date()): Promise<string> {
+  const { numbering } = await getCompanySettings(db);
+  const year = numbering.includeYear ? date.getUTCFullYear() : 0;
+  const rows = await db.$queryRaw<{ nextValue: number }[]>`
+    SELECT "nextValue" FROM document_sequences
+    WHERE "docType" = ${docType} AND "scopeKey" = 'global' AND year = ${year}`;
+  return formatDocumentNumber(numbering, docType, year, Number(rows[0]?.nextValue ?? 1));
 }

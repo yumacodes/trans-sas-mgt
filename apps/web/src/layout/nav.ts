@@ -55,7 +55,7 @@ export interface NavItem {
 /** Sidebar structure (CLAUDE.md §8). Server-side authorization is enforced independently. */
 const ITEMS: NavItem[] = [
   { id: 'dashboard', group: 'Overview', label: 'Dashboard', icon: LayoutDashboard, to: '/', anyOf: ['dashboard.view'] },
-  { id: 'proforma', to: samplePath('proforma'), group: 'Overview', label: 'Proforma', icon: FileText, anyOf: ['proformas.read'] },
+  { id: 'proforma', to: '/proforma', group: 'Overview', label: 'Proforma', icon: FileText, anyOf: ['proformas.read'] },
   {
     id: 'tender-schedule', to: samplePath('tender-schedule'), group: 'Overview',
     label: 'Tender Price Schedule',

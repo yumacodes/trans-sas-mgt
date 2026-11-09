@@ -52,6 +52,7 @@ model UserProfile {
   resolvedResetRequests PasswordResetRequest[] @relation("ResetRequestResolver")
   managedBranches       Branch[]               @relation("BranchManager")
   sentMessages          Message[]
+  proformas             Proforma[]
 
   @@index([isActive])
   @@map("user_profiles")
@@ -303,6 +304,7 @@ model Client {
   accountOwner  UserProfile?         @relation("ClientAccountOwner", fields: [accountOwnerId], references: [id], onDelete: Restrict)
   createdBy     UserProfile          @relation("ClientCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   registrations ClientRegistration[]
+  proformas     Proforma[]
 
   @@index([status])
   @@index([organizationType])
@@ -405,6 +407,7 @@ model StockItem {
   balances  StockBalance[]
   movements StockMovement[]
   images    StockItemImage[]
+  proformaItems ProformaItem[]
 
   @@index([categoryId])
   @@index([isActive])
@@ -574,4 +577,73 @@ model MessageRecipient {
   @@index([messageId, status])
   @@index([kind, recipientId])
   @@map("message_recipients")
+}
+
+// ───────────────────────────── Proformas ─────────────────────────────
+
+enum ProformaStatus {
+  draft
+  issued
+  accepted
+  rejected
+  expired
+}
+
+/// Quotation sent to a customer. Not a sale: it moves no stock and recognises no revenue.
+/// Customer details are copied onto the document so it stays as issued even if the client
+/// record is edited later; `clientId` links it back to the directory when one was chosen.
+/// Totals are stored (calculated server-side with decimal arithmetic) so reports and the
+/// PDF always agree with what was issued.
+model Proforma {
+  id              String         @id @default(uuid()) @db.Uuid
+  number          String         @unique
+  issueDate       DateTime       @db.Date
+  currency        String         @db.Char(3)
+  clientId        String?        @db.Uuid
+  customerName    String
+  customerAddress String?
+  customerEmail   String?
+  customerPhone   String?
+  vatRate         Decimal        @db.Decimal(5, 2)
+  taxRate         Decimal        @db.Decimal(5, 2)
+  subtotal        Decimal        @db.Decimal(18, 2)
+  vatAmount       Decimal        @db.Decimal(18, 2)
+  taxAmount       Decimal        @db.Decimal(18, 2)
+  total           Decimal        @db.Decimal(18, 2)
+  notes           String?
+  status          ProformaStatus @default(draft)
+  emailedAt       DateTime?      @db.Timestamptz(6)
+  createdById     String         @db.Uuid
+  createdAt       DateTime       @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime       @updatedAt @db.Timestamptz(6)
+
+  client    Client?         @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  createdBy UserProfile     @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  items     ProformaItem[]
+
+  @@index([issueDate])
+  @@index([status])
+  @@index([clientId])
+  @@index([customerName(ops: raw("gin_trgm_ops"))], map: "proformas_customer_trgm", type: Gin)
+  @@index([number(ops: raw("gin_trgm_ops"))], map: "proformas_number_trgm", type: Gin)
+  @@map("proformas")
+}
+
+model ProformaItem {
+  id          String   @id @default(uuid()) @db.Uuid
+  proformaId  String   @db.Uuid
+  position    Int
+  stockItemId String?  @db.Uuid
+  name        String
+  quantity    Decimal  @db.Decimal(18, 3)
+  unit        String
+  unitPrice   Decimal  @db.Decimal(18, 2)
+  amount      Decimal  @db.Decimal(18, 2)
+
+  proforma  Proforma   @relation(fields: [proformaId], references: [id], onDelete: Cascade)
+  stockItem StockItem? @relation(fields: [stockItemId], references: [id], onDelete: Restrict)
+
+  @@index([proformaId, position])
+  @@index([stockItemId])
+  @@map("proforma_items")
 }

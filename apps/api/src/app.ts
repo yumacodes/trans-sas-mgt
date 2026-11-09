@@ -13,6 +13,7 @@ import { auditLogsRouter } from './modules/audit-logs';
 import { authRouter } from './modules/auth';
 import { branchesRouter } from './modules/branches';
 import { clientsRouter } from './modules/clients';
+import { proformasRouter } from './modules/proformas';
 import { companyRouter } from './modules/company';
 import { dashboardRouter } from './modules/dashboard';
 import { meRouter } from './modules/me';
@@ -83,6 +84,7 @@ export function createApp() {
   api.use('/roles', rolesRouter);
   api.use('/users', usersRouter);
   api.use('/clients', clientsRouter);
+  api.use('/proformas', proformasRouter);
   api.use('/messages', messagesRouter);
   api.use('/registrations', registrationsRouter);
   api.use('/stock-categories', stockCategoriesRouter);

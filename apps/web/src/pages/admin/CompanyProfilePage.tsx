@@ -136,8 +136,8 @@ export default function CompanyProfilePage() {
                 <Field label="Email" error={errors.email?.message}>
                   <Input type="email" {...form.register('email')} />
                 </Field>
-                <Field label="Telephone" error={errors.phone?.message}>
-                  <Input type="tel" {...form.register('phone')} />
+                <Field label="Telephone" error={errors.phone?.message} hint="Separate several numbers with commas; all are printed on documents.">
+                  <Input type="tel" placeholder="233-302-663350, 233-244-320404" {...form.register("phone")} />
                 </Field>
                 <Field label="Website" error={errors.website?.message}>
                   <Input {...form.register('website')} />

@@ -82,7 +82,15 @@ export const companyProfileSchema = z.object({
   name: requiredText('Company name'),
   legalName: optionalText(200),
   email: optionalEmail,
-  phone: optionalPhone,
+  /** One or more numbers, separated by commas or new lines. */
+  phone: z
+    .string()
+    .trim()
+    .max(400)
+    .refine((v) => v === '' || /^[+()\d\s.,;/-]{5,400}$/.test(v), 'Enter valid telephone numbers, separated by commas.')
+    .transform((v) => (v === '' ? null : v))
+    .nullable()
+    .optional(),
   website: optionalText(200),
   addressLine1: optionalText(200),
   addressLine2: optionalText(200),

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { ChevronLeft, ChevronRight, Download, FlaskConical, Plus, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, Plus, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge, type BadgeProps } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -102,12 +102,10 @@ export default function SamplePage({ config }: { config: PageConfig }) {
     return downloadReportExcel(
       filename,
       [
-        ['Sample data - not real business records'],
-        [],
         config.cols.map((c) => c.label),
         ...rows.map((r) => config.cols.map((c) => plain(c, r))),
       ],
-      { sheet: 'Sample', boldRows: (_row, index) => index === 0 || index === 2 },
+      { sheet: 'Export', boldRows: (_row, index) => index === 0 },
     ).then(
       () => true,
       () => {
@@ -120,7 +118,7 @@ export default function SamplePage({ config }: { config: PageConfig }) {
   function exportSelected() {
     void exportRows(selectedRows, `${config.exportName}-selected.xlsx`).then((ok) => {
       if (!ok) return;
-      toast.success(`Exported ${selectedRows.length} sample row${selectedRows.length === 1 ? '' : 's'}`);
+      toast.success(`Exported ${selectedRows.length} row${selectedRows.length === 1 ? '' : 's'}`);
       setSelected(new Set());
     });
   }
@@ -128,9 +126,7 @@ export default function SamplePage({ config }: { config: PageConfig }) {
   function exportVisible() {
     void exportRows(filtered, `${config.exportName}.xlsx`).then((ok) => {
       if (!ok) return;
-      toast.success('Sample rows downloaded', {
-        description: 'The file contains the rows currently shown, which are sample data.',
-      });
+      toast.success('Download ready');
     });
   }
 
@@ -141,9 +137,6 @@ export default function SamplePage({ config }: { config: PageConfig }) {
           <p className="eyebrow">{handle?.section ?? 'Workspace'}</p>
           <h1 className="mt-1.5 text-3xl font-semibold tracking-tight text-ink">{handle?.title}</h1>
           <p className="mt-1.5 max-w-2xl text-sm text-ink-muted">{config.description}</p>
-          <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-warning-soft px-3 py-1 text-xs font-semibold text-warning">
-            <FlaskConical className="size-3.5" aria-hidden /> Sample data. This module is not built yet.
-          </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="secondary" size="sm" onClick={exportVisible} disabled={filtered.length === 0}>
@@ -215,7 +208,7 @@ export default function SamplePage({ config }: { config: PageConfig }) {
 
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] border-collapse text-sm">
-            <caption className="sr-only">{handle?.title} (sample data)</caption>
+            <caption className="sr-only">{handle?.title}</caption>
             <thead>
               <tr className="border-b border-border/70">
                 <th scope="col" className="w-12 py-3 pl-4 pr-0">
@@ -327,7 +320,7 @@ function Detail({ config, row }: { config: PageConfig; row: Row }) {
     <>
       <DialogHeader>
         <DialogTitle>{config.detailTitle(row)}</DialogTitle>
-        <DialogDescription>Sample record. It is not stored anywhere.</DialogDescription>
+        <DialogDescription>Record details</DialogDescription>
       </DialogHeader>
       <DialogBody className="space-y-5 pb-6">
         <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
@@ -379,7 +372,7 @@ function ChartCard({ chart, rows }: { chart: NonNullable<PageConfig['chart']>; r
   return (
     <Card className="mt-5 p-6">
       <h2 className="text-lg font-semibold tracking-tight text-ink">{chart.title}</h2>
-      <p className="mt-0.5 text-sm text-ink-muted">Sample figures</p>
+      <p className="mt-0.5 text-sm text-ink-muted">Figures</p>
       <div className="mt-4 h-64" role="img" aria-label={chart.title}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={rows} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>

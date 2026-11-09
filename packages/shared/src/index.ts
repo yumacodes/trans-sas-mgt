@@ -11,3 +11,4 @@ export * from './schemas/client';
 export * from './schemas/stock';
 export * from './schemas/dashboard';
 export * from './schemas/message';
+export * from './schemas/proforma';

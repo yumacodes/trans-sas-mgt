@@ -182,6 +182,29 @@ export const api = {
     request<T>('POST', path, { formData }).then((r) => r.data),
 };
 
+/** Fetches a file with the signed-in user's session and saves it through the browser. */
+export async function downloadFile(path: string, fallbackName: string): Promise<void> {
+  const headers: Record<string, string> = {};
+  const token = await accessToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, { headers });
+  } catch {
+    throw new ApiError({ status: 0, code: 'NETWORK', message: NETWORK_ERROR_MESSAGE });
+  }
+  if (!res.ok) throw await parseErrorResponse(res);
+  const name = /filename="([^"]+)"/.exec(res.headers.get('Content-Disposition') ?? '')?.[1] ?? fallbackName;
+  const url = URL.createObjectURL(await res.blob());
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = name;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
 export function newIdempotencyKey() {
   return crypto.randomUUID();
 }

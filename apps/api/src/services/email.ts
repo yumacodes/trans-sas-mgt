@@ -24,6 +24,7 @@ export interface EmailMessage {
   subject: string;
   /** Plain text body. A matching HTML part is generated from it. */
   text: string;
+  attachments?: { filename: string; content: Buffer; contentType?: string }[];
 }
 
 /** Which required variables are still missing, for the setup notice. */
@@ -108,6 +109,7 @@ export async function sendEmail(message: EmailMessage): Promise<void> {
       subject: message.subject,
       text: message.text,
       html: htmlFromText(message.text),
+      ...(message.attachments?.length ? { attachments: message.attachments } : {}),
     });
   } catch (err) {
     logger.warn({ err, domain: message.to.split('@')[1] }, 'email delivery failed');

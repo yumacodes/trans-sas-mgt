@@ -48,22 +48,22 @@ export interface KpiDef {
 
 const KPI_BY_RANGE: Record<RangeKey, KpiDef[]> = {
   month: [
-    { id: 'sales', label: 'Sales value · MTD', value: 1_520_000, unit: 'money', change: 6.8, upIsGood: true, caption: '49 recorded sales', trend: [210, 260, 240, 310, 290, 355, 410, 430], tone: 'var(--color-chart-navy)' },
-    { id: 'payments', label: 'Payments received', value: 1_040_000, unit: 'money', change: 3.1, upIsGood: true, caption: 'Payments recorded this month', trend: [120, 150, 200, 180, 240, 260, 300, 310], tone: 'var(--color-info)' },
-    { id: 'outstanding', label: 'Outstanding balances', value: 684_000, unit: 'money', change: 2.4, upIsGood: false, caption: '18 invoices with balances', trend: [640, 650, 648, 662, 670, 668, 678, 684], tone: '#5b4bd1' },
-    { id: 'stock', label: 'Stock availability', value: 0, unit: 'percent', change: null, upIsGood: true, caption: '', trend: [93.1, 93.4, 93.4, 93.8, 94.0, 93.9, 94.1, 94.2], tone: 'var(--color-chart-teal)', to: '/stock' },
+    { id: 'sales', label: 'Sales value · MTD', value: 0, unit: 'money', change: null, upIsGood: true, caption: 'No data yet', trend: [], tone: 'var(--color-chart-navy)' },
+    { id: 'payments', label: 'Payments received', value: 0, unit: 'money', change: null, upIsGood: true, caption: 'No data yet', trend: [], tone: 'var(--color-info)' },
+    { id: 'outstanding', label: 'Outstanding balances', value: 0, unit: 'money', change: null, upIsGood: false, caption: 'No data yet', trend: [], tone: '#5b4bd1' },
+    { id: 'stock', label: 'Stock availability', value: 0, unit: 'percent', change: null, upIsGood: true, caption: '', trend: [], tone: 'var(--color-chart-teal)', to: '/stock' },
   ],
   quarter: [
-    { id: 'sales', label: 'Sales value · QTD', value: 4_280_000, unit: 'money', change: 12.4, upIsGood: true, caption: '142 recorded sales', trend: [520, 610, 580, 720, 690, 810, 905, 980], tone: 'var(--color-chart-navy)' },
-    { id: 'payments', label: 'Payments received', value: 2_860_000, unit: 'money', change: 8.2, upIsGood: true, caption: 'Payments recorded this quarter', trend: [300, 340, 410, 390, 480, 520, 560, 610], tone: 'var(--color-info)' },
-    { id: 'outstanding', label: 'Outstanding balances', value: 684_000, unit: 'money', change: 5.1, upIsGood: false, caption: '18 invoices with balances', trend: [602, 618, 640, 631, 655, 662, 670, 684], tone: '#5b4bd1' },
-    { id: 'stock', label: 'Stock availability', value: 0, unit: 'percent', change: null, upIsGood: true, caption: '', trend: [91.5, 92.0, 92.6, 93.0, 93.4, 93.8, 94.0, 94.2], tone: 'var(--color-chart-teal)', to: '/stock' },
+    { id: 'sales', label: 'Sales value · QTD', value: 0, unit: 'money', change: null, upIsGood: true, caption: 'No data yet', trend: [], tone: 'var(--color-chart-navy)' },
+    { id: 'payments', label: 'Payments received', value: 0, unit: 'money', change: null, upIsGood: true, caption: 'No data yet', trend: [], tone: 'var(--color-info)' },
+    { id: 'outstanding', label: 'Outstanding balances', value: 0, unit: 'money', change: null, upIsGood: false, caption: 'No data yet', trend: [], tone: '#5b4bd1' },
+    { id: 'stock', label: 'Stock availability', value: 0, unit: 'percent', change: null, upIsGood: true, caption: '', trend: [], tone: 'var(--color-chart-teal)', to: '/stock' },
   ],
   year: [
-    { id: 'sales', label: 'Sales value · YTD', value: 16_940_000, unit: 'money', change: 15.9, upIsGood: true, caption: '561 recorded sales', trend: [900, 1100, 1250, 1180, 1420, 1510, 1630, 1780], tone: 'var(--color-chart-navy)' },
-    { id: 'payments', label: 'Payments received', value: 11_630_000, unit: 'money', change: 11.7, upIsGood: true, caption: 'Payments recorded this year', trend: [610, 760, 880, 820, 990, 1040, 1120, 1210], tone: 'var(--color-info)' },
-    { id: 'outstanding', label: 'Outstanding balances', value: 684_000, unit: 'money', change: -3.2, upIsGood: false, caption: '18 invoices with balances', trend: [760, 742, 735, 720, 712, 700, 691, 684], tone: '#5b4bd1' },
-    { id: 'stock', label: 'Stock availability', value: 0, unit: 'percent', change: null, upIsGood: true, caption: '', trend: [88.2, 89.5, 90.4, 91.8, 92.6, 93.4, 93.9, 94.2], tone: 'var(--color-chart-teal)', to: '/stock' },
+    { id: 'sales', label: 'Sales value · YTD', value: 0, unit: 'money', change: null, upIsGood: true, caption: 'No data yet', trend: [], tone: 'var(--color-chart-navy)' },
+    { id: 'payments', label: 'Payments received', value: 0, unit: 'money', change: null, upIsGood: true, caption: 'No data yet', trend: [], tone: 'var(--color-info)' },
+    { id: 'outstanding', label: 'Outstanding balances', value: 0, unit: 'money', change: null, upIsGood: false, caption: 'No data yet', trend: [], tone: '#5b4bd1' },
+    { id: 'stock', label: 'Stock availability', value: 0, unit: 'percent', change: null, upIsGood: true, caption: '', trend: [], tone: 'var(--color-chart-teal)', to: '/stock' },
   ],
 };
 
@@ -77,13 +77,7 @@ export interface InventoryCategory {
 }
 
 /** Tracked catalogue items per category and how many sit at or below their reorder level. */
-export const INVENTORY: InventoryCategory[] = [
-  { id: 'diagnostic', label: 'Diagnostic Equipment', tracked: 34, belowReorder: 2 },
-  { id: 'monitoring', label: 'Patient Monitoring', tracked: 29, belowReorder: 1 },
-  { id: 'surgical', label: 'Surgical Equipment', tracked: 31, belowReorder: 2 },
-  { id: 'laboratory', label: 'Laboratory Equipment', tracked: 26, belowReorder: 1 },
-  { id: 'consumables', label: 'Consumables', tracked: 18, belowReorder: 2 },
-];
+export const INVENTORY: InventoryCategory[] = [];
 
 /** A category needs attention once a tenth or more of its items are at or below reorder. */
 export const ATTENTION_RATIO = 0.1;
@@ -122,23 +116,20 @@ export interface MonthPoint {
 }
 
 /** The last 12 months, oldest first. Values are GH₵ thousands. */
-export const MONTHLY: MonthPoint[] = [
-  { label: 'Nov', full: 'November 2025', actual: 760, forecast: 700 },
-  { label: 'Dec', full: 'December 2025', actual: 800, forecast: 730 },
-  { label: 'Jan', full: 'January 2026', actual: 750, forecast: 720 },
-  { label: 'Feb', full: 'February 2026', actual: 800, forecast: 740 },
-  { label: 'Mar', full: 'March 2026', actual: 830, forecast: 760 },
-  { label: 'Apr', full: 'April 2026', actual: 815, forecast: 770 },
-  { label: 'May', full: 'May 2026', actual: 843, forecast: 790 },
-  { label: 'Jun', full: 'June 2026', actual: 851, forecast: 800 },
-  { label: 'Jul', full: 'July 2026', actual: 864, forecast: 820 },
-  { label: 'Aug', full: 'August 2026', actual: 846, forecast: 830 },
-  { label: 'Sep', full: 'September 2026', actual: 859, forecast: 840 },
-  { label: 'Oct', full: 'October 2026', actual: 822, forecast: 810 },
-];
+export const MONTHLY: MonthPoint[] = Array.from({ length: 12 }, (_, i) => {
+  const d = new Date();
+  d.setDate(1);
+  d.setMonth(d.getMonth() - (11 - i));
+  return {
+    label: d.toLocaleString('en-GB', { month: 'short' }),
+    full: d.toLocaleString('en-GB', { month: 'long', year: 'numeric' }),
+    actual: null,
+    forecast: null,
+  };
+});
 
 /** Revenue for the twelve months before `MONTHLY`, used only for the year-on-year badge. */
-export const PRIOR_YEAR_TOTAL = 8_297;
+export const PRIOR_YEAR_TOTAL = 0;
 
 export interface ChartWindow {
   points: MonthPoint[];
@@ -201,7 +192,7 @@ export function summariseRevenue(range: RangeKey, data: MonthPoint[] = MONTHLY):
     forecastTotal,
     attainmentPct: forecastTotal > 0 ? (actualTotal / forecastTotal) * 100 : null,
     best,
-    yoyPct: range === 'month' ? null : ((actualTotal - PRIOR_YEAR_TOTAL) / PRIOR_YEAR_TOTAL) * 100,
+    yoyPct: range === 'month' || PRIOR_YEAR_TOTAL === 0 ? null : ((actualTotal - PRIOR_YEAR_TOTAL) / PRIOR_YEAR_TOTAL) * 100,
     vsForecastPct: forecastTotal > 0 ? ((actualTotal - forecastTotal) / forecastTotal) * 100 : null,
   };
 }
@@ -216,12 +207,7 @@ export interface Segment {
   change: number;
 }
 
-export const SEGMENTS: Segment[] = [
-  { id: 'hospital', label: 'Hospital Equipment', revenue: 4_100, change: 22 },
-  { id: 'diagnostic', label: 'Diagnostic Equipment', revenue: 3_200, change: 14 },
-  { id: 'consumables', label: 'Consumables', revenue: 1_400, change: -6 },
-  { id: 'service', label: 'Service & Maintenance', revenue: 1_100, change: 31 },
-];
+export const SEGMENTS: Segment[] = [];
 
 /* ------------------------------------------------------------------- schedule */
 
@@ -238,12 +224,7 @@ export interface ScheduleEvent {
   featured?: boolean;
 }
 
-export const SCHEDULE: ScheduleEvent[] = [
-  { id: 'ev1', start: '09:30', end: '10:00', title: 'Pipeline stand-up', kind: 'Internal', who: 'Sales team', initials: 'ST', note: 'Review open proformas and upcoming tender deadlines.' },
-  { id: 'ev2', start: '11:15', end: '12:00', title: 'Medical equipment quotation review', kind: 'Client Call', who: 'Demo client representative', initials: 'DC', note: 'Walk through the proposed price schedule and delivery terms.', featured: true },
-  { id: 'ev3', start: '14:00', end: '14:45', title: 'Procurement and stock review', kind: 'Operations', who: 'Inventory team', initials: 'IT', note: 'Confirm purchase orders for items below reorder level.' },
-  { id: 'ev4', start: '16:30', end: '17:00', title: 'Outstanding payment follow-up', kind: 'Finance', who: 'Accounts team', initials: 'AT', note: 'Contact clients with invoices past their due date.' },
-];
+export const SCHEDULE: ScheduleEvent[] = [];
 
 /** Working day used for the availability figure. */
 export const WORKDAY = { start: '08:30', end: '17:30' };
@@ -279,13 +260,7 @@ export interface ActivityItem {
   toLabel?: string;
 }
 
-export const ACTIVITIES: ActivityItem[] = [
-  { id: 'a1', icon: 'proforma', tone: 'lavender', text: 'A proforma was prepared for a hospital client', category: 'Proforma', minutesAgo: 18, reference: 'PRF-2026-0142', related: 'Sample Teaching Hospital', by: 'Demo Sales User' },
-  { id: 'a2', icon: 'payment', tone: 'green', text: 'A payment was recorded against an outstanding invoice', category: 'Payment', minutesAgo: 52, reference: 'PAY-2026-0318', related: 'INV-2026-0207', by: 'Demo Accountant' },
-  { id: 'a3', icon: 'stock', tone: 'blue', text: 'Stock was received for diagnostic equipment', category: 'Stock', minutesAgo: 190, reference: 'GRN-2026-0061', related: 'Diagnostic Equipment · 12 units', by: 'Demo Inventory User', to: '/stock', toLabel: 'Open stock' },
-  { id: 'a4', icon: 'waybill', tone: 'yellow', text: 'A waybill was generated for a completed sale', category: 'Delivery', minutesAgo: 26 * 60, reference: 'WB-2026-0095', related: 'SAL-2026-0133', by: 'Demo Support User' },
-  { id: 'a5', icon: 'import', tone: 'lavender', text: 'An authorised user imported stock items from an Excel spreadsheet', category: 'Import', minutesAgo: 2 * 24 * 60 + 40, reference: 'IMP-2026-0012', related: '48 rows · 46 accepted', by: 'Demo Admin', to: '/stock-items', toLabel: 'Open stock items' },
-];
+export const ACTIVITIES: ActivityItem[] = [];
 
 /* ------------------------------------------------------------- notifications */
 
@@ -297,8 +272,4 @@ export interface DemoNotification {
   read: boolean;
 }
 
-export const NOTIFICATIONS: DemoNotification[] = [
-  { id: 'n1', title: 'Low stock', body: '8 items are at or below their reorder level.', minutesAgo: 35, read: false },
-  { id: 'n2', title: 'Payment recorded', body: 'A payment was applied to INV-2026-0207.', minutesAgo: 52, read: false },
-  { id: 'n3', title: 'Import finished', body: 'Stock import IMP-2026-0012 completed with 2 rejected rows.', minutesAgo: 2 * 24 * 60, read: true },
-];
+export const NOTIFICATIONS: DemoNotification[] = [];

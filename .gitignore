@@ -13,3 +13,4 @@ coverage
 
 # Vercel CLI project link
 .vercel
+*.tsbuildinfo

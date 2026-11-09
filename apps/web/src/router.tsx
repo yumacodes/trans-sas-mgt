@@ -12,6 +12,7 @@ const ForgotPasswordPage = lazy(() => import('@/pages/auth/ForgotPasswordPage'))
 const ResetPasswordPage = lazy(() => import('@/pages/auth/ResetPasswordPage'));
 const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
 const ClientsPage = lazy(() => import('@/pages/clients/ClientsPage'));
+const ProformaPage = lazy(() => import('@/pages/proforma/ProformaPage'));
 const RegistrationsPage = lazy(() => import('@/pages/registrations/RegistrationsPage'));
 const StockItemsPage = lazy(() => import('@/pages/stock/StockItemsPage'));
 const CommunicationPage = lazy(() => import('@/pages/communication/CommunicationPage'));
@@ -52,6 +53,11 @@ export const routes: RouteObject[] = [
         path: 'clients',
         element: <RequirePermission anyOf={['clients.read']} />,
         children: [{ index: true, element: <ClientsPage />, handle: h('Clients', 'Records') }],
+      },
+      {
+        path: 'proforma',
+        element: <RequirePermission anyOf={['proformas.read']} />,
+        children: [{ index: true, element: <ProformaPage />, handle: h('Proforma', 'Overview') }],
       },
       {
         path: 'registered-clients',

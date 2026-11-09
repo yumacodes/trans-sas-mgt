@@ -69,7 +69,7 @@ export function RevenuePanel({ range }: { range: RangeKey }) {
       : summary.vsForecastPct !== null
         ? `${formatSignedPercent(summary.vsForecastPct)} vs forecast`
         : null;
-  const maxSegment = Math.max(...SEGMENTS.map((s) => s.revenue));
+  const maxSegment = Math.max(1, ...SEGMENTS.map((s) => s.revenue));
 
   return (
     <Card className="flex min-w-0 flex-col p-6">

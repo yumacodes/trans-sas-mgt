@@ -1,7 +1,9 @@
 import {
   MESSAGE_STATUS_LABELS,
+  PROFORMA_STATUS_LABELS,
   type ClientStatus,
   type MessageStatus,
+  type ProformaStatus,
   type RegistrationStatus,
 } from '@tsm/shared';
 import { Badge, type BadgeProps } from '@/components/ui/badge';
@@ -66,6 +68,22 @@ export function MessageStatusBadge({ status }: { status: MessageStatus }) {
   return (
     <Badge tone={MESSAGE_TONES[status]} dot>
       {MESSAGE_STATUS_LABELS[status]}
+    </Badge>
+  );
+}
+
+const PROFORMA_TONES: Record<ProformaStatus, BadgeProps['tone']> = {
+  draft: 'neutral',
+  issued: 'info',
+  accepted: 'success',
+  rejected: 'danger',
+  expired: 'warning',
+};
+
+export function ProformaStatusBadge({ status }: { status: ProformaStatus }) {
+  return (
+    <Badge tone={PROFORMA_TONES[status]} dot>
+      {PROFORMA_STATUS_LABELS[status]}
     </Badge>
   );
 }
