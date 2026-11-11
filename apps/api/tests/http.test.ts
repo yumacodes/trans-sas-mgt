@@ -18,7 +18,8 @@ const db = vi.hoisted(() => ({
   stockItemImage: { findMany: vi.fn(), aggregate: vi.fn() },
   idempotencyRecord: { create: vi.fn(), findUnique: vi.fn(), update: vi.fn(), delete: vi.fn() },
   expense: { findUnique: vi.fn(), findMany: vi.fn(), count: vi.fn(), create: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
-  tender: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
+  tender: { findUnique: vi.fn(), findMany: vi.fn(), count: vi.fn(), create: vi.fn(), update: vi.fn() },
+  proforma: { findUnique: vi.fn(), findMany: vi.fn(), count: vi.fn() },
   tenderItem: { deleteMany: vi.fn() },
   acceptanceLetter: { findUnique: vi.fn(), update: vi.fn() },
   $transaction: vi.fn(),
@@ -627,5 +628,52 @@ describe('sign-in with username or email', () => {
     expect(db.auditLog.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ action: 'user.password_reset_requested' }) }),
     );
+  });
+});
+
+describe('branch data isolation', () => {
+  const OWN = '00000000-0000-4000-8000-0000000000b1';
+  const OTHER = '00000000-0000-4000-8000-0000000000b2';
+  const ID = '00000000-0000-4000-8000-0000000000f1';
+  const scoped = (keys: string[]) => profile(keys, { branches: [{ branchId: OWN }] });
+
+  it("limits a staff member's list to their branch", async () => {
+    db.userProfile.findUnique.mockResolvedValue(scoped(['proformas.read']));
+    db.proforma.findMany.mockResolvedValue([]);
+    db.proforma.count.mockResolvedValue(0);
+    const res = await request(app).get('/api/v1/proformas').set('Authorization', `Bearer ${await token()}`);
+    expect(res.status).toBe(200);
+    expect(db.proforma.findMany.mock.calls[0]![0].where.AND[0]).toEqual({
+      OR: [{ branchId: null }, { branchId: { in: [OWN] } }],
+    });
+  });
+
+  it('does not limit a user with access to all branches', async () => {
+    db.userProfile.findUnique.mockResolvedValue(profile(['proformas.read', 'branches.all_access']));
+    db.proforma.findMany.mockResolvedValue([]);
+    db.proforma.count.mockResolvedValue(0);
+    await request(app).get('/api/v1/proformas').set('Authorization', `Bearer ${await token()}`);
+    expect(db.proforma.findMany.mock.calls[0]![0].where.AND[0]).toEqual({});
+  });
+
+  it("refuses to filter by a branch the user can't see", async () => {
+    db.userProfile.findUnique.mockResolvedValue(scoped(['tenders.read']));
+    const res = await request(app)
+      .get('/api/v1/tenders')
+      .query({ branchId: OTHER })
+      .set('Authorization', `Bearer ${await token()}`);
+    expect(res.status).toBe(403);
+    expect(db.tender.findMany).not.toHaveBeenCalled();
+  });
+
+  it("reports another branch's document as missing, on every route", async () => {
+    db.userProfile.findUnique.mockResolvedValue(scoped(['tenders.read', 'tenders.manage']));
+    db.tender.findUnique.mockResolvedValue({ branchId: OTHER });
+    const auth = `Bearer ${await token()}`;
+    const read = await request(app).get(`/api/v1/tenders/${ID}`).set('Authorization', auth);
+    const pdf = await request(app).get(`/api/v1/tenders/${ID}/pdf`).set('Authorization', auth);
+    const status = await request(app).patch(`/api/v1/tenders/${ID}/status`).set('Authorization', auth).send({ status: 'cancelled' });
+    expect([read.status, pdf.status, status.status]).toEqual([404, 404, 404]);
+    expect(db.tender.update).not.toHaveBeenCalled();
   });
 });

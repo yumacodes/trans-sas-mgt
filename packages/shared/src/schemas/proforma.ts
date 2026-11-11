@@ -50,6 +50,8 @@ export const proformaItemInputSchema = z.object({
 export type ProformaItemInput = z.input<typeof proformaItemInputSchema>;
 
 export const proformaInputSchema = z.object({
+  /** Branch the document belongs to. Omit to use the user's own branch. */
+  branchId: uuid.nullable().optional(),
   issueDate: isoDate,
   currency: z.enum(PROFORMA_CURRENCIES),
   /** Set when the customer was picked from the client directory. */
@@ -69,6 +71,7 @@ export type ProformaInput = z.input<typeof proformaInputSchema>;
 export const proformaStatusSchema = z.object({ status: z.enum(PROFORMA_STATUSES) });
 
 export const proformaListQuerySchema = listQuerySchema.extend({
+  branchId: uuid.optional(),
   status: z.enum(PROFORMA_STATUSES).optional(),
   dateFrom: isoDate.optional(),
   dateTo: isoDate.optional(),
@@ -134,6 +137,7 @@ export interface ProformaItemDto {
 
 export interface ProformaDto {
   id: string;
+  branch: { id: string; code: string; name: string } | null;
   number: string;
   issueDate: string;
   currency: ProformaCurrency;

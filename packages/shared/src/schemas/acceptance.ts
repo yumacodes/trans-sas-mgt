@@ -15,6 +15,8 @@ export const ACCEPTANCE_STATUS_LABELS: Record<AcceptanceStatus, string> = {
 };
 
 export const acceptanceInputSchema = z.object({
+  /** Branch the document belongs to. Omit to use the user's own branch. */
+  branchId: uuid.nullable().optional(),
   letterDate: isoDate,
   /** The client's reference ("Your Ref"). */
   yourReference: optionalText(100),
@@ -37,6 +39,7 @@ export type AcceptanceInput = z.input<typeof acceptanceInputSchema>;
 export const acceptanceStatusSchema = z.object({ status: z.enum(ACCEPTANCE_STATUSES) });
 
 export const acceptanceListQuerySchema = listQuerySchema.extend({
+  branchId: uuid.optional(),
   status: z.enum(ACCEPTANCE_STATUSES).optional(),
   dateFrom: isoDate.optional(),
   dateTo: isoDate.optional(),
@@ -65,6 +68,7 @@ export function acceptanceBody(fields: { awardLetterDate?: string | null; supply
 
 export interface AcceptanceDto {
   id: string;
+  branch: { id: string; code: string; name: string } | null;
   number: string;
   letterDate: string;
   yourReference: string | null;

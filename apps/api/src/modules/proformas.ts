@@ -23,6 +23,7 @@ import { created, ok } from '../lib/respond';
 import { dateFromIso, decimalString, isoDateOnly, iso } from '../lib/serialize';
 import { parse } from '../lib/validate';
 import { actorFrom, recordAudit } from '../services/audit';
+import { assertBranchAccess, branchGuard, optionalBranchWhere, resolveDocumentBranch } from '../services/branch-scope';
 import { nextDocumentNumber, peekDocumentNumber } from '../services/document-numbers';
 import { EMAIL_NOT_CONFIGURED, emailConfigured, sendEmail } from '../services/email';
 import { pdfCompany } from '../services/pdf-company';
@@ -38,6 +39,7 @@ export const proformasRouter = Router();
 const include = {
   items: { orderBy: { position: 'asc' as const } },
   createdBy: { select: { fullName: true } },
+  branch: { select: { id: true, code: true, name: true } },
 } satisfies Prisma.ProformaInclude;
 
 type ProformaRow = Prisma.ProformaGetPayload<{ include: typeof include }>;
@@ -45,6 +47,7 @@ type ProformaRow = Prisma.ProformaGetPayload<{ include: typeof include }>;
 function toDto(p: ProformaRow): ProformaDto {
   return {
     id: p.id,
+    branch: p.branch,
     number: p.number,
     issueDate: isoDateOnly(p.issueDate),
     currency: p.currency as ProformaDto['currency'],
@@ -86,6 +89,10 @@ async function loadProforma(id: string): Promise<ProformaRow> {
 }
 
 proformasRouter.use(requirePermission('proformas.read'));
+proformasRouter.param(
+  'id',
+  branchGuard('The proforma', (id) => prisma.proforma.findUnique({ where: { id }, select: { branchId: true } })),
+);
 
 /** Number the next proforma will get, for the New Proforma form. */
 proformasRouter.get('/next-number', requirePermission('proformas.manage'), async (_req, res) => {
@@ -103,8 +110,11 @@ proformasRouter.get('/items', requirePermission('proformas.manage'), async (req,
 });
 
 proformasRouter.get('/', async (req, res) => {
+  const ctx = getAuth(req);
   const query = parse(proformaListQuerySchema, req.query);
-  const and: Prisma.ProformaWhereInput[] = [];
+  if (query.branchId) assertBranchAccess(ctx, query.branchId);
+  const and: Prisma.ProformaWhereInput[] = [optionalBranchWhere(ctx)];
+  if (query.branchId) and.push({ branchId: query.branchId });
   if (query.status) and.push({ status: query.status });
   if (query.dateFrom) and.push({ issueDate: { gte: dateFromIso(query.dateFrom) } });
   if (query.dateTo) and.push({ issueDate: { lte: dateFromIso(query.dateTo) } });
@@ -173,10 +183,12 @@ proformasRouter.post('/', requirePermission('proformas.manage'), idempotent, asy
       'proforma',
     );
 
+    const branchId = await resolveDocumentBranch(tx, ctx, input.branchId);
     const number = await nextDocumentNumber(tx, 'proforma', { date: dateFromIso(input.issueDate) });
     const proforma = await tx.proforma.create({
       data: {
         number,
+        branchId,
         issueDate: dateFromIso(input.issueDate),
         currency: input.currency,
         clientId,
@@ -246,10 +258,12 @@ proformasRouter.put('/:id', requirePermission('proformas.manage'), async (req, r
       },
       'proforma',
     );
+    const branchId = input.branchId ? await resolveDocumentBranch(tx, ctx, input.branchId) : before.branchId;
     // Guard against a concurrent status change between the read above and this write.
     const claimed = await tx.proforma.updateMany({
       where: { id, status: before.status },
       data: {
+        branchId,
         issueDate: dateFromIso(input.issueDate),
         currency: input.currency,
         clientId,

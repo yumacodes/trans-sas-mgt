@@ -20,6 +20,7 @@ import { created, ok } from '../lib/respond';
 import { dateFromIso, decimalString, iso, isoDateOnly, optionalIsoDateOnly } from '../lib/serialize';
 import { parse } from '../lib/validate';
 import { actorFrom, recordAudit } from '../services/audit';
+import { assertBranchAccess, branchGuard, optionalBranchWhere, resolveDocumentBranch } from '../services/branch-scope';
 import { nextDocumentNumber, peekDocumentNumber } from '../services/document-numbers';
 import { pdfCompany } from '../services/pdf-company';
 import { assertStockItemsExist, customerOptions, resolveClient, stockItemOptions } from '../services/pickers';
@@ -35,6 +36,7 @@ export const tendersRouter = Router();
 const include = {
   items: { orderBy: { position: 'asc' as const } },
   createdBy: { select: { fullName: true } },
+  branch: { select: { id: true, code: true, name: true } },
 } satisfies Prisma.TenderInclude;
 
 type TenderRow = Prisma.TenderGetPayload<{ include: typeof include }>;
@@ -42,6 +44,7 @@ type TenderRow = Prisma.TenderGetPayload<{ include: typeof include }>;
 function toDto(t: TenderRow): TenderDto {
   return {
     id: t.id,
+    branch: t.branch,
     number: t.number,
     scheduleDate: isoDateOnly(t.scheduleDate),
     tenderReference: t.tenderReference,
@@ -124,6 +127,10 @@ function fields(input: z.output<typeof tenderInputSchema>) {
 }
 
 tendersRouter.use(requirePermission('tenders.read'));
+tendersRouter.param(
+  'id',
+  branchGuard('The price schedule', (id) => prisma.tender.findUnique({ where: { id }, select: { branchId: true } })),
+);
 
 tendersRouter.get('/next-number', requirePermission('tenders.manage'), async (_req, res) => {
   ok(res, { number: await peekDocumentNumber(prisma, 'tender') });
@@ -138,8 +145,11 @@ tendersRouter.get('/items', requirePermission('tenders.manage'), async (req, res
 });
 
 tendersRouter.get('/', async (req, res) => {
+  const ctx = getAuth(req);
   const query = parse(tenderListQuerySchema, req.query);
-  const and: Prisma.TenderWhereInput[] = [];
+  if (query.branchId) assertBranchAccess(ctx, query.branchId);
+  const and: Prisma.TenderWhereInput[] = [optionalBranchWhere(ctx)];
+  if (query.branchId) and.push({ branchId: query.branchId });
   if (query.status) and.push({ status: query.status });
   if (query.dateFrom) and.push({ scheduleDate: { gte: dateFromIso(query.dateFrom) } });
   if (query.dateTo) and.push({ scheduleDate: { lte: dateFromIso(query.dateTo) } });
@@ -202,6 +212,7 @@ tendersRouter.post('/', requirePermission('tenders.manage'), idempotent, async (
       data: {
         ...data,
         number: await nextDocumentNumber(tx, 'tender', { date: dateFromIso(input.scheduleDate) }),
+        branchId: await resolveDocumentBranch(tx, ctx, input.branchId),
         clientId,
         createdById: ctx.profileId,
         items: { create: items },
@@ -240,7 +251,12 @@ tendersRouter.put('/:id', requirePermission('tenders.manage'), async (req, res) 
     await tx.tenderItem.deleteMany({ where: { tenderId: id } });
     const updated = await tx.tender.update({
       where: { id },
-      data: { ...data, clientId, items: { create: items } },
+      data: {
+        ...data,
+        clientId,
+        branchId: input.branchId ? await resolveDocumentBranch(tx, ctx, input.branchId) : before.branchId,
+        items: { create: items },
+      },
       include,
     });
     await recordAudit(tx, actorFrom(req), {

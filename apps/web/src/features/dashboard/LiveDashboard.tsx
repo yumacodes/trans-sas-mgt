@@ -1,12 +1,15 @@
 import type { ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import {
   AlertTriangle,
   ArrowUpRight,
   Building2,
   ClipboardList,
   FileClock,
+  FileText,
+  Gavel,
+  Wallet,
   Package,
   ShieldCheck,
   UserCheck,
@@ -15,11 +18,13 @@ import {
 } from 'lucide-react';
 import type { AuditEntryDto, DashboardSummaryDto } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
+import { FilterSelect } from '@/components/app/DataTable';
 import { EmptyState, ErrorState } from '@/components/app/States';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { api, errorMessage } from '@/lib/api';
 import { formatCount, formatLongDate, formatRelative, greetingFor } from '@/lib/format';
+import { useBranchOptions } from '@/lib/queries';
 import { qk } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
 
@@ -66,6 +71,28 @@ const METRICS: MetricDef[] = [
     icon: <Building2 className="size-4" aria-hidden />,
     to: '/admin/branches?isActive=true',
   },
+  {
+    key: 'openProformas',
+    label: 'Open proformas',
+    definition: 'Draft or issued, awaiting an answer',
+    icon: <FileText className="size-4" aria-hidden />,
+    to: '/proforma',
+  },
+  {
+    key: 'openTenders',
+    label: 'Open tenders',
+    definition: 'Draft or submitted, awaiting an outcome',
+    icon: <Gavel className="size-4" aria-hidden />,
+    to: '/tender-schedule',
+  },
+  {
+    key: 'pendingExpenses',
+    label: 'Expenses to approve',
+    definition: 'Recorded and awaiting approval',
+    icon: <Wallet className="size-4" aria-hidden />,
+    to: '/expenses/general?status=pending',
+    attention: true,
+  },
 ];
 
 const ENTITY_STYLE: Record<string, { label: string; icon: ReactNode; tile: string }> = {
@@ -91,10 +118,17 @@ const FALLBACK_STYLE = {
 
 export default function LiveDashboard() {
   const { me } = useAuth();
+  const [params, setParams] = useSearchParams();
+  const branches = useBranchOptions();
+  const branchId = params.get('branch') ?? undefined;
+  const selectBranch = (id: string | undefined) =>
+    setParams(id ? { branch: id } : {}, { replace: true });
+
   const query = useQuery({
-    queryKey: qk.dashboard,
-    queryFn: ({ signal }) => api.get<DashboardSummaryDto>('/dashboard/summary', undefined, signal),
+    queryKey: [...qk.dashboard, 'summary', branchId ?? 'all'],
+    queryFn: ({ signal }) => api.get<DashboardSummaryDto>('/dashboard/summary', { branchId }, signal),
   });
+  const branchName = branches.data?.find((b) => b.id === branchId)?.name;
 
   const now = new Date();
   const firstName = me?.user.fullName.split(' ')[0];
@@ -104,15 +138,30 @@ export default function LiveDashboard() {
 
   return (
     <>
-      <header className="mb-6">
+      <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div>
         <p className="eyebrow">{formatLongDate(now)}</p>
         <h1 className="mt-1.5 text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
           {greetingFor(now.getHours())}
           {firstName ? `, ${firstName}` : ''}
         </h1>
         <p className="mt-1.5 text-sm text-ink-muted">
-          Current figures from the business records you have access to.
+          {branchName
+            ? `Current figures for ${branchName}.`
+            : me?.allBranches
+              ? 'Current figures across all branches.'
+              : 'Current figures for your branch.'}
         </p>
+        </div>
+        {me?.allBranches && (
+          <FilterSelect
+            label="Branch"
+            allLabel="All branches"
+            value={branchId}
+            onChange={selectBranch}
+            options={(branches.data ?? []).map((b) => ({ value: b.id, label: b.name }))}
+          />
+        )}
       </header>
 
       {query.isError ? (
@@ -123,7 +172,7 @@ export default function LiveDashboard() {
         <>
           <section
             aria-label="Key figures"
-            className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5"
+            className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
           >
             {query.isLoading
               ? Array.from({ length: 5 }).map((_, i) => (
@@ -163,9 +212,9 @@ export default function LiveDashboard() {
                 <span className="flex size-10 items-center justify-center rounded-full bg-highlight">
                   <FileClock className="size-5" aria-hidden />
                 </span>
-                <h2 className="mt-4 text-base font-semibold">Sales and finance figures</h2>
+                <h2 className="mt-4 text-base font-semibold">Sales and payment figures</h2>
                 <p className="mt-1.5 text-sm leading-relaxed opacity-80">
-                  Sales, payments, expenses and tender totals will appear here once those modules
+                  Sales and payment totals will appear here once those modules
                   are in use. Nothing is shown until there are real records to calculate it from.
                 </p>
               </aside>
@@ -224,7 +273,7 @@ function ActivityStream({ entries }: { entries: AuditEntryDto[] }) {
       <CardHeader className="border-b-0 pb-2">
         <div>
           <CardTitle>Activity stream</CardTitle>
-          <p className="mt-0.5 text-xs text-ink-muted">The latest changes recorded in the system</p>
+          <p className="mt-0.5 text-xs text-ink-muted">The latest changes recorded across the company</p>
         </div>
         <Link
           to="/admin/audit-log"

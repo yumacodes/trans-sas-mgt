@@ -12,6 +12,7 @@ import {
 } from '@tsm/shared';
 import type { z } from 'zod';
 import { useAuth } from '@/auth/AuthProvider';
+import { BranchField } from '@/components/app/BranchControls';
 import { CustomerInput, ItemNameInput } from '@/components/app/DocumentPickers';
 import { FormDialog } from '@/components/app/dialogs';
 import { Field, FormGrid, FormSection, useIdempotencyKey } from '@/components/app/form';
@@ -32,6 +33,7 @@ type ProformaOutput = z.output<typeof proformaInputSchema>;
 const blankItem = { stockItemId: null, name: '', quantity: '1', unit: '', unitPrice: '' };
 
 const blankForm = (): ProformaInput => ({
+  branchId: null,
   issueDate: todayIso(),
   currency: 'USD',
   clientId: null,
@@ -45,6 +47,7 @@ const blankForm = (): ProformaInput => ({
 });
 
 const fromProforma = (p: ProformaDto): ProformaInput => ({
+  branchId: p.branch?.id ?? null,
   issueDate: p.issueDate,
   currency: p.currency,
   clientId: p.clientId,
@@ -158,6 +161,7 @@ export function ProformaFormDialog({ open, onOpenChange, onSaved, proforma }: Pr
                   ...shown,
                   id: pendingId(),
                   number: nextNumber.data?.number ?? '…',
+                  branch: null,
                   status: 'draft',
                   emailedAt: null,
                   preparedBy: fullName.split(/\s+/)[0] ?? '',
@@ -198,6 +202,11 @@ export function ProformaFormDialog({ open, onOpenChange, onSaved, proforma }: Pr
               <Field label="Invoice date" error={errors.issueDate?.message} required>
                 <Input type="date" {...form.register('issueDate')} />
               </Field>
+              <BranchField
+                registration={form.register('branchId', { setValueAs: (v) => v || null })}
+                error={errors.branchId?.message}
+                current={proforma?.branch?.name}
+              />
               <Field label="Customer" error={errors.customerName?.message} required className="sm:col-span-2">
                 <Controller
                   control={form.control}

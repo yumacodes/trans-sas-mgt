@@ -15,6 +15,12 @@ export interface DashboardSummaryDto {
   lowStockItems: number | null;
   /** Active branches. */
   activeBranches: number | null;
+  /** Proformas in draft or issued, awaiting the customer's answer. */
+  openProformas: number | null;
+  /** Price schedules in draft or submitted, awaiting an outcome. */
+  openTenders: number | null;
+  /** Expense and tender transactions awaiting approval. */
+  pendingExpenses: number | null;
   /** Latest audit events; only returned to holders of audit.read. */
   recentActivity: AuditEntryDto[] | null;
 }

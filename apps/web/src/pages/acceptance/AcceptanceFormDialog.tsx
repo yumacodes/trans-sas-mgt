@@ -13,6 +13,7 @@ import {
 } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
 import { FormDialog } from '@/components/app/dialogs';
+import { BranchField } from '@/components/app/BranchControls';
 import { CustomerInput } from '@/components/app/DocumentPickers';
 import { Field, FormGrid, FormSection, useIdempotencyKey } from '@/components/app/form';
 import { useOperation } from '@/components/app/OperationFeedback';
@@ -35,6 +36,7 @@ const nullIfEmpty = (v: unknown) => (v === '' || v === undefined ? null : v);
 function toFormValues(l?: AcceptanceDto | null, defaults?: AcceptanceDefaultsDto): AcceptanceInput {
   if (!l) {
     return {
+      branchId: null,
       letterDate: todayIso(),
       yourReference: '',
       clientId: null,
@@ -51,6 +53,7 @@ function toFormValues(l?: AcceptanceDto | null, defaults?: AcceptanceDefaultsDto
     };
   }
   return {
+    branchId: l.branch?.id ?? null,
     letterDate: l.letterDate,
     yourReference: l.yourReference ?? '',
     clientId: l.clientId,
@@ -156,6 +159,7 @@ export function AcceptanceFormDialog({ open, onOpenChange, letter, onSaved }: Pr
                   ...shown,
                   id: pendingId(),
                   number: nextNumber.data?.number ?? '…',
+                  branch: null,
                   status: 'draft',
                   preparedBy: '',
                   createdAt: new Date().toISOString(),
@@ -211,6 +215,11 @@ export function AcceptanceFormDialog({ open, onOpenChange, letter, onSaved }: Pr
                   </NativeSelect>
                 </Field>
               )}
+              <BranchField
+                registration={form.register('branchId', { setValueAs: nullIfEmpty })}
+                error={errors.branchId?.message}
+                current={letter?.branch?.name}
+              />
               <Field label="To" error={errors.recipientName?.message} required className="sm:col-span-2">
                 <Controller
                   control={form.control}

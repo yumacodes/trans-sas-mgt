@@ -17,7 +17,7 @@ import { created, ok } from '../lib/respond';
 import { iso, optionalIsoDateOnly } from '../lib/serialize';
 import { parse } from '../lib/validate';
 import { actorFrom, diff, recordAudit } from '../services/audit';
-import { assertBranchAccess, canAccessBranch, optionalBranchWhere } from '../services/branch-scope';
+import { assertBranchAccess, canAccessBranch, defaultBranchId, optionalBranchWhere } from '../services/branch-scope';
 import { nextDocumentNumber } from '../services/document-numbers';
 
 export const clientsRouter = Router();
@@ -164,7 +164,7 @@ clientsRouter.post('/', requirePermission('clients.create'), idempotent, async (
     const row = await tx.client.create({
       data: {
         ...input,
-        branchId: input.branchId ?? null,
+        branchId: input.branchId ?? defaultBranchId(ctx),
         accountOwnerId: input.accountOwnerId ?? null,
         code,
         createdById: ctx.profileId,

@@ -13,6 +13,7 @@ import {
   type TenderInput,
 } from '@tsm/shared';
 import { FormDialog } from '@/components/app/dialogs';
+import { BranchField } from '@/components/app/BranchControls';
 import { CustomerInput, ItemNameInput } from '@/components/app/DocumentPickers';
 import { Field, FormGrid, FormSection, useIdempotencyKey } from '@/components/app/form';
 import { useOperation } from '@/components/app/OperationFeedback';
@@ -46,6 +47,7 @@ const blankItem = {
 function toFormValues(t?: TenderDto | null): TenderInput {
   if (!t) {
     return {
+      branchId: null,
       scheduleDate: todayIso(),
       tenderReference: '',
       submissionDeadline: null,
@@ -61,6 +63,7 @@ function toFormValues(t?: TenderDto | null): TenderInput {
     };
   }
   return {
+    branchId: t.branch?.id ?? null,
     scheduleDate: t.scheduleDate,
     tenderReference: t.tenderReference ?? '',
     submissionDeadline: t.submissionDeadline,
@@ -184,6 +187,7 @@ export function TenderFormDialog({ open, onOpenChange, tender, onSaved }: Props)
                   ...shown,
                   id: pendingId(),
                   number: nextNumber.data?.number ?? '…',
+                  branch: null,
                   status: 'draft',
                   preparedBy: '',
                   createdAt: new Date().toISOString(),
@@ -238,6 +242,11 @@ export function TenderFormDialog({ open, onOpenChange, tender, onSaved }: Props)
               <Field label="Lot" error={errors.lot?.message} hint="e.g. 2 DRESSING ITEMS" className="sm:col-span-2">
                 <Input {...form.register('lot')} />
               </Field>
+              <BranchField
+                registration={form.register('branchId', { setValueAs: (v) => v || null })}
+                error={errors.branchId?.message}
+                current={tender?.branch?.name}
+              />
               <Field label="To (procuring organisation)" error={errors.customerName?.message} required className="sm:col-span-2">
                 <Controller
                   control={form.control}

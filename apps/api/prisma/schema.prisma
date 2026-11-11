@@ -233,6 +233,9 @@ model Branch {
   stockBalances   StockBalance[]
   stockMovements  StockMovement[]
   expenses        Expense[]
+  proformas       Proforma[]
+  tenders         Tender[]
+  acceptanceLetters AcceptanceLetter[]
 
   @@index([managerUserId])
   @@map("branches")
@@ -621,6 +624,7 @@ model Proforma {
   notes           String?
   status          ProformaStatus @default(draft)
   emailedAt       DateTime?      @db.Timestamptz(6)
+  branchId        String?        @db.Uuid
   createdById     String         @db.Uuid
   createdAt       DateTime       @default(now()) @db.Timestamptz(6)
   updatedAt       DateTime       @updatedAt @db.Timestamptz(6)
@@ -628,7 +632,9 @@ model Proforma {
   client    Client?        @relation(fields: [clientId], references: [id], onDelete: Restrict)
   createdBy UserProfile    @relation(fields: [createdById], references: [id], onDelete: Restrict)
   items     ProformaItem[]
+  branch    Branch?        @relation(fields: [branchId], references: [id], onDelete: Restrict)
 
+  @@index([branchId])
   @@index([issueDate])
   @@index([status])
   @@index([clientId])
@@ -741,6 +747,7 @@ model Tender {
   total              Decimal      @db.Decimal(18, 2)
   notes              String?
   status             TenderStatus @default(draft)
+  branchId           String?      @db.Uuid
   createdById        String       @db.Uuid
   createdAt          DateTime     @default(now()) @db.Timestamptz(6)
   updatedAt          DateTime     @updatedAt @db.Timestamptz(6)
@@ -749,7 +756,9 @@ model Tender {
   createdBy         UserProfile        @relation(fields: [createdById], references: [id], onDelete: Restrict)
   items             TenderItem[]
   acceptanceLetters AcceptanceLetter[]
+  branch            Branch?            @relation(fields: [branchId], references: [id], onDelete: Restrict)
 
+  @@index([branchId])
   @@index([scheduleDate])
   @@index([status])
   @@index([clientId])
@@ -806,6 +815,7 @@ model AcceptanceLetter {
   signatoryTitle    String?
   tenderId          String?          @db.Uuid
   status            AcceptanceStatus @default(draft)
+  branchId          String?          @db.Uuid
   createdById       String           @db.Uuid
   createdAt         DateTime         @default(now()) @db.Timestamptz(6)
   updatedAt         DateTime         @updatedAt @db.Timestamptz(6)
@@ -813,7 +823,9 @@ model AcceptanceLetter {
   client    Client?     @relation(fields: [clientId], references: [id], onDelete: Restrict)
   tender    Tender?     @relation(fields: [tenderId], references: [id], onDelete: Restrict)
   createdBy UserProfile @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  branch    Branch?     @relation(fields: [branchId], references: [id], onDelete: Restrict)
 
+  @@index([branchId])
   @@index([letterDate])
   @@index([status])
   @@index([clientId])

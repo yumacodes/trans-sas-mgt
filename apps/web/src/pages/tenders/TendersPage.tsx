@@ -3,6 +3,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { Pencil, Plus } from 'lucide-react';
 import { TENDER_STATUSES, TENDER_STATUS_LABELS, type TenderDto } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
+import { BranchFilter } from '@/components/app/BranchControls';
 import { CellLink, DataTable, FilterSelect } from '@/components/app/DataTable';
 import { PageHeader } from '@/components/app/PageHeader';
 import { TenderStatusBadge } from '@/components/app/StatusBadges';
@@ -17,7 +18,7 @@ import { TenderFormDialog } from './TenderFormDialog';
 
 export default function TendersPage() {
   const { can } = useAuth();
-  const state = useTableState(['status', 'dateFrom', 'dateTo'], { sort: 'scheduleDate:desc' });
+  const state = useTableState(['status', 'branchId', 'dateFrom', 'dateTo'], { sort: 'scheduleDate:desc' });
   const result = useListQuery<TenderDto>(qk.tenders, '/tenders', state.query);
   const [viewId, setViewId] = useState<string | null>(null);
   const [form, setForm] = useState<{ open: boolean; tender: TenderDto | null }>({ open: false, tender: null });
@@ -86,6 +87,7 @@ export default function TendersPage() {
         searchPlaceholder="Search number, organisation, tender ref or lot"
         filters={
           <>
+            <BranchFilter state={state} />
             <FilterSelect
               label="Status"
               value={state.filters.status}

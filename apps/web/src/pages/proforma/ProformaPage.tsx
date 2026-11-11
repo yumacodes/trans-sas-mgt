@@ -3,6 +3,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { FileDown, Mail, Pencil, Plus } from 'lucide-react';
 import { PROFORMA_STATUSES, PROFORMA_STATUS_LABELS, type ProformaDto } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
+import { BranchFilter } from '@/components/app/BranchControls';
 import { CellLink, DataTable, FilterSelect } from '@/components/app/DataTable';
 import { PageHeader } from '@/components/app/PageHeader';
 import { ProformaStatusBadge } from '@/components/app/StatusBadges';
@@ -19,7 +20,7 @@ import { ProformaFormDialog } from './ProformaFormDialog';
 
 export default function ProformaPage() {
   const { can } = useAuth();
-  const state = useTableState(['status', 'dateFrom', 'dateTo'], { sort: 'issueDate:desc' });
+  const state = useTableState(['status', 'branchId', 'dateFrom', 'dateTo'], { sort: 'issueDate:desc' });
   const result = useListQuery<ProformaDto>(qk.proformas, '/proformas', state.query);
   const [viewId, setViewId] = useState<string | null>(null);
   const [viewTab, setViewTab] = useState<string | undefined>();
@@ -142,6 +143,7 @@ export default function ProformaPage() {
         searchPlaceholder="Search invoice number or customer"
         filters={
           <>
+            <BranchFilter state={state} />
             <FilterSelect
               label="Status"
               value={state.filters.status}

@@ -10,7 +10,7 @@ import {
   type AcceptanceDto,
 } from '@tsm/shared';
 import type { z } from 'zod';
-import { getAuth, requirePermission } from '../middleware/auth';
+import { getAuth, requirePermission, type AuthContext } from '../middleware/auth';
 import { idempotent } from '../middleware/idempotency';
 import { AppError, invalidState, notFound } from '../lib/errors';
 import { orderBy, pageMeta, pageWindow } from '../lib/pagination';
@@ -20,6 +20,7 @@ import { dateFromIso, iso, isoDateOnly, optionalIsoDateOnly } from '../lib/seria
 import { parse } from '../lib/validate';
 import { renderAcceptancePdf } from '../services/acceptance-pdf';
 import { actorFrom, recordAudit } from '../services/audit';
+import { assertBranchAccess, branchGuard, optionalBranchWhere, resolveDocumentBranch } from '../services/branch-scope';
 import { nextDocumentNumber, peekDocumentNumber } from '../services/document-numbers';
 import { pdfCompany } from '../services/pdf-company';
 import { customerOptions, resolveClient } from '../services/pickers';
@@ -33,6 +34,7 @@ export const acceptanceLettersRouter = Router();
 const include = {
   tender: { select: { id: true, number: true } },
   createdBy: { select: { fullName: true } },
+  branch: { select: { id: true, code: true, name: true } },
 } satisfies Prisma.AcceptanceLetterInclude;
 
 type LetterRow = Prisma.AcceptanceLetterGetPayload<{ include: typeof include }>;
@@ -40,6 +42,7 @@ type LetterRow = Prisma.AcceptanceLetterGetPayload<{ include: typeof include }>;
 function toDto(l: LetterRow): AcceptanceDto {
   return {
     id: l.id,
+    branch: l.branch,
     number: l.number,
     letterDate: isoDateOnly(l.letterDate),
     yourReference: l.yourReference,
@@ -67,9 +70,9 @@ async function loadLetter(db: Db, id: string): Promise<LetterRow> {
   return row;
 }
 
-async function checkTender(tx: Tx, tenderId: string | null | undefined) {
+async function checkTender(tx: Tx, ctx: AuthContext, tenderId: string | null | undefined) {
   if (!tenderId) return;
-  const found = await tx.tender.count({ where: { id: tenderId } });
+  const found = await tx.tender.count({ where: { id: tenderId, ...optionalBranchWhere(ctx) } });
   if (!found) {
     const message = 'That price schedule no longer exists. Choose another or leave it empty.';
     throw new AppError('VALIDATION_FAILED', message, { tenderId: message });
@@ -94,6 +97,12 @@ function fields(input: z.output<typeof acceptanceInputSchema>) {
 }
 
 acceptanceLettersRouter.use(requirePermission('acceptance.read'));
+acceptanceLettersRouter.param(
+  'id',
+  branchGuard('The acceptance letter', (id) =>
+    prisma.acceptanceLetter.findUnique({ where: { id }, select: { branchId: true } }),
+  ),
+);
 
 acceptanceLettersRouter.get('/next-number', requirePermission('acceptance.manage'), async (_req, res) => {
   ok(res, { number: await peekDocumentNumber(prisma, 'acceptance') });
@@ -113,8 +122,11 @@ acceptanceLettersRouter.get('/customers', requirePermission('acceptance.manage')
 });
 
 acceptanceLettersRouter.get('/', async (req, res) => {
+  const ctx = getAuth(req);
   const query = parse(acceptanceListQuerySchema, req.query);
-  const and: Prisma.AcceptanceLetterWhereInput[] = [];
+  if (query.branchId) assertBranchAccess(ctx, query.branchId);
+  const and: Prisma.AcceptanceLetterWhereInput[] = [optionalBranchWhere(ctx)];
+  if (query.branchId) and.push({ branchId: query.branchId });
   if (query.status) and.push({ status: query.status });
   if (query.dateFrom) and.push({ letterDate: { gte: dateFromIso(query.dateFrom) } });
   if (query.dateTo) and.push({ letterDate: { lte: dateFromIso(query.dateTo) } });
@@ -163,7 +175,7 @@ acceptanceLettersRouter.post('/', requirePermission('acceptance.manage'), idempo
   const ctx = getAuth(req);
   const input = parse(acceptanceInputSchema, req.body);
   const row = await prisma.$transaction(async (tx) => {
-    await checkTender(tx, input.tenderId);
+    await checkTender(tx, ctx, input.tenderId);
     const clientId = await resolveClient(
       tx,
       req,
@@ -174,6 +186,7 @@ acceptanceLettersRouter.post('/', requirePermission('acceptance.manage'), idempo
     const letter = await tx.acceptanceLetter.create({
       data: {
         ...fields(input),
+        branchId: await resolveDocumentBranch(tx, ctx, input.branchId),
         number: await nextDocumentNumber(tx, 'acceptance', { date: dateFromIso(input.letterDate) }),
         clientId,
         createdById: ctx.profileId,
@@ -198,7 +211,7 @@ acceptanceLettersRouter.put('/:id', requirePermission('acceptance.manage'), asyn
   const row = await prisma.$transaction(async (tx) => {
     const before = await loadLetter(tx, id);
     if (before.status !== 'draft') throw invalidState('Only draft letters can be edited.');
-    await checkTender(tx, input.tenderId);
+    await checkTender(tx, ctx, input.tenderId);
     const clientId = await resolveClient(
       tx,
       req,
@@ -206,7 +219,12 @@ acceptanceLettersRouter.put('/:id', requirePermission('acceptance.manage'), asyn
       { clientId: input.clientId, name: input.recipientName, address: input.recipientAddress },
       'acceptance letter',
     );
-    const updated = await tx.acceptanceLetter.update({ where: { id }, data: { ...fields(input), clientId }, include });
+    const branchId = input.branchId ? await resolveDocumentBranch(tx, ctx, input.branchId) : before.branchId;
+    const updated = await tx.acceptanceLetter.update({
+      where: { id },
+      data: { ...fields(input), clientId, branchId },
+      include,
+    });
     await recordAudit(tx, actorFrom(req), {
       action: 'acceptance.updated',
       entityType: 'acceptance',

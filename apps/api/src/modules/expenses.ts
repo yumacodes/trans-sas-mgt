@@ -22,7 +22,7 @@ import { created, ok } from '../lib/respond';
 import { dateFromIso, decimalString, iso, isoDateOnly } from '../lib/serialize';
 import { parse } from '../lib/validate';
 import { actorFrom, recordAudit } from '../services/audit';
-import { assertBranchAccess, canAccessBranch, optionalBranchWhere } from '../services/branch-scope';
+import { assertBranchAccess, canAccessBranch, defaultBranchId, optionalBranchWhere } from '../services/branch-scope';
 import { nextDocumentNumber } from '../services/document-numbers';
 import { renderExpensePdf } from '../services/expense-pdf';
 import { pdfCompany } from '../services/pdf-company';
@@ -166,7 +166,7 @@ expensesRouter.post('/', requirePermission('expenses.manage'), idempotent, async
         paymentMethod: input.paymentMethod,
         paymentReference: input.paymentReference ?? null,
         description: input.description ?? null,
-        branchId: input.branchId ?? null,
+        branchId: input.branchId ?? defaultBranchId(ctx),
         createdById: ctx.profileId,
       },
       include,

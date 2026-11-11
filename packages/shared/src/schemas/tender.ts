@@ -42,6 +42,8 @@ export const tenderItemInputSchema = z.object({
 export type TenderItemInput = z.input<typeof tenderItemInputSchema>;
 
 export const tenderInputSchema = z.object({
+  /** Branch the document belongs to. Omit to use the user's own branch. */
+  branchId: uuid.nullable().optional(),
   scheduleDate: isoDate,
   /** The procuring organisation's reference ("Your Ref"). */
   tenderReference: optionalText(100),
@@ -63,6 +65,7 @@ export type TenderInput = z.input<typeof tenderInputSchema>;
 export const tenderStatusSchema = z.object({ status: z.enum(TENDER_STATUSES) });
 
 export const tenderListQuerySchema = listQuerySchema.extend({
+  branchId: uuid.optional(),
   status: z.enum(TENDER_STATUSES).optional(),
   dateFrom: isoDate.optional(),
   dateTo: isoDate.optional(),
@@ -117,6 +120,7 @@ export interface TenderItemDto {
 
 export interface TenderDto {
   id: string;
+  branch: { id: string; code: string; name: string } | null;
   number: string;
   scheduleDate: string;
   tenderReference: string | null;
