@@ -22,7 +22,6 @@ import {
   Wallet,
 } from 'lucide-react';
 import type { Permission } from '@tsm/shared';
-import { samplePath } from '@/features/samples/registry';
 
 export const NAV_GROUPS = [
   'Overview',
@@ -92,18 +91,19 @@ const ITEMS: NavItem[] = [
   { id: 'stock', group: 'Stock Management', label: 'Stock', icon: Boxes, to: '/stock', anyOf: ['inventory.read'] },
   { id: 'purchase', to: '/purchases', group: 'Stock Management', label: 'Purchase', icon: ShoppingBag, anyOf: ['purchases.read'] },
   { id: 'suppliers', to: '/suppliers', group: 'Stock Management', label: 'Suppliers', icon: Factory, anyOf: ['purchases.read'] },
-  { id: 'r-income', group: 'Reports', label: 'Income Statement', icon: BarChart3, to: samplePath('r-income'), anyOf: ['reports.financial'] },
-  { id: 'r-sales', group: 'Reports', label: 'Sales Report', icon: BarChart3, to: samplePath('r-sales'), anyOf: ['reports.view'] },
-  { id: 'r-payment', group: 'Reports', label: 'Payment Report', icon: BarChart3, to: samplePath('r-payment'), anyOf: ['reports.financial'] },
-  { id: 'r-expense', group: 'Reports', label: 'Expense Report', icon: BarChart3, to: samplePath('r-expense'), anyOf: ['reports.financial'] },
-  { id: 'r-tender', group: 'Reports', label: 'Tender Report', icon: BarChart3, to: samplePath('r-tender'), anyOf: ['reports.view'] },
-  { id: 'r-stock', group: 'Reports', label: 'Stock Report', icon: BarChart3, to: samplePath('r-stock'), anyOf: ['reports.view'] },
-  { id: 'r-movement', group: 'Reports', label: 'Stock Movement Report', icon: BarChart3, to: samplePath('r-movement'), anyOf: ['reports.view'] },
-  { id: 'r-low-stock', group: 'Reports', label: 'Low-Stock Report', icon: BarChart3, to: samplePath('r-low-stock'), anyOf: ['reports.view'] },
-  { id: 'r-purchase', group: 'Reports', label: 'Purchase Report', icon: BarChart3, to: samplePath('r-purchase'), anyOf: ['reports.view'] },
-  { id: 'r-clients', group: 'Reports', label: 'Client Report', icon: BarChart3, to: samplePath('r-clients'), anyOf: ['reports.view'] },
-  { id: 'r-outstanding', group: 'Reports', label: 'Outstanding Balances', icon: BarChart3, to: samplePath('r-outstanding'), anyOf: ['reports.financial'] },
-  { id: 'r-branch', group: 'Reports', label: 'Branch Performance', icon: BarChart3, to: samplePath('r-branch'), anyOf: ['reports.view'] },
+  { id: 'r-income', group: 'Reports', label: 'Income Statement', icon: BarChart3, to: '/reports/income-statement', anyOf: ['reports.financial'] },
+  { id: 'r-sales', group: 'Reports', label: 'Sales Report', icon: BarChart3, to: '/reports/sales', anyOf: ['reports.view'] },
+  { id: 'r-payment', group: 'Reports', label: 'Payment Report', icon: BarChart3, to: '/reports/payments', anyOf: ['reports.financial'] },
+  { id: 'r-expense', group: 'Reports', label: 'Expense Report', icon: BarChart3, to: '/reports/expenses', anyOf: ['reports.financial'] },
+  { id: 'r-tender', group: 'Reports', label: 'Tender Report', icon: BarChart3, to: '/reports/tenders', anyOf: ['reports.view'] },
+  { id: 'r-stock', group: 'Reports', label: 'Stock Report', icon: BarChart3, to: '/reports/stock', anyOf: ['reports.view'] },
+  { id: 'r-movement', group: 'Reports', label: 'Stock Movement Report', icon: BarChart3, to: '/reports/stock-movement', anyOf: ['reports.view'] },
+  { id: 'r-low-stock', group: 'Reports', label: 'Low-Stock Report', icon: BarChart3, to: '/reports/low-stock', anyOf: ['reports.view'] },
+  { id: 'r-purchase', group: 'Reports', label: 'Purchase Report', icon: BarChart3, to: '/reports/purchases', anyOf: ['reports.view'] },
+  { id: 'r-clients', group: 'Reports', label: 'Client Report', icon: BarChart3, to: '/reports/clients', anyOf: ['reports.view'] },
+  { id: 'r-outstanding', group: 'Reports', label: 'Outstanding Balances', icon: BarChart3, to: '/reports/outstanding-balances', anyOf: ['reports.financial'] },
+  { id: 'r-branch', group: 'Reports', label: 'Branch Performance', icon: BarChart3, to: '/reports/branch-performance', anyOf: ['reports.view'] },
+  { id: 'r-tax', group: 'Reports', label: 'Tax Summary', icon: BarChart3, to: '/reports/tax-summary', anyOf: ['reports.financial'] },
   {
     id: 'admin', group: 'Administration',
     label: 'Admin',

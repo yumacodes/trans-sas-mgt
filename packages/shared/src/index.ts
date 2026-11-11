@@ -18,3 +18,4 @@ export * from './schemas/acceptance';
 export * from './schemas/sale';
 export * from './schemas/notification';
 export * from './schemas/purchase';
+export * from './schemas/report';

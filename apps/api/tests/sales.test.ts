@@ -448,3 +448,17 @@ describe('spreadsheet import', () => {
     expect(res.status).toBe(403);
   });
 });
+
+describe('reports', () => {
+  it('keeps financial reports from users with only operational report access', async () => {
+    signIn(['reports.view']);
+    const res = await request(app).get('/api/v1/reports/income-statement').set('Authorization', await auth());
+    expect(res.status).toBe(403);
+  });
+
+  it('rejects an unknown report', async () => {
+    signIn(['reports.view', 'reports.financial']);
+    const res = await request(app).get('/api/v1/reports/salaries').set('Authorization', await auth());
+    expect(res.status).toBe(422);
+  });
+});

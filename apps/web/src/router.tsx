@@ -1,4 +1,3 @@
-import { SAMPLE_PAGES } from '@/features/samples/registry';
 import { lazy } from 'react';
 import { createBrowserRouter, Navigate, type RouteObject } from 'react-router';
 import { RequireAuth, RequirePermission } from '@/auth/guards';
@@ -35,7 +34,7 @@ const BranchesPage = lazy(() => import('@/pages/admin/BranchesPage'));
 const AuditLogPage = lazy(() => import('@/pages/admin/AuditLogPage'));
 const AccountPage = lazy(() => import('@/pages/account/AccountPage'));
 
-const SampleRoute = lazy(() => import('@/features/samples/SampleRoute'));
+const ReportPage = lazy(() => import('@/pages/reports/ReportPage'));
 
 const h = (title: string, section?: string): RouteHandle => ({ title, section });
 
@@ -173,17 +172,11 @@ export const routes: RouteObject[] = [
           },
         ],
       },
-      ...SAMPLE_PAGES.map((page) => ({
-        path: page.path.slice(1),
-        element: <RequirePermission anyOf={page.anyOf} />,
-        children: [
-          {
-            index: true,
-            element: <SampleRoute id={page.id} />,
-            handle: h(page.title, page.section),
-          },
-        ],
-      })),
+      {
+        path: 'reports/:key',
+        element: <RequirePermission anyOf={['reports.view', 'reports.financial']} />,
+        children: [{ index: true, element: <ReportPage />, handle: h('Report', 'Reports') }],
+      },
       { path: 'account', element: <AccountPage />, handle: h('Account settings') },
       { path: '*', element: <NotFoundPage />, handle: h('Page not found') },
     ],
