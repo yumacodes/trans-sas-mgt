@@ -71,6 +71,7 @@ export const PERMISSION_DEFINITIONS = {
   'expenses.read': { group: 'finance', description: 'View expenses and tender transactions' },
   'expenses.manage': { group: 'finance', description: 'Record expenses and tender transactions' },
   'expenses.approve': { group: 'finance', description: 'Approve expenses' },
+  'expenses.approve_large': { group: 'finance', description: 'Approve expenses above the approval limit' },
 
   'messages.read': { group: 'communication', description: 'View messages sent to clients and staff' },
   'messages.send': { group: 'communication', description: 'Send messages to clients and staff' },

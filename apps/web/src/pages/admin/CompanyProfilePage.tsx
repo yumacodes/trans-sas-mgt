@@ -198,6 +198,13 @@ export default function CompanyProfilePage() {
                 >
                   <Input type="number" min={1} max={365} {...form.register('settings.proformaValidityDays')} />
                 </Field>
+                <Field
+                  label="Expense approval limit"
+                  error={errors.settings?.expenseApprovalLimit?.message}
+                  hint="Expenses above this amount need someone allowed to approve large expenses (Admin by default). Leave empty for no limit."
+                >
+                  <Input inputMode="decimal" {...form.register('settings.expenseApprovalLimit')} />
+                </Field>
                 <SwitchRow
                   name="settings.pricesIncludeTax"
                   control={form.control}

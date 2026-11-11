@@ -462,3 +462,32 @@ describe('reports', () => {
     expect(res.status).toBe(422);
   });
 });
+
+describe('expense approval limit', () => {
+  const expense = { findUnique: vi.fn(), updateMany: vi.fn() };
+  const companyProfile = { findFirst: vi.fn() };
+
+  beforeEach(() => {
+    Object.assign(db, { expense, companyProfile });
+    companyProfile.findFirst.mockResolvedValue({ settings: { expenseApprovalLimit: '1000' } });
+    expense.findUnique.mockResolvedValue({ id: ID, number: 'EX-1', kind: 'general', status: 'pending', amount: money('5000'), branchId: null });
+  });
+
+  const approve = async () =>
+    request(app).post(`/api/v1/expenses/${ID}/status`).set('Authorization', await auth()).send({ status: 'approved' });
+
+  it('stops an ordinary approver approving above the limit', async () => {
+    signIn(['expenses.read', 'expenses.approve']);
+    const res = await approve();
+    expect(res.status).toBe(403);
+    expect(res.body.error.message).toMatch(/approval limit/);
+    expect(expense.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('lets someone with the large-approval permission approve it', async () => {
+    signIn(['expenses.read', 'expenses.approve', 'expenses.approve_large']);
+    expense.updateMany.mockResolvedValue({ count: 1 });
+    await approve();
+    expect(expense.updateMany).toHaveBeenCalled();
+  });
+});

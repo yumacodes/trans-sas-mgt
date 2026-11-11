@@ -69,6 +69,12 @@ export const companySettingsSchema = z.object({
   pricesIncludeTax: z.boolean(),
   allowNegativeStock: z.boolean(),
   proformaValidityDays: z.coerce.number().int().min(1).max(365),
+  /** Expenses above this amount need expenses.approve_large. Empty means no limit. */
+  expenseApprovalLimit: z
+    .string()
+    .trim()
+    .regex(/^(\d{1,14}(\.\d{1,2})?)?$/, 'Enter an amount, or leave it empty for no limit.')
+    .default(''),
   numbering: documentNumberingSchema,
 });
 export type CompanySettings = z.infer<typeof companySettingsSchema>;
@@ -78,6 +84,7 @@ export const DEFAULT_COMPANY_SETTINGS: CompanySettings = {
   pricesIncludeTax: false,
   allowNegativeStock: false,
   proformaValidityDays: 30,
+  expenseApprovalLimit: '',
   numbering: { prefixes: DEFAULT_DOCUMENT_PREFIXES, padding: 5, includeYear: true },
 };
 

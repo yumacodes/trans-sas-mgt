@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ban, Check, FileDown, Pencil, Printer, X } from 'lucide-react';
+import { AttachmentsPanel } from '@/components/app/AttachmentsPanel';
 import { reportFailure } from '@/components/app/OperationFeedback';
 import {
   EXPENSE_KIND_LABELS,
@@ -130,6 +131,11 @@ export function ExpenseDetailModal({ expenseId, onOpenChange, onEdit }: Props) {
           e
             ? [
                 { value: 'details', label: 'Details', content: details },
+                {
+                  value: 'files',
+                  label: 'Files',
+                  content: <AttachmentsPanel ownerType="expense" ownerId={e.id} canManage={can('expenses.manage')} />,
+                },
                 ...(can('audit.read')
                   ? [{ value: 'history', label: 'History', content: <EntityHistory entityType="expense" entityId={e.id} /> }]
                   : []),

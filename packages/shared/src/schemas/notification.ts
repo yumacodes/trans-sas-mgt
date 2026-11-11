@@ -35,3 +35,29 @@ export interface ImportResultDto {
   duplicates: number;
   results: ImportRowResult[];
 }
+
+export const ATTACHMENT_OWNER_TYPES = [
+  'proforma',
+  'tender',
+  'acceptance',
+  'sale',
+  'waybill',
+  'payment',
+  'purchase',
+  'expense',
+  'client',
+  'supplier',
+] as const;
+export type AttachmentOwnerType = (typeof ATTACHMENT_OWNER_TYPES)[number];
+export const ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024;
+
+export interface AttachmentDto {
+  id: string;
+  name: string;
+  mimeType: string;
+  sizeBytes: number;
+  uploadedBy: string;
+  createdAt: string;
+  /** Short-lived signed link; null when it couldn't be issued. */
+  url: string | null;
+}

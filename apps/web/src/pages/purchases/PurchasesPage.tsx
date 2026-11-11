@@ -17,6 +17,7 @@ import {
   type SupplierDto,
 } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
+import { AttachmentsPanel } from '@/components/app/AttachmentsPanel';
 import { useOpenParam } from '@/components/app/useOpenParam';
 import { DocumentEmailComposer } from '@/components/app/DocumentEmailComposer';
 import { BranchField, BranchFilter } from '@/components/app/BranchControls';
@@ -293,6 +294,11 @@ function PurchaseDetailModal({
           p
             ? [
                 { value: 'details', label: 'Details', content: details },
+                {
+                  value: 'files',
+                  label: 'Files',
+                  content: <AttachmentsPanel ownerType="purchase" ownerId={p.id} canManage={can('purchases.manage')} />,
+                },
                 { value: 'receipts', label: `Receipts (${p.receipts.length})`, content: receipts },
                 ...(can('purchases.manage')
                   ? [

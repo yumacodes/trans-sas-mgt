@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ban, Banknote, CheckCircle2, Copy, FileDown, Pencil, Printer, Truck } from 'lucide-react';
 import type { SaleDto, WaybillDto } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
+import { AttachmentsPanel } from '@/components/app/AttachmentsPanel';
 import { DocumentEmailComposer } from '@/components/app/DocumentEmailComposer';
 import { ConfirmDialog, ReasonDialog } from '@/components/app/dialogs';
 import { EntityHistory } from '@/components/app/EntityHistory';
@@ -180,6 +181,11 @@ export function SaleDetailModal({ saleId, onOpenChange, onEdit }: Props) {
           s
             ? [
                 { value: 'details', label: 'Details', content: details },
+                {
+                  value: 'files',
+                  label: 'Files',
+                  content: <AttachmentsPanel ownerType="sale" ownerId={s.id} canManage={can('sales.manage')} />,
+                },
                 ...(can('sales.manage')
                   ? [
                       {

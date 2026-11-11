@@ -13,7 +13,7 @@ import {
   type ExpenseDto,
 } from '@tsm/shared';
 import { z } from 'zod';
-import { getAuth, requirePermission, type AuthContext } from '../middleware/auth';
+import { can, getAuth, requirePermission, type AuthContext } from '../middleware/auth';
 import { idempotent } from '../middleware/idempotency';
 import { AppError, invalidState, notFound } from '../lib/errors';
 import { orderBy, pageMeta, pageWindow } from '../lib/pagination';
@@ -26,6 +26,7 @@ import { assertBranchAccess, canAccessBranch, defaultBranchId, optionalBranchWhe
 import { nextDocumentNumber } from '../services/document-numbers';
 import { renderExpensePdf } from '../services/expense-pdf';
 import { notifyPermission } from '../services/notifications';
+import { getCompanySettings } from '../services/company-settings';
 import { pdfCompany } from '../services/pdf-company';
 
 /**
@@ -238,6 +239,15 @@ expensesRouter.post('/:id/status', requirePermission('expenses.approve'), async 
       throw invalidState(
         `A record that is ${EXPENSE_STATUS_LABELS[before.status].toLowerCase()} can't be marked ${EXPENSE_STATUS_LABELS[status].toLowerCase()}.`,
       );
+    }
+    if (status === 'approved' && !can(ctx, 'expenses.approve_large')) {
+      const { expenseApprovalLimit } = await getCompanySettings(tx);
+      if (expenseApprovalLimit && before.amount.gt(expenseApprovalLimit)) {
+        throw new AppError(
+          'FORBIDDEN',
+          `This record is above the approval limit of ${expenseApprovalLimit}, so an administrator has to approve it.`,
+        );
+      }
     }
     if ((status === 'rejected' || status === 'voided') && !reason) {
       throw new AppError('VALIDATION_FAILED', 'Give a reason.', { reason: 'Give a reason.' });

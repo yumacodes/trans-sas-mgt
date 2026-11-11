@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ban, FileDown, Pencil, Printer, Send } from 'lucide-react';
 import { ACCEPTANCE_STATUS_LABELS, type AcceptanceDto, type AcceptanceStatus } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
+import { AttachmentsPanel } from '@/components/app/AttachmentsPanel';
 import { DocumentEmailComposer } from '@/components/app/DocumentEmailComposer';
 import { ConfirmDialog } from '@/components/app/dialogs';
 import { EntityHistory } from '@/components/app/EntityHistory';
@@ -95,6 +96,11 @@ export function AcceptanceDetailModal({ letterId, onOpenChange, onEdit }: Props)
           l
             ? [
                 { value: 'details', label: 'Letter', content: details },
+                {
+                  value: 'files',
+                  label: 'Files',
+                  content: <AttachmentsPanel ownerType="acceptance" ownerId={l.id} canManage={can('acceptance.manage')} />,
+                },
                 ...(can('acceptance.manage')
                   ? [
                       {

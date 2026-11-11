@@ -13,6 +13,7 @@ import {
   type WaybillInput,
 } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
+import { AttachmentsPanel } from '@/components/app/AttachmentsPanel';
 import { DocumentEmailComposer } from '@/components/app/DocumentEmailComposer';
 import { BranchField, BranchFilter } from '@/components/app/BranchControls';
 import { CellLink, DataTable, FilterSelect } from '@/components/app/DataTable';
@@ -248,6 +249,11 @@ function WaybillDetailModal({
           w
             ? [
                 { value: 'details', label: 'Details', content: details },
+                {
+                  value: 'files',
+                  label: 'Files',
+                  content: <AttachmentsPanel ownerType="waybill" ownerId={w.id} canManage={can('waybills.manage')} />,
+                },
                 ...(can('waybills.manage')
                   ? [
                       {

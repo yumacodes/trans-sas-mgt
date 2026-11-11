@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { Copy, FileDown, FileSignature, Pencil, Printer, ShoppingCart } from 'lucide-react';
 import { TENDER_STATUSES, TENDER_STATUS_LABELS, type SaleDto, type TenderDto, type TenderStatus } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
+import { AttachmentsPanel } from '@/components/app/AttachmentsPanel';
 import { DocumentEmailComposer } from '@/components/app/DocumentEmailComposer';
 import { EntityHistory } from '@/components/app/EntityHistory';
 import { Field } from '@/components/app/form';
@@ -168,6 +169,11 @@ export function TenderDetailModal({ tenderId, onOpenChange, onEdit }: Props) {
         t
           ? [
               { value: 'details', label: 'Details', content: details },
+                {
+                  value: 'files',
+                  label: 'Files',
+                  content: <AttachmentsPanel ownerType="tender" ownerId={t.id} canManage={can('tenders.manage')} />,
+                },
                 ...(can('tenders.manage')
                   ? [
                       {

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
-import { FileDown, Pencil, Plus } from 'lucide-react';
+import { CheckCircle2, FileDown, Pencil, Plus } from 'lucide-react';
 import {
   EXPENSE_KIND_LABELS,
   EXPENSE_STATUSES,
@@ -8,6 +8,10 @@ import {
   type ExpenseDto,
   type ExpenseKind,
 } from '@tsm/shared';
+import { useQueryClient } from '@tanstack/react-query';
+import { patchRecord } from '@/lib/optimistic';
+import { api } from '@/lib/api';
+import { useOperation } from '@/components/app/OperationFeedback';
 import { useAuth } from '@/auth/AuthProvider';
 import { useOpenParam } from '@/components/app/useOpenParam';
 import { CellLink, DataTable, FilterSelect } from '@/components/app/DataTable';
@@ -38,6 +42,8 @@ export function ExpensesPage({ kind }: { kind: ExpenseKind }) {
   const [form, setForm] = useState<{ open: boolean; expense: ExpenseDto | null }>({ open: false, expense: null });
   const [pickerOpen, setPickerOpen] = useState(false);
   const canCreate = can('expenses.manage');
+  const queryClient = useQueryClient();
+  const { run } = useOperation();
   const label = EXPENSE_KIND_LABELS[kind];
   const newLabel = kind === 'general' ? 'Record expense' : `Record ${label.toLowerCase()}`;
 
@@ -142,6 +148,26 @@ export function ExpensesPage({ kind }: { kind: ExpenseKind }) {
         state={state}
         getRowId={(e) => e.id}
         onRowClick={(e) => setViewId(e.id)}
+        bulkActions={
+          can('expenses.approve')
+            ? [
+                {
+                  label: 'Approve selected',
+                  icon: <CheckCircle2 aria-hidden />,
+                  onSelect: (rows, clear) => {
+                    clear();
+                    for (const e of rows.filter((r) => r.status === 'pending')) {
+                      void run(() => api.post<ExpenseDto>(`/expenses/${e.id}/status`, { status: 'approved', reason: null }), {
+                        optimistic: () => patchRecord<ExpenseDto>(queryClient, qk.expenses, e.id, { status: 'approved' }),
+                      })
+                        .then(() => queryClient.invalidateQueries({ queryKey: qk.expenses }))
+                        .catch(() => undefined);
+                    }
+                  },
+                },
+              ]
+            : undefined
+        }
         rowActions={(e) => [
           {
             label: 'Edit',

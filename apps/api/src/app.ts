@@ -23,6 +23,7 @@ import { jobsRouter } from './modules/jobs';
 import { searchRouter } from './modules/search';
 import { importsRouter } from './modules/imports';
 import { reportsRouter } from './modules/reports';
+import { attachmentsRouter } from './modules/attachments';
 import { purchasesRouter } from './modules/purchases';
 import { suppliersRouter } from './modules/suppliers';
 import { waybillsRouter } from './modules/waybills';
@@ -107,6 +108,7 @@ export function createApp() {
   api.use('/search', searchRouter);
   api.use('/imports', importsRouter);
   api.use('/reports', reportsRouter);
+  api.use('/attachments', attachmentsRouter);
   api.use('/suppliers', suppliersRouter);
   api.use('/purchases', purchasesRouter);
   api.use('/sales', salesRouter);

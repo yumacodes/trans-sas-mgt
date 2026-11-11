@@ -11,6 +11,7 @@ import {
   type SaleDto,
   type ProformaStatus,
 } from '@tsm/shared';
+import { AttachmentsPanel } from '@/components/app/AttachmentsPanel';
 import { reportFailure } from '@/components/app/OperationFeedback';
 import { useAuth } from '@/auth/AuthProvider';
 import { Field } from '@/components/app/form';
@@ -335,6 +336,11 @@ export function ProformaDetailModal({ proformaId, onOpenChange, onEdit, initialT
         p
           ? [
               { value: 'details', label: 'Details', content: details },
+                {
+                  value: 'files',
+                  label: 'Files',
+                  content: <AttachmentsPanel ownerType="proforma" ownerId={p.id} canManage={can('proformas.manage')} />,
+                },
               ...(canManage
                 ? [
                     {

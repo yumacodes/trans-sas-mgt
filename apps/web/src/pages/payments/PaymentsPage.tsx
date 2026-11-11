@@ -4,6 +4,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { FileDown, Plus, Printer, Undo2 } from 'lucide-react';
 import { PAYMENT_METHOD_LABELS, PAYMENT_STATUSES, PAYMENT_STATUS_LABELS, type PaymentDto } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
+import { AttachmentsPanel } from '@/components/app/AttachmentsPanel';
 import { useOpenParam } from '@/components/app/useOpenParam';
 import { DocumentEmailComposer } from '@/components/app/DocumentEmailComposer';
 import { BranchFilter } from '@/components/app/BranchControls';
@@ -170,6 +171,11 @@ function PaymentDetailModal({
           p
             ? [
                 { value: 'details', label: 'Details', content: details },
+                {
+                  value: 'files',
+                  label: 'Files',
+                  content: <AttachmentsPanel ownerType="payment" ownerId={p.id} canManage={can('payments.record')} />,
+                },
                 ...(can('payments.record')
                   ? [
                       {
