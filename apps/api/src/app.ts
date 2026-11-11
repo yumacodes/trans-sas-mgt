@@ -21,6 +21,7 @@ import { salesRouter } from './modules/sales';
 import { notificationsRouter } from './modules/notifications';
 import { jobsRouter } from './modules/jobs';
 import { searchRouter } from './modules/search';
+import { importsRouter } from './modules/imports';
 import { purchasesRouter } from './modules/purchases';
 import { suppliersRouter } from './modules/suppliers';
 import { waybillsRouter } from './modules/waybills';
@@ -68,7 +69,8 @@ export function createApp() {
       maxAge: 600,
     }),
   );
-  app.use(express.json({ limit: '1mb' }));
+  // Spreadsheet imports send up to 1,000 rows at once.
+  app.use(express.json({ limit: '5mb' }));
 
   app.get('/health', (_req, res) => {
     res.json({ status: 'ok' });
@@ -102,6 +104,7 @@ export function createApp() {
   api.use('/acceptance-letters', acceptanceLettersRouter);
   api.use('/notifications', notificationsRouter);
   api.use('/search', searchRouter);
+  api.use('/imports', importsRouter);
   api.use('/suppliers', suppliersRouter);
   api.use('/purchases', purchasesRouter);
   api.use('/sales', salesRouter);

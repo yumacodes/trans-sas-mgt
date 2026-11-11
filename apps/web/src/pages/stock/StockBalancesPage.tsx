@@ -2,7 +2,10 @@ import { useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import type { StockBalanceDto, StockItemDto } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
+import { ImportDialog } from '@/components/app/ImportDialog';
 import { CellLink, DataTable, FilterSelect } from '@/components/app/DataTable';
+import { Upload } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/app/PageHeader';
 import { LowStockBadge } from '@/components/app/StatusBadges';
 import { useTableState } from '@/components/app/useTableState';
@@ -15,6 +18,7 @@ import { StockItemFormDialog } from './StockItemFormDialog';
 export default function StockBalancesPage() {
   const { can } = useAuth();
   const state = useTableState(['branchId', 'categoryId', 'lowStock']);
+  const [importOpen, setImportOpen] = useState(false);
   const result = useListQuery<StockBalanceDto>(qk.stockBalances, '/stock-balances', state.query);
   const branches = useBranchOptions();
   const categories = useStockCategories();
@@ -93,6 +97,28 @@ export default function StockBalancesPage() {
       <PageHeader
         title="Stock"
         description="On-hand quantities by item and branch, calculated from the stock movement ledger."
+        actions={
+          can('inventory.adjust') && (
+            <Button variant="secondary" onClick={() => setImportOpen(true)}>
+              <Upload aria-hidden /> Import opening stock
+            </Button>
+          )
+        }
+      />
+      <ImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        title="Import opening stock"
+        description="Records starting quantities from your old system. Each item and branch can get an opening balance once, before any other stock movement."
+        endpoint="opening-balances"
+        templateName="opening-stock"
+        invalidate={[qk.stockBalances, qk.stockItems, qk.dashboard]}
+        columns={[
+          { key: 'sku', header: 'Item code', required: true, example: 'MON-12' },
+          { key: 'branchCode', header: 'Branch code', required: true, example: 'HQ' },
+          { key: 'quantity', header: 'Quantity', required: true, example: 10 },
+          { key: 'unitCost', header: 'Unit cost', example: 2400 },
+        ]}
       />
       <DataTable
         columns={columns}

@@ -406,3 +406,45 @@ describe('scheduled jobs endpoint', () => {
     expect([401, 503]).toContain(res.status);
   });
 });
+
+describe('spreadsheet import', () => {
+  const stockCategory = { findMany: vi.fn() };
+  const createMany = vi.fn();
+
+  beforeEach(() => {
+    Object.assign(db, { stockCategory });
+    Object.assign(db.stockItem, { createMany });
+    stockCategory.findMany.mockResolvedValue([{ id: BRANCH, name: 'Monitors' }]);
+    db.stockItem.findMany.mockResolvedValue([{ sku: 'OLD-1' }]);
+  });
+
+  const rows = [
+    { sku: 'new-1', name: 'Monitor', sellingPrice: '10', category: 'Monitors' },
+    { sku: 'OLD-1', name: 'Already there', sellingPrice: '5' },
+    { sku: 'new-1', name: 'Twice in file', sellingPrice: '5' },
+    { sku: 'bad sku!', name: 'Bad', sellingPrice: '5' },
+    { sku: 'NEW-2', name: 'Unknown category', sellingPrice: '5', category: 'Nope' },
+  ];
+
+  it('checks every row without saving anything', async () => {
+    signIn(['stock_items.read', 'stock_items.create']);
+    const res = await request(app).post('/api/v1/imports/stock-items').set('Authorization', await auth()).send({ rows });
+    expect(res.status).toBe(200);
+    expect(res.body.data).toMatchObject({ committed: false, valid: 1, duplicates: 2, invalid: 2 });
+    expect(createMany).not.toHaveBeenCalled();
+  });
+
+  it('saves only the valid rows', async () => {
+    signIn(['stock_items.read', 'stock_items.create']);
+    const res = await request(app).post('/api/v1/imports/stock-items').set('Authorization', await auth()).send({ rows, commit: true });
+    expect(res.body.data.created).toBe(1);
+    expect(createMany.mock.calls[0]![0].data).toHaveLength(1);
+    expect(createMany.mock.calls[0]![0].data[0]).toMatchObject({ sku: 'NEW-1', approvalStatus: 'pending', categoryId: BRANCH });
+  });
+
+  it('blocks importing without the permission', async () => {
+    signIn(['stock_items.read']);
+    const res = await request(app).post('/api/v1/imports/stock-items').set('Authorization', await auth()).send({ rows });
+    expect(res.status).toBe(403);
+  });
+});

@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
-import { CheckCircle2, FolderTree, ImagePlus, Pencil, Plus, Power, PowerOff, XCircle } from 'lucide-react';
+import { CheckCircle2, FolderTree, ImagePlus, Pencil, Plus, Power, PowerOff, Upload, XCircle } from 'lucide-react';
 import { STOCK_APPROVAL_LABELS, STOCK_APPROVAL_STATUSES } from '@tsm/shared';
 import type { StockItemDto } from '@tsm/shared';
 import { useAuth, useCurrency } from '@/auth/AuthProvider';
+import { ImportDialog } from '@/components/app/ImportDialog';
 import { useOpenParam } from '@/components/app/useOpenParam';
 import { CellLink, DataTable, FilterPills, FilterSelect, type RowAction } from '@/components/app/DataTable';
 import { Badge } from '@/components/ui/badge';
@@ -44,6 +45,7 @@ export default function StockItemsPage() {
     item: null,
   });
   const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [statusTarget, setStatusTarget] = useState<StockItemDto | null>(null);
   const [rejecting, setRejecting] = useState<StockItemDto | null>(null);
 
@@ -173,6 +175,11 @@ export default function StockItemsPage() {
         description="The medical equipment catalogue, prices and stock levels."
         actions={
           <>
+            {can('stock_items.create') && (
+              <Button variant="secondary" onClick={() => setImportOpen(true)}>
+                <Upload aria-hidden /> Import
+              </Button>
+            )}
             {(can('stock_items.create') || can('stock_items.update')) && (
               <Button variant="secondary" onClick={() => setCategoriesOpen(true)}>
                 <FolderTree aria-hidden /> Categories
@@ -316,6 +323,30 @@ export default function StockItemsPage() {
         onOpenChange={(open) => setForm((f) => ({ ...f, open }))}
       />
       <CategoriesDialog open={categoriesOpen} onOpenChange={setCategoriesOpen} />
+      <ImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        title="Import stock items"
+        description="Adds new items to the catalogue. Item codes that already exist are skipped, never overwritten."
+        endpoint="stock-items"
+        templateName="stock-items"
+        invalidate={[qk.stockItems, qk.dashboard]}
+        columns={[
+          { key: 'sku', header: 'Item code', required: true, example: 'MON-12' },
+          { key: 'name', header: 'Name', required: true, example: 'Patient monitor, 12-inch' },
+          { key: 'category', header: 'Category', example: 'Patient monitoring' },
+          { key: 'brand', header: 'Brand', example: 'VitaScan' },
+          { key: 'model', header: 'Model', example: 'VS-12' },
+          { key: 'unit', header: 'Unit', example: 'unit' },
+          { key: 'sellingPrice', header: 'Selling price', required: true, example: 3250 },
+          { key: 'purchaseCost', header: 'Purchase cost', example: 2400 },
+          { key: 'reorderLevel', header: 'Reorder level', example: 2 },
+          { key: 'trackingMode', header: 'Tracking', example: 'none' },
+          { key: 'warrantyMonths', header: 'Warranty months', example: 12 },
+          { key: 'tracksExpiry', header: 'Tracks expiry', example: 'no' },
+          { key: 'description', header: 'Description', example: '' },
+        ]}
+      />
       <ReasonDialog
         open={Boolean(rejecting)}
         onOpenChange={(o) => !o && setRejecting(null)}

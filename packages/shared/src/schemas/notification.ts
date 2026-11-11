@@ -18,3 +18,20 @@ export interface SearchResultDto {
   /** Page that opens the record. */
   link: string;
 }
+
+/** Outcome of one spreadsheet row; `row` is its row number in the sheet. */
+export interface ImportRowResult {
+  row: number;
+  status: 'valid' | 'error' | 'duplicate';
+  message: string | null;
+}
+
+export interface ImportResultDto {
+  /** False for a check, true once valid rows were saved. */
+  committed: boolean;
+  created: number;
+  valid: number;
+  invalid: number;
+  duplicates: number;
+  results: ImportRowResult[];
+}

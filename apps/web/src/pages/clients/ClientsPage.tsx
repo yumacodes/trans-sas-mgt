@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
-import { Archive, ArchiveRestore, Mail, Pencil, Plus } from 'lucide-react';
+import { Archive, ArchiveRestore, Mail, Pencil, Plus, Upload } from 'lucide-react';
 import {
   CLIENT_STATUSES,
   ORGANIZATION_TYPE_LABELS,
@@ -9,6 +9,7 @@ import {
   type ClientDto,
 } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
+import { ImportDialog } from '@/components/app/ImportDialog';
 import { useOpenParam } from '@/components/app/useOpenParam';
 import { CellLink, DataTable, FilterPills, FilterSelect } from '@/components/app/DataTable';
 import { exportAction } from '@/components/app/bulkExport';
@@ -43,6 +44,7 @@ export default function ClientsPage() {
     client: null,
   });
   const [archiveTarget, setArchiveTarget] = useState<ClientDto | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   const restore = async (client: ClientDto) => {
     try {
@@ -119,9 +121,14 @@ export default function ClientsPage() {
         description="Hospitals, clinics, agencies and other customers."
         actions={
           can('clients.create') && (
-            <Button onClick={() => setForm({ open: true, client: null })}>
-              <Plus aria-hidden /> New client
-            </Button>
+            <>
+              <Button variant="secondary" onClick={() => setImportOpen(true)}>
+                <Upload aria-hidden /> Import
+              </Button>
+              <Button onClick={() => setForm({ open: true, client: null })}>
+                <Plus aria-hidden /> New client
+              </Button>
+            </>
           )
         }
       />
@@ -235,6 +242,26 @@ export default function ClientsPage() {
           closeView();
           setForm({ open: true, client: c });
         }}
+      />
+      <ImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        title="Import clients"
+        description="Adds new clients. A client whose name already exists is skipped. Codes are assigned automatically."
+        endpoint="clients"
+        templateName="clients"
+        invalidate={[qk.clients, qk.dashboard]}
+        columns={[
+          { key: 'name', header: 'Name', required: true, example: 'Example District Hospital' },
+          { key: 'organizationType', header: 'Organization type', required: true, example: 'public_hospital' },
+          { key: 'contactPerson', header: 'Contact person', example: 'Ama Mensah' },
+          { key: 'email', header: 'Email', example: 'procurement@example.org' },
+          { key: 'phone', header: 'Phone', example: '+233 20 000 0000' },
+          { key: 'billingAddress', header: 'Billing address', example: 'P.O. Box 1, Accra' },
+          { key: 'deliveryAddress', header: 'Delivery address', example: '' },
+          { key: 'taxId', header: 'Tax ID', example: '' },
+          { key: 'notes', header: 'Notes', example: '' },
+        ]}
       />
       <ClientFormDialog
         open={form.open}
