@@ -399,3 +399,10 @@ describe('purchase receipts', () => {
     expect(recordMovement).not.toHaveBeenCalled();
   });
 });
+
+describe('scheduled jobs endpoint', () => {
+  it('is unavailable until a secret is configured, and never runs for a user session', async () => {
+    const res = await request(app).get('/api/v1/jobs/daily').set('Authorization', await auth());
+    expect([401, 503]).toContain(res.status);
+  });
+});

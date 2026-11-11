@@ -55,6 +55,9 @@ const envSchema = z
     MAIL_FROM_EMAIL: optionalEmailEnv,
     MAIL_FROM_NAME: optionalEnv,
     MAIL_REPLY_TO: optionalEmailEnv,
+
+    /** Shared secret the scheduler sends to run the daily jobs. Without it they can't be triggered. */
+    CRON_SECRET: optionalEnv,
   })
   .transform((env) => ({
     ...env,

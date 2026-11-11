@@ -12,5 +12,11 @@
     "api/index.js": {
       "maxDuration": 60
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/v1/jobs/daily",
+      "schedule": "0 5 * * *"
+    }
+  ]
 }

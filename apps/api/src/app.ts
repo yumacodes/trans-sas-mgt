@@ -19,6 +19,7 @@ import { tendersRouter } from './modules/tenders';
 import { acceptanceLettersRouter } from './modules/acceptance-letters';
 import { salesRouter } from './modules/sales';
 import { notificationsRouter } from './modules/notifications';
+import { jobsRouter } from './modules/jobs';
 import { purchasesRouter } from './modules/purchases';
 import { suppliersRouter } from './modules/suppliers';
 import { waybillsRouter } from './modules/waybills';
@@ -85,6 +86,7 @@ export function createApp() {
   );
   // Public sign-in routes; everything after `authenticate` requires a valid session.
   api.use('/auth', authRouter);
+  api.use('/jobs', jobsRouter);
   api.use(authenticate);
   api.use('/me', meRouter);
   api.use('/dashboard', dashboardRouter);
