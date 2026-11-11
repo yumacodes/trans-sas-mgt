@@ -3,6 +3,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { FileDown, Mail, Pencil, Plus } from 'lucide-react';
 import { PROFORMA_STATUSES, PROFORMA_STATUS_LABELS, type ProformaDto } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
+import { useOpenParam } from '@/components/app/useOpenParam';
 import { BranchFilter } from '@/components/app/BranchControls';
 import { CellLink, DataTable, FilterSelect } from '@/components/app/DataTable';
 import { PageHeader } from '@/components/app/PageHeader';
@@ -22,7 +23,7 @@ export default function ProformaPage() {
   const { can } = useAuth();
   const state = useTableState(['status', 'branchId', 'dateFrom', 'dateTo'], { sort: 'issueDate:desc' });
   const result = useListQuery<ProformaDto>(qk.proformas, '/proformas', state.query);
-  const [viewId, setViewId] = useState<string | null>(null);
+  const [viewId, setViewId, closeView] = useOpenParam();
   const [viewTab, setViewTab] = useState<string | undefined>();
   const [form, setForm] = useState<{ open: boolean; proforma: ProformaDto | null }>({ open: false, proforma: null });
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -188,9 +189,9 @@ export default function ProformaPage() {
       <ProformaDetailModal
         proformaId={viewId}
         initialTab={viewTab}
-        onOpenChange={(o) => !o && setViewId(null)}
+        onOpenChange={(o) => !o && closeView()}
         onEdit={(proforma) => {
-          setViewId(null);
+          closeView();
           setForm({ open: true, proforma });
         }}
       />

@@ -214,6 +214,7 @@ export interface OpenSaleOptionDto {
   id: string;
   number: string;
   customerName: string;
+  customerEmail: string | null;
   currency: ProformaCurrency;
   total: string;
   balance: string;

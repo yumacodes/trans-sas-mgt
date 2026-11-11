@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { z } from 'zod';
@@ -18,6 +18,7 @@ import { FormDialog } from '@/components/app/dialogs';
 import { Field, FormGrid, useIdempotencyKey } from '@/components/app/form';
 import { useOperation } from '@/components/app/OperationFeedback';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { DialogBody, DialogClose, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { NativeSelect } from '@/components/ui/native-select';
@@ -50,7 +51,7 @@ export function PaymentFormDialog({ open, onOpenChange, sale }: Props) {
     staleTime: 0,
   });
   const options: OpenSaleOptionDto[] = sale
-    ? [{ id: sale.id, number: sale.number, customerName: sale.customerName, currency: sale.currency, total: sale.total, balance: sale.balance }]
+    ? [{ id: sale.id, number: sale.number, customerName: sale.customerName, customerEmail: sale.customerEmail, currency: sale.currency, total: sale.total, balance: sale.balance }]
     : (openSales.data ?? []);
 
   const blank = (): PaymentInput => ({
@@ -61,6 +62,7 @@ export function PaymentFormDialog({ open, onOpenChange, sale }: Props) {
     externalReference: '',
     notes: '',
   });
+  const [emailReceipt, setEmailReceipt] = useState(true);
   const form = useForm<PaymentInput, unknown, Output>({ resolver: zodForm(paymentInputSchema), defaultValues: blank() });
   const { errors, isDirty } = form.formState;
 
@@ -75,7 +77,7 @@ export function PaymentFormDialog({ open, onOpenChange, sale }: Props) {
     const target = options.find((o) => o.id === values.saleId);
     onOpenChange(false);
     try {
-      await run(() => api.post<PaymentDto>('/payments', values, idem.keyFor(values)), {
+      const saved = await run(() => api.post<PaymentDto>('/payments', values, idem.keyFor(values)), {
         optimistic: () => {
           if (!target) return;
           const balance = toMoneyString(toDecimal(target.balance).minus(values.amount));
@@ -108,6 +110,19 @@ export function PaymentFormDialog({ open, onOpenChange, sale }: Props) {
         },
       });
       idem.reset();
+      const email = target?.customerEmail;
+      if (emailReceipt && email && saved) {
+        const data = new FormData();
+        data.set('to', email);
+        data.set('subject', `Receipt ${saved.number}`);
+        data.set(
+          'body',
+          `Dear ${saved.customerName},\n\nThank you for your payment of ${formatMoney(saved.amount, saved.currency)}. Your receipt ${saved.number} is attached.\n\nKind regards,\n${me?.user.fullName ?? ''}`,
+        );
+        data.set('attachInvoice', 'true');
+        // A receipt that can't be emailed doesn't undo the payment; the error dialog says so.
+        void run(() => api.upload(`/payments/${saved.id}/email`, data)).catch(() => undefined);
+      }
       void queryClient.invalidateQueries({ queryKey: qk.payments });
       void queryClient.invalidateQueries({ queryKey: qk.sales });
       void queryClient.invalidateQueries({ queryKey: qk.dashboard });
@@ -165,6 +180,12 @@ export function PaymentFormDialog({ open, onOpenChange, sale }: Props) {
             <Field label="Notes" error={errors.notes?.message} className="sm:col-span-2">
               <Textarea rows={2} {...form.register('notes')} />
             </Field>
+            {selected?.customerEmail && (
+              <label className="flex items-center gap-2 text-sm sm:col-span-2">
+                <Checkbox checked={emailReceipt} onCheckedChange={(v) => setEmailReceipt(v === true)} />
+                Email the receipt to {selected.customerEmail}
+              </label>
+            )}
           </FormGrid>
         </DialogBody>
         <DialogFooter>

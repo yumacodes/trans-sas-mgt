@@ -1,6 +1,8 @@
-import { Router } from 'express';
+import { Router, type Request } from 'express';
 import type { Prisma } from '@prisma/client';
 import {
+  acceptanceBody,
+  acceptanceSubject,
   ACCEPTANCE_STATUS_LABELS,
   acceptanceInputSchema,
   acceptanceListQuerySchema,
@@ -20,9 +22,10 @@ import { dateFromIso, iso, isoDateOnly, optionalIsoDateOnly } from '../lib/seria
 import { parse } from '../lib/validate';
 import { renderAcceptancePdf } from '../services/acceptance-pdf';
 import { actorFrom, recordAudit } from '../services/audit';
-import { assertBranchAccess, branchGuard, optionalBranchWhere, resolveDocumentBranch } from '../services/branch-scope';
+import { assertBranchAccess, branchGuard, canAccessBranch, optionalBranchWhere, resolveDocumentBranch } from '../services/branch-scope';
 import { nextDocumentNumber, peekDocumentNumber } from '../services/document-numbers';
 import { pdfCompany } from '../services/pdf-company';
+import { documentEmailRoute } from '../services/document-email';
 import { customerOptions, resolveClient } from '../services/pickers';
 
 /**
@@ -171,6 +174,22 @@ acceptanceLettersRouter.get('/:id/pdf', async (req, res) => {
   res.send(pdf);
 });
 
+acceptanceLettersRouter.post(
+  '/:id/email',
+  ...documentEmailRoute({
+    permission: 'acceptance.manage',
+    entityType: 'acceptance',
+    load: async (id) => {
+      const letter = toDto(await loadLetter(prisma, id));
+      return {
+        number: letter.number,
+        recipientName: letter.recipientName,
+        pdf: async () => renderAcceptancePdf(letter, await pdfCompany('Acceptance Letter')),
+      };
+    },
+  }),
+);
+
 acceptanceLettersRouter.post('/', requirePermission('acceptance.manage'), idempotent, async (req, res) => {
   const ctx = getAuth(req);
   const input = parse(acceptanceInputSchema, req.body);
@@ -234,6 +253,92 @@ acceptanceLettersRouter.put('/:id', requirePermission('acceptance.manage'), asyn
     return updated;
   });
   ok(res, toDto(row));
+});
+
+/** Draft letter accepting an awarded price schedule or a delivered order, filled from it. */
+async function draftLetter(
+  req: Request,
+  source: {
+    branchId: string | null;
+    clientId: string | null;
+    recipientName: string;
+    recipientAddress: string | null;
+    contractNumber: string;
+    tenderId: string | null;
+    from: string;
+  },
+) {
+  const ctx = getAuth(req);
+  return prisma.$transaction(async (tx) => {
+    const last = await tx.acceptanceLetter.findFirst({
+      orderBy: { createdAt: 'desc' },
+      select: { signatoryName: true, signatoryTitle: true },
+    });
+    const supplyDescription = 'MEDICAL ITEMS';
+    const letter = await tx.acceptanceLetter.create({
+      data: {
+        number: await nextDocumentNumber(tx, 'acceptance'),
+        letterDate: new Date(new Date().toISOString().slice(0, 10)),
+        branchId: source.branchId ?? (await resolveDocumentBranch(tx, ctx, null)),
+        clientId: source.clientId,
+        recipientName: source.recipientName,
+        recipientAddress: source.recipientAddress,
+        contractNumber: source.contractNumber,
+        supplyDescription,
+        subject: acceptanceSubject(source.contractNumber),
+        body: acceptanceBody({ supplyDescription }),
+        signatoryName: last?.signatoryName ?? ctx.fullName ?? '',
+        signatoryTitle: last?.signatoryTitle ?? null,
+        tenderId: source.tenderId,
+        createdById: ctx.profileId,
+      },
+      include,
+    });
+    await recordAudit(tx, actorFrom(req), {
+      action: 'acceptance.created',
+      entityType: 'acceptance',
+      entityId: letter.id,
+      summary: `Acceptance letter ${letter.number} drafted from ${source.from}`,
+    });
+    return letter;
+  });
+}
+
+acceptanceLettersRouter.post('/from-tender/:tenderId', requirePermission('acceptance.manage'), async (req, res) => {
+  const ctx = getAuth(req);
+  const tender = await prisma.tender.findUnique({ where: { id: parse(uuid, req.params.tenderId) } });
+  if (!tender || !canAccessBranch(ctx, tender.branchId)) throw notFound('The price schedule');
+  if (tender.status !== 'awarded') throw invalidState('Only an awarded price schedule can have an acceptance letter.');
+  const letter = await draftLetter(req, {
+    branchId: tender.branchId,
+    clientId: tender.clientId,
+    recipientName: tender.customerName,
+    recipientAddress: tender.customerAddress,
+    contractNumber: tender.tenderReference ?? tender.number,
+    tenderId: tender.id,
+    from: `price schedule ${tender.number}`,
+  });
+  created(res, toDto(letter));
+});
+
+acceptanceLettersRouter.post('/from-waybill/:waybillId', requirePermission('acceptance.manage'), async (req, res) => {
+  const ctx = getAuth(req);
+  const waybill = await prisma.waybill.findUnique({
+    where: { id: parse(uuid, req.params.waybillId) },
+    include: { sale: { select: { number: true, tenderId: true } } },
+  });
+  if (!waybill || !canAccessBranch(ctx, waybill.branchId)) throw notFound('The waybill');
+  if (waybill.status !== 'delivered') throw invalidState('Only a delivered waybill can have an acceptance letter.');
+  const letter = await draftLetter(req, {
+    branchId: waybill.branchId,
+    clientId: waybill.clientId,
+    recipientName: waybill.recipientName,
+    recipientAddress: waybill.deliveryAddress,
+    contractNumber: waybill.sale?.number ?? waybill.number,
+    tenderId: waybill.sale?.tenderId ?? null,
+    from: `waybill ${waybill.number}`,
+  });
+  created(res, toDto(letter));
 });
 
 acceptanceLettersRouter.patch('/:id/status', requirePermission('acceptance.manage'), async (req, res) => {

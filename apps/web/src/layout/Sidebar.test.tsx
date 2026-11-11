@@ -55,7 +55,7 @@ describe('navigation visibility', () => {
   });
 
   it('drops groups with no visible children', () => {
-    expect(labels(['purchases.read'])).toEqual(['Purchase']);
+    expect(labels(['purchases.read'])).toEqual(['Purchase', 'Suppliers']);
     expect(labels([])).toEqual([]);
   });
 

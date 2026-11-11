@@ -3,6 +3,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { Pencil, Plus } from 'lucide-react';
 import { ACCEPTANCE_STATUSES, ACCEPTANCE_STATUS_LABELS, type AcceptanceDto } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
+import { useOpenParam } from '@/components/app/useOpenParam';
 import { BranchFilter } from '@/components/app/BranchControls';
 import { CellLink, DataTable, FilterSelect } from '@/components/app/DataTable';
 import { PageHeader } from '@/components/app/PageHeader';
@@ -20,7 +21,7 @@ export default function AcceptancePage() {
   const { can } = useAuth();
   const state = useTableState(['status', 'branchId', 'dateFrom', 'dateTo'], { sort: 'letterDate:desc' });
   const result = useListQuery<AcceptanceDto>(qk.acceptanceLetters, '/acceptance-letters', state.query);
-  const [viewId, setViewId] = useState<string | null>(null);
+  const [viewId, setViewId, closeView] = useOpenParam();
   const [form, setForm] = useState<{ open: boolean; letter: AcceptanceDto | null }>({ open: false, letter: null });
   const canCreate = can('acceptance.manage');
 
@@ -118,9 +119,9 @@ export default function AcceptancePage() {
       />
       <AcceptanceDetailModal
         letterId={viewId}
-        onOpenChange={(o) => !o && setViewId(null)}
+        onOpenChange={(o) => !o && closeView()}
         onEdit={(letter) => {
-          setViewId(null);
+          closeView();
           setForm({ open: true, letter });
         }}
       />

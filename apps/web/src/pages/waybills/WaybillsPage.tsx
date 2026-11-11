@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Controller, useFieldArray, useForm } from 'react-hook-form';
-import { useSearchParams } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
-import { Ban, CheckCircle2, FileDown, Pencil, Plus, Printer, Send, Trash2 } from 'lucide-react';
+import { Ban, CheckCircle2, FileDown, FileSignature, Pencil, Plus, Printer, Send, Trash2 } from 'lucide-react';
 import type { z } from 'zod';
 import {
   WAYBILL_STATUSES,
@@ -13,6 +13,7 @@ import {
   type WaybillInput,
 } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
+import { DocumentEmailComposer } from '@/components/app/DocumentEmailComposer';
 import { BranchField, BranchFilter } from '@/components/app/BranchControls';
 import { CellLink, DataTable, FilterSelect } from '@/components/app/DataTable';
 import { ConfirmDialog, FormDialog, ReasonDialog } from '@/components/app/dialogs';
@@ -152,6 +153,7 @@ function WaybillDetailModal({
   const { can } = useAuth();
   const queryClient = useQueryClient();
   const { run } = useOperation();
+  const navigate = useNavigate();
   const pdf = usePdfActions(BASE);
   const [action, setAction] = useState<'dispatch' | 'cancel' | 'deliver' | null>(null);
   const canManage = can('waybills.manage');
@@ -162,6 +164,18 @@ function WaybillDetailModal({
     enabled: Boolean(waybillId),
   });
   const w = query.data;
+
+  const makeLetter = async () => {
+    if (!w) return;
+    try {
+      const letter = await run(() => api.post<{ id: string }>(`/acceptance-letters/from-waybill/${w.id}`));
+      void queryClient.invalidateQueries({ queryKey: qk.acceptanceLetters });
+      onOpenChange(false);
+      void navigate(`/acceptance-letters?open=${letter.id}`);
+    } catch {
+      // The error dialog already explained the failure.
+    }
+  };
 
   const act = async (path: string, patch: Partial<WaybillDto>, body?: unknown) => {
     if (!w) return;
@@ -234,6 +248,26 @@ function WaybillDetailModal({
           w
             ? [
                 { value: 'details', label: 'Details', content: details },
+                ...(can('waybills.manage')
+                  ? [
+                      {
+                        value: 'email',
+                        label: 'Email',
+                        content: (
+                          <DocumentEmailComposer
+                            key={w.id}
+                            path={`/waybills/${w.id}`}
+                            number={w.number}
+                            documentLabel="waybill"
+                            recipientName={w.recipientName}
+                            defaultTo={null}
+                            defaultSubject={`Delivery note ${w.number}`}
+                            intro={`Please find attached the delivery note ${w.number} for your order.`}
+                          />
+                        ),
+                      },
+                    ]
+                  : []),
                 ...(can('audit.read')
                   ? [{ value: 'history', label: 'History', content: <EntityHistory entityType="waybill" entityId={w.id} /> }]
                   : []),
@@ -252,6 +286,11 @@ function WaybillDetailModal({
                     <Send aria-hidden /> Dispatch
                   </Button>
                 </>
+              )}
+              {w.status === 'delivered' && can('acceptance.manage') && (
+                <Button variant="secondary" onClick={() => void makeLetter()}>
+                  <FileSignature aria-hidden /> Acceptance letter
+                </Button>
               )}
               {canManage && w.status === 'dispatched' && (
                 <Button variant="secondary" onClick={() => setAction('deliver')}>

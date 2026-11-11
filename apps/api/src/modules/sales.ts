@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { Prisma } from '@prisma/client';
-import type { z } from 'zod';
+import { z } from 'zod';
 import {
   calculateProformaTotals,
   saleCancelSchema,
@@ -30,8 +30,9 @@ import { nextDocumentNumber, peekDocumentNumber } from '../services/document-num
 import { recordMovement } from '../services/inventory';
 import { notifyLowStock } from '../services/notifications';
 import { pdfCompany } from '../services/pdf-company';
-import { assertStockItemsExist, customerOptions, resolveClient, stockItemOptions } from '../services/pickers';
+import { assertStockItemsExist, customerOptions, lastPrices, resolveClient, stockItemOptions } from '../services/pickers';
 import { renderProformaPdf } from '../services/proforma-pdf';
+import { documentEmailRoute } from '../services/document-email';
 
 /**
  * Sales. A draft changes nothing. Confirming a sale issues its stock in the same
@@ -149,6 +150,13 @@ salesRouter.get('/items', requirePermission('sales.manage'), async (req, res) =>
   ok(res, await stockItemOptions(req));
 });
 
+/** What each stock item was last sold for to this client, from confirmed sales. */
+salesRouter.get('/last-prices', async (req, res) => {
+  const ctx = getAuth(req);
+  const { clientId } = parse(z.object({ clientId: uuid }), req.query);
+  ok(res, await lastPrices(ctx, clientId));
+});
+
 salesRouter.get('/', async (req, res) => {
   const ctx = getAuth(req);
   const query = parse(saleListQuerySchema, req.query);
@@ -189,9 +197,8 @@ salesRouter.get('/:id', async (req, res) => {
   ok(res, toDto(await loadSale(prisma, parse(uuid, req.params.id))));
 });
 
-salesRouter.get('/:id/pdf', async (req, res) => {
-  const sale = toDto(await loadSale(prisma, parse(uuid, req.params.id)));
-  // A sale invoice has the same layout as a proforma, under its own heading.
+/** A sale invoice has the same layout as a proforma, under its own heading. */
+async function salePdf(sale: SaleDto) {
   const asDocument: ProformaDto = {
     ...sale,
     issueDate: sale.saleDate,
@@ -201,17 +208,83 @@ salesRouter.get('/:id/pdf', async (req, res) => {
     emailedAt: null,
     preparedByName: sale.preparedBy,
   };
-  const pdf = await renderProformaPdf(asDocument, await pdfCompany('Invoice'), {
+  return renderProformaPdf(asDocument, await pdfCompany('Invoice'), {
     heading: 'SALES',
     subheading: 'INVOICE',
     documentTitle: 'Sales Invoice',
     statusLabel: sale.status === 'confirmed' ? 'Confirmed' : sale.status === 'draft' ? 'Draft' : 'Cancelled',
   });
+}
+
+salesRouter.get('/:id/pdf', async (req, res) => {
+  const sale = toDto(await loadSale(prisma, parse(uuid, req.params.id)));
+  const pdf = await salePdf(sale);
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `attachment; filename="${sale.number}.pdf"`);
   res.setHeader('Cache-Control', 'private, no-store');
   res.send(pdf);
 });
+
+salesRouter.post(
+  '/:id/email',
+  ...documentEmailRoute({
+    permission: 'sales.manage',
+    entityType: 'sale',
+    load: async (id) => {
+      const sale = toDto(await loadSale(prisma, id));
+      return { number: sale.number, recipientName: sale.customerName, pdf: () => salePdf(sale) };
+    },
+  }),
+);
+
+/** Copies a sale into a new draft, for repeat orders. */
+salesRouter.post('/:id/duplicate', requirePermission('sales.manage'), async (req, res) => {
+  const ctx = getAuth(req);
+  const id = parse(uuid, req.params.id);
+  const row = await prisma.$transaction(async (tx) => {
+    const source = await loadSale(tx, id);
+    const copy = await tx.sale.create({
+      data: {
+        number: await nextDocumentNumber(tx, 'sale'),
+        saleDate: new Date(new Date().toISOString().slice(0, 10)),
+        currency: source.currency,
+        branchId: source.branchId,
+        clientId: source.clientId,
+        customerName: source.customerName,
+        customerAddress: source.customerAddress,
+        customerEmail: source.customerEmail,
+        customerPhone: source.customerPhone,
+        taxRate: source.taxRate,
+        subtotal: source.subtotal,
+        taxAmount: source.taxAmount,
+        total: source.total,
+        notes: source.notes,
+        createdById: ctx.profileId,
+        items: {
+          create: source.items.map((i) => ({
+            position: i.position,
+            stockItemId: i.stockItemId,
+            name: i.name,
+            quantity: i.quantity,
+            unit: i.unit,
+            unitPrice: i.unitPrice,
+            amount: i.amount,
+          })),
+        },
+      },
+      include: saleInclude,
+    });
+    await recordAudit(tx, actorFrom(req), {
+      action: 'sale.created',
+      entityType: 'sale',
+      entityId: copy.id,
+      summary: `Sale ${copy.number} copied from ${source.number}`,
+    });
+    return copy;
+  });
+  created(res, toDto(row));
+});
+
 
 salesRouter.post('/', requirePermission('sales.manage'), idempotent, async (req, res) => {
   const ctx = getAuth(req);

@@ -98,3 +98,27 @@ export async function resolveClient(
   });
   return client.id;
 }
+
+/** Last confirmed selling price per stock item for one client, newest first. */
+export async function lastPrices(ctx: AuthContext, clientId: string) {
+  const rows = await prisma.saleItem.findMany({
+    where: {
+      stockItemId: { not: null },
+      sale: { clientId, status: 'confirmed', ...(ctx.allBranches ? {} : { branchId: { in: [...ctx.branchIds] } }) },
+    },
+    select: { stockItemId: true, unitPrice: true, sale: { select: { number: true, saleDate: true, currency: true } } },
+    orderBy: { sale: { saleDate: 'desc' } },
+    take: 500,
+  });
+  const latest: Record<string, { unitPrice: string; currency: string; saleNumber: string; saleDate: string }> = {};
+  for (const r of rows) {
+    if (latest[r.stockItemId!]) continue;
+    latest[r.stockItemId!] = {
+      unitPrice: decimalString(r.unitPrice),
+      currency: r.sale.currency,
+      saleNumber: r.sale.number,
+      saleDate: r.sale.saleDate.toISOString().slice(0, 10),
+    };
+  }
+  return latest;
+}

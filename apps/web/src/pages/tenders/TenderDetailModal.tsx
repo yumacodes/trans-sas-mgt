@@ -1,8 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router';
-import { FileDown, Pencil, Printer, ShoppingCart } from 'lucide-react';
+import { Copy, FileDown, FileSignature, Pencil, Printer, ShoppingCart } from 'lucide-react';
 import { TENDER_STATUSES, TENDER_STATUS_LABELS, type SaleDto, type TenderDto, type TenderStatus } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
+import { DocumentEmailComposer } from '@/components/app/DocumentEmailComposer';
 import { EntityHistory } from '@/components/app/EntityHistory';
 import { Field } from '@/components/app/form';
 import { useOperation } from '@/components/app/OperationFeedback';
@@ -46,6 +47,18 @@ export function TenderDetailModal({ tenderId, onOpenChange, onEdit }: Props) {
         success: `Marked as ${TENDER_STATUS_LABELS[status].toLowerCase()}`,
       });
       void queryClient.invalidateQueries({ queryKey: qk.tenders });
+    } catch {
+      // The error dialog already explained the failure.
+    }
+  };
+
+  const convert = async (path: string, page: string) => {
+    try {
+      const made = await run(() => api.post<{ id: string }>(path));
+      void queryClient.invalidateQueries({ queryKey: qk.tenders });
+      void queryClient.invalidateQueries({ queryKey: qk.acceptanceLetters });
+      onOpenChange(false);
+      void navigate(`${page}?open=${made.id}`);
     } catch {
       // The error dialog already explained the failure.
     }
@@ -155,6 +168,26 @@ export function TenderDetailModal({ tenderId, onOpenChange, onEdit }: Props) {
         t
           ? [
               { value: 'details', label: 'Details', content: details },
+                ...(can('tenders.manage')
+                  ? [
+                      {
+                        value: 'email',
+                        label: 'Email',
+                        content: (
+                          <DocumentEmailComposer
+                            key={t.id}
+                            path={`/tenders/${t.id}`}
+                            number={t.number}
+                            documentLabel="price schedule"
+                            recipientName={t.customerName}
+                            defaultTo={null}
+                            defaultSubject={`Price schedule ${t.number}`}
+                            intro={`Please find attached our price schedule ${t.number}.`}
+                          />
+                        ),
+                      },
+                    ]
+                  : []),
               ...(can('audit.read')
                 ? [{ value: 'history', label: 'History', content: <EntityHistory entityType="tender" entityId={t.id} /> }]
                 : []),
@@ -164,6 +197,16 @@ export function TenderDetailModal({ tenderId, onOpenChange, onEdit }: Props) {
       actions={
         t && (
           <>
+            {canManage && (
+              <Button variant="secondary" onClick={() => void convert(`/tenders/${t.id}/duplicate`, '/tender-schedule')}>
+                <Copy aria-hidden /> Duplicate
+              </Button>
+            )}
+            {t.status === 'awarded' && can('acceptance.manage') && (
+              <Button variant="secondary" onClick={() => void convert(`/acceptance-letters/from-tender/${t.id}`, '/acceptance-letters')}>
+                <FileSignature aria-hidden /> Acceptance letter
+              </Button>
+            )}
             {t.status === 'awarded' && can('sales.manage') && (
               <Button variant="secondary" onClick={() => void makeSale()}>
                 <ShoppingCart aria-hidden /> Create sale

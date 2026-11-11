@@ -17,6 +17,8 @@ import {
   type SupplierDto,
 } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
+import { useOpenParam } from '@/components/app/useOpenParam';
+import { DocumentEmailComposer } from '@/components/app/DocumentEmailComposer';
 import { BranchField, BranchFilter } from '@/components/app/BranchControls';
 import { CellLink, DataTable, FilterSelect } from '@/components/app/DataTable';
 import { ConfirmDialog, FormDialog } from '@/components/app/dialogs';
@@ -56,7 +58,7 @@ export default function PurchasesPage() {
   const { can } = useAuth();
   const state = useTableState(['status', 'branchId'], { sort: 'purchaseDate:desc' });
   const result = useListQuery<PurchaseDto>(qk.purchases, BASE, state.query);
-  const [viewId, setViewId] = useState<string | null>(null);
+  const [viewId, setViewId, closeView] = useOpenParam();
   const [form, setForm] = useState<{ open: boolean; purchase: PurchaseDto | null }>({ open: false, purchase: null });
   const [reorderOpen, setReorderOpen] = useState(false);
   const canManage = can('purchases.manage');
@@ -138,9 +140,9 @@ export default function PurchasesPage() {
       />
       <PurchaseDetailModal
         purchaseId={viewId}
-        onOpenChange={(o) => !o && setViewId(null)}
+        onOpenChange={(o) => !o && closeView()}
         onEdit={(purchase) => {
-          setViewId(null);
+          closeView();
           setForm({ open: true, purchase });
         }}
       />
@@ -292,6 +294,26 @@ function PurchaseDetailModal({
             ? [
                 { value: 'details', label: 'Details', content: details },
                 { value: 'receipts', label: `Receipts (${p.receipts.length})`, content: receipts },
+                ...(can('purchases.manage')
+                  ? [
+                      {
+                        value: 'email',
+                        label: 'Email',
+                        content: (
+                          <DocumentEmailComposer
+                            key={p.id}
+                            path={`/purchases/${p.id}`}
+                            number={p.number}
+                            documentLabel="purchase order"
+                            recipientName={p.supplier.name}
+                            defaultTo={null}
+                            defaultSubject={`Purchase order ${p.number}`}
+                            intro={`Please find attached our purchase order ${p.number}.`}
+                          />
+                        ),
+                      },
+                    ]
+                  : []),
                 ...(can('audit.read')
                   ? [{ value: 'history', label: 'History', content: <EntityHistory entityType="purchase" entityId={p.id} /> }]
                   : []),

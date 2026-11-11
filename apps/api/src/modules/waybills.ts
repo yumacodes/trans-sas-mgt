@@ -28,6 +28,7 @@ import { nextDocumentNumber, peekDocumentNumber } from '../services/document-num
 import { recordMovement } from '../services/inventory';
 import { notify, notifyLowStock } from '../services/notifications';
 import { pdfCompany } from '../services/pdf-company';
+import { documentEmailRoute } from '../services/document-email';
 import { assertStockItemsExist, customerOptions, resolveClient, stockItemOptions } from '../services/pickers';
 import { renderWaybillPdf } from '../services/waybill-pdf';
 
@@ -217,6 +218,22 @@ waybillsRouter.get('/:id/pdf', async (req, res) => {
   res.setHeader('Cache-Control', 'private, no-store');
   res.send(pdf);
 });
+
+waybillsRouter.post(
+  '/:id/email',
+  ...documentEmailRoute({
+    permission: 'waybills.manage',
+    entityType: 'waybill',
+    load: async (id) => {
+      const waybill = toDto(await loadWaybill(prisma, id));
+      return {
+        number: waybill.number,
+        recipientName: waybill.recipientName,
+        pdf: async () => renderWaybillPdf(waybill, await pdfCompany('Waybill')),
+      };
+    },
+  }),
+);
 
 waybillsRouter.post('/', requirePermission('waybills.manage'), idempotent, async (req, res) => {
   const ctx = getAuth(req);

@@ -25,6 +25,7 @@ import { nextDocumentNumber, peekDocumentNumber } from '../services/document-num
 import { recordMovement } from '../services/inventory';
 import { notifyPermission } from '../services/notifications';
 import { pdfCompany } from '../services/pdf-company';
+import { documentEmailRoute } from '../services/document-email';
 import { assertStockItemsExist, stockItemOptions } from '../services/pickers';
 import { renderProformaPdf } from '../services/proforma-pdf';
 
@@ -198,8 +199,7 @@ purchasesRouter.get('/:id', async (req, res) => {
   ok(res, toDto(await loadPurchase(prisma, parse(uuid, req.params.id))));
 });
 
-purchasesRouter.get('/:id/pdf', async (req, res) => {
-  const row = await loadPurchase(prisma, parse(uuid, req.params.id));
+async function purchasePdf(row: PurchaseRow) {
   const p = toDto(row);
   // A purchase order uses the invoice layout, with the supplier in the customer's place.
   const asDocument: ProformaDto = {
@@ -237,17 +237,34 @@ purchasesRouter.get('/:id/pdf', async (req, res) => {
     createdAt: p.createdAt,
     updatedAt: p.updatedAt,
   };
-  const pdf = await renderProformaPdf(asDocument, await pdfCompany('Purchase Order'), {
+  return renderProformaPdf(asDocument, await pdfCompany('Purchase Order'), {
     heading: 'PURCHASE',
     subheading: 'ORDER',
     documentTitle: 'Purchase Order',
     statusLabel: p.status === 'draft' ? 'Draft' : 'Ordered',
   });
+}
+
+purchasesRouter.get('/:id/pdf', async (req, res) => {
+  const row = await loadPurchase(prisma, parse(uuid, req.params.id));
+  const pdf = await purchasePdf(row);
   res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', `attachment; filename="${p.number}.pdf"`);
+  res.setHeader('Content-Disposition', `attachment; filename="${row.number}.pdf"`);
   res.setHeader('Cache-Control', 'private, no-store');
   res.send(pdf);
 });
+
+purchasesRouter.post(
+  '/:id/email',
+  ...documentEmailRoute({
+    permission: 'purchases.manage',
+    entityType: 'purchase',
+    load: async (id) => {
+      const row = await loadPurchase(prisma, id);
+      return { number: row.number, recipientName: row.supplier.name, pdf: () => purchasePdf(row) };
+    },
+  }),
+);
 
 purchasesRouter.post('/', requirePermission('purchases.manage'), idempotent, async (req, res) => {
   const ctx = getAuth(req);

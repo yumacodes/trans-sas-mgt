@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Ban, Banknote, CheckCircle2, FileDown, Pencil, Printer, Truck } from 'lucide-react';
+import { Ban, Banknote, CheckCircle2, Copy, FileDown, Pencil, Printer, Truck } from 'lucide-react';
 import type { SaleDto, WaybillDto } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
+import { DocumentEmailComposer } from '@/components/app/DocumentEmailComposer';
 import { ConfirmDialog, ReasonDialog } from '@/components/app/dialogs';
 import { EntityHistory } from '@/components/app/EntityHistory';
 import { useOperation } from '@/components/app/OperationFeedback';
@@ -67,6 +68,18 @@ export function SaleDetailModal({ saleId, onOpenChange, onEdit }: Props) {
         optimistic: () => patchRecord<SaleDto>(queryClient, qk.sales, s.id, { status: 'cancelled', cancelReason: reason }),
       });
       refresh();
+    } catch {
+      // The error dialog already explained the failure.
+    }
+  };
+
+  const duplicate = async () => {
+    if (!s) return;
+    try {
+      const copy = await run(() => api.post<SaleDto>(`/sales/${s.id}/duplicate`));
+      void queryClient.invalidateQueries({ queryKey: qk.sales });
+      onOpenChange(false);
+      void navigate(`/sales?open=${copy.id}`);
     } catch {
       // The error dialog already explained the failure.
     }
@@ -167,6 +180,26 @@ export function SaleDetailModal({ saleId, onOpenChange, onEdit }: Props) {
           s
             ? [
                 { value: 'details', label: 'Details', content: details },
+                ...(can('sales.manage')
+                  ? [
+                      {
+                        value: 'email',
+                        label: 'Email',
+                        content: (
+                          <DocumentEmailComposer
+                            key={s.id}
+                            path={`/sales/${s.id}`}
+                            number={s.number}
+                            documentLabel="invoice"
+                            recipientName={s.customerName}
+                            defaultTo={s.customerEmail}
+                            defaultSubject={`Invoice ${s.number}`}
+                            intro={`Please find attached invoice ${s.number} for ${formatMoney(s.total, s.currency)}.`}
+                          />
+                        ),
+                      },
+                    ]
+                  : []),
                 ...(can('audit.read')
                   ? [{ value: 'history', label: 'History', content: <EntityHistory entityType="sale" entityId={s.id} /> }]
                   : []),
@@ -194,6 +227,11 @@ export function SaleDetailModal({ saleId, onOpenChange, onEdit }: Props) {
               {s.status === 'confirmed' && can('payments.record') && Number(s.balance) > 0 && (
                 <Button variant="secondary" onClick={() => setPaying(true)}>
                   <Banknote aria-hidden /> Record payment
+                </Button>
+              )}
+              {canManage && (
+                <Button variant="secondary" onClick={() => void duplicate()}>
+                  <Copy aria-hidden /> Duplicate
                 </Button>
               )}
               {s.status !== 'cancelled' && can('sales.cancel') && (

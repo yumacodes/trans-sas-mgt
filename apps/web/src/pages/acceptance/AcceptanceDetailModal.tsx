@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ban, FileDown, Pencil, Printer, Send } from 'lucide-react';
 import { ACCEPTANCE_STATUS_LABELS, type AcceptanceDto, type AcceptanceStatus } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
+import { DocumentEmailComposer } from '@/components/app/DocumentEmailComposer';
 import { ConfirmDialog } from '@/components/app/dialogs';
 import { EntityHistory } from '@/components/app/EntityHistory';
 import { useOperation } from '@/components/app/OperationFeedback';
@@ -94,6 +95,26 @@ export function AcceptanceDetailModal({ letterId, onOpenChange, onEdit }: Props)
           l
             ? [
                 { value: 'details', label: 'Letter', content: details },
+                ...(can('acceptance.manage')
+                  ? [
+                      {
+                        value: 'email',
+                        label: 'Email',
+                        content: (
+                          <DocumentEmailComposer
+                            key={l.id}
+                            path={`/acceptance-letters/${l.id}`}
+                            number={l.number}
+                            documentLabel="letter"
+                            recipientName={l.recipientName}
+                            defaultTo={null}
+                            defaultSubject={l.subject}
+                            intro={`Please find attached our letter ${l.number}.`}
+                          />
+                        ),
+                      },
+                    ]
+                  : []),
                 ...(can('audit.read')
                   ? [{ value: 'history', label: 'History', content: <EntityHistory entityType="acceptance" entityId={l.id} /> }]
                   : []),

@@ -23,6 +23,7 @@ import { actorFrom, recordAudit } from '../services/audit';
 import { assertBranchAccess, branchGuard, optionalBranchWhere, resolveDocumentBranch } from '../services/branch-scope';
 import { nextDocumentNumber, peekDocumentNumber } from '../services/document-numbers';
 import { pdfCompany } from '../services/pdf-company';
+import { documentEmailRoute } from '../services/document-email';
 import { assertStockItemsExist, customerOptions, resolveClient, stockItemOptions } from '../services/pickers';
 import { renderTenderPdf } from '../services/tender-pdf';
 
@@ -195,6 +196,22 @@ tendersRouter.get('/:id/pdf', async (req, res) => {
   res.send(pdf);
 });
 
+tendersRouter.post(
+  '/:id/email',
+  ...documentEmailRoute({
+    permission: 'tenders.manage',
+    entityType: 'tender',
+    load: async (id) => {
+      const tender = toDto(await loadTender(prisma, id));
+      return {
+        number: tender.number,
+        recipientName: tender.customerName,
+        pdf: async () => renderTenderPdf(tender, await pdfCompany('Price Schedule')),
+      };
+    },
+  }),
+);
+
 tendersRouter.post('/', requirePermission('tenders.manage'), idempotent, async (req, res) => {
   const ctx = getAuth(req);
   const input = parse(tenderInputSchema, req.body);
@@ -268,6 +285,48 @@ tendersRouter.put('/:id', requirePermission('tenders.manage'), async (req, res) 
     return updated;
   });
   ok(res, toDto(row));
+});
+
+/** Copies a price schedule into a new draft, for a similar tender. */
+tendersRouter.post('/:id/duplicate', requirePermission('tenders.manage'), async (req, res) => {
+  const ctx = getAuth(req);
+  const id = parse(uuid, req.params.id);
+  const row = await prisma.$transaction(async (tx) => {
+    const source = await loadTender(tx, id);
+    const copy = await tx.tender.create({
+      data: {
+        number: await nextDocumentNumber(tx, 'tender'),
+        scheduleDate: new Date(new Date().toISOString().slice(0, 10)),
+        tenderReference: source.tenderReference,
+        submissionDeadline: null,
+        branchId: source.branchId,
+        clientId: source.clientId,
+        customerName: source.customerName,
+        customerAddress: source.customerAddress,
+        lot: source.lot,
+        currency: source.currency,
+        taxLabel: source.taxLabel,
+        taxRate: source.taxRate,
+        subtotal: source.subtotal,
+        taxAmount: source.taxAmount,
+        total: source.total,
+        notes: source.notes,
+        createdById: ctx.profileId,
+        items: {
+          create: source.items.map(({ id: _id, tenderId: _t, ...item }) => item),
+        },
+      },
+      include,
+    });
+    await recordAudit(tx, actorFrom(req), {
+      action: 'tender.created',
+      entityType: 'tender',
+      entityId: copy.id,
+      summary: `Price schedule ${copy.number} copied from ${source.number}`,
+    });
+    return copy;
+  });
+  created(res, toDto(row));
 });
 
 tendersRouter.patch('/:id/status', requirePermission('tenders.manage'), async (req, res) => {

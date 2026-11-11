@@ -109,6 +109,23 @@ export function SaleFormDialog({ open, onOpenChange, onSaved, sale }: Props) {
   }, [open, sale, form]);
 
   const watched = form.watch();
+  // What this client last paid for each item, shown as a hint beside the price.
+  const pricedClientId = watched.clientId ?? null;
+  const lastPrices = useQuery({
+    queryKey: [...qk.sales, 'last-prices', pricedClientId],
+    queryFn: ({ signal }) =>
+      api.get<Record<string, { unitPrice: string; currency: string; saleNumber: string; saleDate: string }>>(
+        '/sales/last-prices',
+        { clientId: pricedClientId ?? '' },
+        signal,
+      ),
+    enabled: open && Boolean(pricedClientId),
+    staleTime: 60_000,
+  });
+  const priceHint = (stockItemId: string | null | undefined) => {
+    const last = stockItemId ? lastPrices.data?.[stockItemId] : undefined;
+    return last ? `Last sold to this client at ${formatMoney(last.unitPrice, last.currency)} (${last.saleNumber})` : undefined;
+  };
   const lines = watched.items ?? [];
   const totals = calculateProformaTotals(
     lines.map((i) => ({ quantity: numeric(i?.quantity), unitPrice: numeric(i?.unitPrice) })),
@@ -307,7 +324,7 @@ export function SaleFormDialog({ open, onOpenChange, onSaved, sale }: Props) {
                     <Field label="Unit" error={e?.unit?.message} required>
                       <Input placeholder="pcs" {...form.register(`items.${index}.unit`)} />
                     </Field>
-                    <Field label="Unit price" error={e?.unitPrice?.message} required>
+                    <Field label="Unit price" error={e?.unitPrice?.message} required hint={priceHint(lines[index]?.stockItemId)}>
                       <Input inputMode="decimal" {...form.register(`items.${index}.unitPrice`)} />
                     </Field>
                     <Field label="Amount">

@@ -22,6 +22,7 @@ import { assertBranchAccess, branchGuard, branchWhere, canAccessBranch } from '.
 import { nextDocumentNumber } from '../services/document-numbers';
 import { notify } from '../services/notifications';
 import { pdfCompany } from '../services/pdf-company';
+import { documentEmailRoute } from '../services/document-email';
 import { renderReceiptPdf } from '../services/receipt-pdf';
 import { saleBalance } from './sales';
 
@@ -116,6 +117,7 @@ paymentsRouter.get('/open-sales', requirePermission('payments.record'), async (r
       id: sale.id,
       number: sale.number,
       customerName: sale.customerName,
+      customerEmail: sale.customerEmail,
       currency: sale.currency as OpenSaleOptionDto['currency'],
       total: decimalString(sale.total),
       balance: decimalString(balance),
@@ -173,6 +175,22 @@ paymentsRouter.get('/:id/pdf', async (req, res) => {
   res.setHeader('Cache-Control', 'private, no-store');
   res.send(pdf);
 });
+
+paymentsRouter.post(
+  '/:id/email',
+  ...documentEmailRoute({
+    permission: 'payments.record',
+    entityType: 'payment',
+    load: async (id) => {
+      const payment = toDto(await loadPayment(prisma, id));
+      return {
+        number: payment.number,
+        recipientName: payment.customerName,
+        pdf: async () => renderReceiptPdf(payment, await pdfCompany('Receipt')),
+      };
+    },
+  }),
+);
 
 paymentsRouter.post('/', requirePermission('payments.record'), idempotent, async (req, res) => {
   const ctx = getAuth(req);

@@ -4,6 +4,8 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { FileDown, Plus, Printer, Undo2 } from 'lucide-react';
 import { PAYMENT_METHOD_LABELS, PAYMENT_STATUSES, PAYMENT_STATUS_LABELS, type PaymentDto } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
+import { useOpenParam } from '@/components/app/useOpenParam';
+import { DocumentEmailComposer } from '@/components/app/DocumentEmailComposer';
 import { BranchFilter } from '@/components/app/BranchControls';
 import { CellLink, DataTable, FilterSelect } from '@/components/app/DataTable';
 import { ReasonDialog } from '@/components/app/dialogs';
@@ -26,7 +28,7 @@ export default function PaymentsPage() {
   const { can } = useAuth();
   const state = useTableState(['status', 'branchId'], { sort: 'paymentDate:desc' });
   const result = useListQuery<PaymentDto>(qk.payments, '/payments', state.query);
-  const [viewId, setViewId] = useState<string | null>(null);
+  const [viewId, setViewId, closeView] = useOpenParam();
   const [formOpen, setFormOpen] = useState(false);
   const canRecord = can('payments.record');
   const right = { align: 'right' as const, headerClassName: 'text-right' };
@@ -93,7 +95,7 @@ export default function PaymentsPage() {
         emptyDescription="Payments appear here once they are recorded against a confirmed sale."
         emptyAction={newButton('sm')}
       />
-      <PaymentDetailModal paymentId={viewId} onOpenChange={(o) => !o && setViewId(null)} />
+      <PaymentDetailModal paymentId={viewId} onOpenChange={(o) => !o && closeView()} />
       {canRecord && <PaymentFormDialog open={formOpen} onOpenChange={setFormOpen} />}
     </>
   );
@@ -168,6 +170,26 @@ function PaymentDetailModal({
           p
             ? [
                 { value: 'details', label: 'Details', content: details },
+                ...(can('payments.record')
+                  ? [
+                      {
+                        value: 'email',
+                        label: 'Email',
+                        content: (
+                          <DocumentEmailComposer
+                            key={p.id}
+                            path={`/payments/${p.id}`}
+                            number={p.number}
+                            documentLabel="receipt"
+                            recipientName={p.customerName}
+                            defaultTo={null}
+                            defaultSubject={`Receipt ${p.number}`}
+                            intro={`Thank you for your payment of ${formatMoney(p.amount, p.currency)}. Your receipt ${p.number} is attached.`}
+                          />
+                        ),
+                      },
+                    ]
+                  : []),
                 ...(can('audit.read')
                   ? [{ value: 'history', label: 'History', content: <EntityHistory entityType="payment" entityId={p.id} /> }]
                   : []),

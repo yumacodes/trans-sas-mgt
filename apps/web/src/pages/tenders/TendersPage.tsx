@@ -3,6 +3,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { Pencil, Plus } from 'lucide-react';
 import { TENDER_STATUSES, TENDER_STATUS_LABELS, type TenderDto } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
+import { useOpenParam } from '@/components/app/useOpenParam';
 import { BranchFilter } from '@/components/app/BranchControls';
 import { CellLink, DataTable, FilterSelect } from '@/components/app/DataTable';
 import { PageHeader } from '@/components/app/PageHeader';
@@ -20,7 +21,7 @@ export default function TendersPage() {
   const { can } = useAuth();
   const state = useTableState(['status', 'branchId', 'dateFrom', 'dateTo'], { sort: 'scheduleDate:desc' });
   const result = useListQuery<TenderDto>(qk.tenders, '/tenders', state.query);
-  const [viewId, setViewId] = useState<string | null>(null);
+  const [viewId, setViewId, closeView] = useOpenParam();
   const [form, setForm] = useState<{ open: boolean; tender: TenderDto | null }>({ open: false, tender: null });
   const canCreate = can('tenders.manage');
   const right = { align: 'right' as const, headerClassName: 'text-right' };
@@ -130,9 +131,9 @@ export default function TendersPage() {
       />
       <TenderDetailModal
         tenderId={viewId}
-        onOpenChange={(o) => !o && setViewId(null)}
+        onOpenChange={(o) => !o && closeView()}
         onEdit={(tender) => {
-          setViewId(null);
+          closeView();
           setForm({ open: true, tender });
         }}
       />

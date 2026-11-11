@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
+import { z } from 'zod';
 import { Router } from 'express';
 import multer from 'multer';
 import rateLimit from 'express-rate-limit';
@@ -28,7 +29,7 @@ import { nextDocumentNumber, peekDocumentNumber } from '../services/document-num
 import { EMAIL_NOT_CONFIGURED, emailConfigured, sendEmail } from '../services/email';
 import { pdfCompany } from '../services/pdf-company';
 import { renderProformaPdf } from '../services/proforma-pdf';
-import { assertStockItemsExist, customerOptions, resolveClient, stockItemOptions } from '../services/pickers';
+import { assertStockItemsExist, customerOptions, lastPrices, resolveClient, stockItemOptions } from '../services/pickers';
 
 /**
  * Proforma invoices. A proforma is a quotation: it never moves stock or counts as
@@ -107,6 +108,13 @@ proformasRouter.get('/customers', requirePermission('proformas.manage'), async (
 /** Stock items to pick from; selecting one fills the unit and unit price. */
 proformasRouter.get('/items', requirePermission('proformas.manage'), async (req, res) => {
   ok(res, await stockItemOptions(req));
+});
+
+/** What each stock item was last sold for to this client, for the price hint. */
+proformasRouter.get('/last-prices', requirePermission('proformas.manage'), async (req, res) => {
+  const ctx = getAuth(req);
+  const { clientId } = parse(z.object({ clientId: uuid }), req.query);
+  ok(res, await lastPrices(ctx, clientId));
 });
 
 proformasRouter.get('/', async (req, res) => {
@@ -228,6 +236,57 @@ proformasRouter.post('/', requirePermission('proformas.manage'), idempotent, asy
   });
   created(res, toDto(row));
 });
+
+/** Copies a proforma into a new draft, for a similar quotation. */
+proformasRouter.post('/:id/duplicate', requirePermission('proformas.manage'), async (req, res) => {
+  const ctx = getAuth(req);
+  const id = parse(uuid, req.params.id);
+  const row = await prisma.$transaction(async (tx) => {
+    const source = await loadProforma(id);
+    const copy = await tx.proforma.create({
+      data: {
+        number: await nextDocumentNumber(tx, 'proforma'),
+        issueDate: new Date(new Date().toISOString().slice(0, 10)),
+        currency: source.currency,
+        branchId: source.branchId,
+        clientId: source.clientId,
+        customerName: source.customerName,
+        customerAddress: source.customerAddress,
+        customerEmail: source.customerEmail,
+        customerPhone: source.customerPhone,
+        vatRate: source.vatRate,
+        taxRate: source.taxRate,
+        subtotal: source.subtotal,
+        vatAmount: source.vatAmount,
+        taxAmount: source.taxAmount,
+        total: source.total,
+        notes: source.notes,
+        createdById: ctx.profileId,
+        items: {
+          create: source.items.map((i) => ({
+            position: i.position,
+            stockItemId: i.stockItemId,
+            name: i.name,
+            quantity: i.quantity,
+            unit: i.unit,
+            unitPrice: i.unitPrice,
+            amount: i.amount,
+          })),
+        },
+      },
+      include,
+    });
+    await recordAudit(tx, actorFrom(req), {
+      action: 'proforma.created',
+      entityType: 'proforma',
+      entityId: copy.id,
+      summary: `Proforma ${copy.number} copied from ${source.number}`,
+    });
+    return copy;
+  });
+  created(res, toDto(row));
+});
+
 
 /** A proforma can be corrected until the customer has answered it. */
 const EDITABLE_STATUSES = ['draft', 'issued'] as const;
