@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
-import { Archive, ArchiveRestore, Pencil, Plus } from 'lucide-react';
+import { Archive, ArchiveRestore, Mail, Pencil, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   CLIENT_STATUSES,
@@ -135,6 +135,22 @@ export default function ClientsPage() {
         state={state}
         getRowId={(c) => c.id}
         onRowClick={(c) => setViewId(c.id)}
+        rowActions={(c) => [
+          {
+            label: 'Edit',
+            icon: <Pencil />,
+            hidden: !can('clients.update') || c.status !== 'active',
+            onSelect: () => setForm({ open: true, client: c }),
+          },
+          {
+            label: 'Send email',
+            icon: <Mail />,
+            hidden: !c.email,
+            onSelect: () => {
+              window.location.href = `mailto:${c.email}`;
+            },
+          },
+        ]}
         caption="Clients"
         searchPlaceholder="Search name, code, contact or email"
         filters={

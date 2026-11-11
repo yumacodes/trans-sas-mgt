@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
-import { FolderTree, Plus, Power, PowerOff } from 'lucide-react';
+import { FolderTree, ImagePlus, Pencil, Plus, Power, PowerOff } from 'lucide-react';
 import type { StockItemDto } from '@tsm/shared';
 import { useAuth, useCurrency } from '@/auth/AuthProvider';
 import { CellLink, DataTable, FilterPills, FilterSelect } from '@/components/app/DataTable';
@@ -165,6 +165,19 @@ export default function StockItemsPage() {
         state={state}
         getRowId={(i) => i.id}
         onRowClick={(i) => setViewId(i.id)}
+        rowActions={(i) => [
+          {
+            label: 'Edit',
+            icon: <Pencil />,
+            hidden: !can('stock_items.update'),
+            onSelect: () => setForm({ open: true, item: i }),
+          },
+          {
+            label: 'Add or change images',
+            icon: <ImagePlus />,
+            onSelect: () => setViewId(i.id),
+          },
+        ]}
         caption="Stock items"
         searchPlaceholder="Search code, name, brand or model"
         filters={

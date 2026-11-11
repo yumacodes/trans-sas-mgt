@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
-import { FileDown, Plus } from 'lucide-react';
+import { FileDown, Mail, Pencil, Plus } from 'lucide-react';
 import { PROFORMA_STATUSES, PROFORMA_STATUS_LABELS, type ProformaDto } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
 import { CellLink, DataTable, FilterSelect } from '@/components/app/DataTable';
@@ -22,7 +22,8 @@ export default function ProformaPage() {
   const state = useTableState(['status', 'dateFrom', 'dateTo'], { sort: 'issueDate:desc' });
   const result = useListQuery<ProformaDto>(qk.proformas, '/proformas', state.query);
   const [viewId, setViewId] = useState<string | null>(null);
-  const [formOpen, setFormOpen] = useState(false);
+  const [viewTab, setViewTab] = useState<string | undefined>();
+  const [form, setForm] = useState<{ open: boolean; proforma: ProformaDto | null }>({ open: false, proforma: null });
   const [pickerOpen, setPickerOpen] = useState(false);
   const canCreate = can('proformas.manage');
 
@@ -104,7 +105,7 @@ export default function ProformaPage() {
               <FileDown aria-hidden /> Generate Invoice
             </Button>
             {canCreate && (
-              <Button onClick={() => setFormOpen(true)}>
+              <Button onClick={() => setForm({ open: true, proforma: null })}>
                 <Plus aria-hidden /> New Proforma
               </Button>
             )}
@@ -116,7 +117,27 @@ export default function ProformaPage() {
         result={result}
         state={state}
         getRowId={(p) => p.id}
-        onRowClick={(p) => setViewId(p.id)}
+        onRowClick={(p) => {
+          setViewTab(undefined);
+          setViewId(p.id);
+        }}
+        rowActions={(p) => [
+          {
+            label: 'Edit',
+            icon: <Pencil />,
+            hidden: !canCreate || !(p.status === 'draft' || p.status === 'issued'),
+            onSelect: () => setForm({ open: true, proforma: p }),
+          },
+          {
+            label: 'Send email',
+            icon: <Mail />,
+            hidden: !canCreate,
+            onSelect: () => {
+              setViewTab('email');
+              setViewId(p.id);
+            },
+          },
+        ]}
         caption="Proformas"
         searchPlaceholder="Search invoice number or customer"
         filters={
@@ -155,16 +176,32 @@ export default function ProformaPage() {
         emptyDescription="Create your first proforma to quote a customer."
         emptyAction={
           canCreate && (
-            <Button size="sm" onClick={() => setFormOpen(true)}>
+            <Button size="sm" onClick={() => setForm({ open: true, proforma: null })}>
               <Plus aria-hidden /> New Proforma
             </Button>
           )
         }
       />
       <GenerateInvoiceDialog open={pickerOpen} onOpenChange={setPickerOpen} />
-      <ProformaDetailModal proformaId={viewId} onOpenChange={(o) => !o && setViewId(null)} />
+      <ProformaDetailModal
+        proformaId={viewId}
+        initialTab={viewTab}
+        onOpenChange={(o) => !o && setViewId(null)}
+        onEdit={(proforma) => {
+          setViewId(null);
+          setForm({ open: true, proforma });
+        }}
+      />
       {canCreate && (
-        <ProformaFormDialog open={formOpen} onOpenChange={setFormOpen} onSaved={(p) => setViewId(p.id)} />
+        <ProformaFormDialog
+          open={form.open}
+          proforma={form.proforma}
+          onOpenChange={(open) => setForm((f) => ({ ...f, open }))}
+          onSaved={(p) => {
+            setViewTab(undefined);
+            setViewId(p.id);
+          }}
+        />
       )}
     </>
   );

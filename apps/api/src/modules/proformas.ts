@@ -217,6 +217,81 @@ proformasRouter.post('/', requirePermission('proformas.manage'), idempotent, asy
   created(res, toDto(row));
 });
 
+/** A proforma can be corrected until the customer has answered it. */
+const EDITABLE_STATUSES = ['draft', 'issued'] as const;
+
+proformasRouter.put('/:id', requirePermission('proformas.manage'), async (req, res) => {
+  const ctx = getAuth(req);
+  const id = parse(uuid, req.params.id);
+  const input = parse(proformaInputSchema, req.body);
+  const totals = calculateProformaTotals(input.items, 0, input.taxRate);
+
+  const row = await prisma.$transaction(async (tx) => {
+    const before = await tx.proforma.findUnique({ where: { id } });
+    if (!before) throw notFound('The proforma');
+    if (!(EDITABLE_STATUSES as readonly string[]).includes(before.status)) {
+      throw new AppError('CONFLICT', `Proforma ${before.number} is ${before.status} and can no longer be edited.`);
+    }
+    await assertStockItemsExist(tx, input.items.map((i) => i.stockItemId));
+    const clientId = await resolveClient(
+      tx,
+      req,
+      ctx,
+      {
+        clientId: input.clientId,
+        name: input.customerName,
+        address: input.customerAddress,
+        email: input.customerEmail,
+        phone: input.customerPhone,
+      },
+      'proforma',
+    );
+    // Guard against a concurrent status change between the read above and this write.
+    const claimed = await tx.proforma.updateMany({
+      where: { id, status: before.status },
+      data: {
+        issueDate: dateFromIso(input.issueDate),
+        currency: input.currency,
+        clientId,
+        customerName: input.customerName,
+        customerAddress: input.customerAddress ?? null,
+        customerEmail: input.customerEmail ?? null,
+        customerPhone: input.customerPhone ?? null,
+        taxRate: input.taxRate,
+        subtotal: totals.subtotal,
+        vatAmount: totals.vatAmount,
+        taxAmount: totals.taxAmount,
+        total: totals.total,
+        notes: input.notes ?? null,
+      },
+    });
+    if (claimed.count === 0) {
+      throw new AppError('CONFLICT', 'This proforma was changed by someone else. Reopen it and try again.');
+    }
+    await tx.proformaItem.deleteMany({ where: { proformaId: id } });
+    await tx.proformaItem.createMany({
+      data: input.items.map((item, position) => ({
+        proformaId: id,
+        position,
+        stockItemId: item.stockItemId ?? null,
+        name: item.name,
+        quantity: item.quantity,
+        unit: item.unit,
+        unitPrice: item.unitPrice,
+        amount: totals.amounts[position]!,
+      })),
+    });
+    await recordAudit(tx, actorFrom(req), {
+      action: 'proforma.updated',
+      entityType: 'proforma',
+      entityId: id,
+      summary: `Proforma ${before.number} edited (${input.currency} ${totals.total})`,
+    });
+    return loadProforma(id);
+  });
+  ok(res, toDto(row));
+});
+
 proformasRouter.patch('/:id/status', requirePermission('proformas.manage'), async (req, res) => {
   const id = parse(uuid, req.params.id);
   const { status } = parse(proformaStatusSchema, req.body);

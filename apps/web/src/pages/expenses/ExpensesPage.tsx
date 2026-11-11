@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
-import { FileDown, Plus } from 'lucide-react';
+import { FileDown, Pencil, Plus } from 'lucide-react';
 import {
   EXPENSE_KIND_LABELS,
   EXPENSE_STATUSES,
@@ -141,6 +141,14 @@ export function ExpensesPage({ kind }: { kind: ExpenseKind }) {
         state={state}
         getRowId={(e) => e.id}
         onRowClick={(e) => setViewId(e.id)}
+        rowActions={(e) => [
+          {
+            label: 'Edit',
+            icon: <Pencil />,
+            hidden: !canCreate || e.status !== 'pending',
+            onSelect: () => setForm({ open: true, expense: e }),
+          },
+        ]}
         caption={label}
         searchPlaceholder="Search reference, category or counterparty"
         filters={

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { FileDown, Paperclip, Printer, Send, X } from 'lucide-react';
+import { FileDown, Paperclip, Pencil, Printer, Send, X } from 'lucide-react';
 import {
   PROFORMA_EMAIL_MAX_FILES,
   PROFORMA_EMAIL_MAX_FILE_BYTES,
@@ -153,9 +153,12 @@ function EmailComposer({ proforma, onSent }: { proforma: ProformaDto; onSent: ()
 interface Props {
   proformaId: string | null;
   onOpenChange: (open: boolean) => void;
+  onEdit?: (proforma: ProformaDto) => void;
+  /** Open on this tab, e.g. 'email'. */
+  initialTab?: string;
 }
 
-export function ProformaDetailModal({ proformaId, onOpenChange }: Props) {
+export function ProformaDetailModal({ proformaId, onOpenChange, onEdit, initialTab }: Props) {
   const { can } = useAuth();
   const queryClient = useQueryClient();
   const { run } = useOperation();
@@ -292,6 +295,7 @@ export function ProformaDetailModal({ proformaId, onOpenChange }: Props) {
       loading={query.isLoading}
       error={query.isError ? errorMessage(query.error) : null}
       onRetry={() => void query.refetch()}
+      initialTab={initialTab}
       tabs={
         p
           ? [
@@ -311,6 +315,11 @@ export function ProformaDetailModal({ proformaId, onOpenChange }: Props) {
       actions={
         p && (
           <>
+            {canManage && onEdit && (p.status === 'draft' || p.status === 'issued') && (
+              <Button variant="secondary" onClick={() => onEdit(p)}>
+                <Pencil aria-hidden /> Edit
+              </Button>
+            )}
             <Button variant="secondary" onClick={() => void print()} loading={printing}>
               <Printer aria-hidden /> Print
             </Button>

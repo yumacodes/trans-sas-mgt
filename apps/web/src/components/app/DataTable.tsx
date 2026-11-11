@@ -15,11 +15,19 @@ import {
   ChevronRight,
   RefreshCw,
   Search,
+  MoreHorizontal,
   X,
 } from 'lucide-react';
 import type { PageMeta } from '@tsm/shared';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { NativeSelect } from '@/components/ui/native-select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { errorMessage } from '@/lib/api';
@@ -77,6 +85,8 @@ interface DataTableProps<T> {
   bulkActions?: BulkAction<T>[];
   /** Opens the record when its row is clicked. The row then reads as a button. */
   onRowClick?: (row: T) => void;
+  /** Adds a trailing "…" menu to each row (Edit, Send email…). Return [] for none. */
+  rowActions?: (row: T) => RowAction[];
   emptyTitle: string;
   emptyDescription?: string;
   emptyAction?: ReactNode;
@@ -96,6 +106,7 @@ export function DataTable<T>({
   filters,
   bulkActions,
   onRowClick,
+  rowActions,
   emptyTitle,
   emptyDescription,
   emptyAction,
@@ -105,7 +116,21 @@ export function DataTable<T>({
   const rows = useMemo(() => result.data?.data ?? [], [result.data]);
   const meta = result.data?.meta;
 
-  const allColumns = columns;
+  const allColumns = useMemo<ColumnDef<T>[]>(
+    () =>
+      rowActions
+        ? [
+            ...columns,
+            {
+              id: '_actions',
+              header: () => <span className="sr-only">Actions</span>,
+              meta: { align: 'right' as const, cellClassName: 'w-12' },
+              cell: ({ row }) => <RowMenu actions={rowActions(row.original)} />,
+            },
+          ]
+        : columns,
+    [columns, rowActions],
+  );
 
   const table = useReactTable({
     data: rows,
@@ -568,5 +593,35 @@ export function FilterPills({
         );
       })}
     </div>
+  );
+}
+
+function RowMenu({ actions }: { actions: RowAction[] }) {
+  const visible = actions.filter((a) => !a.hidden);
+  if (visible.length === 0) return null;
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label="Row actions"
+          title="Actions"
+          className="rounded-full p-1.5 text-ink-muted transition-colors hover:bg-surface-muted hover:text-ink"
+        >
+          <MoreHorizontal className="size-4" aria-hidden />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        {visible.map((a, i) => (
+          <div key={a.label}>
+            {a.separatorBefore && i > 0 && <DropdownMenuSeparator />}
+            <DropdownMenuItem destructive={a.destructive} onSelect={a.onSelect}>
+              {a.icon}
+              {a.label}
+            </DropdownMenuItem>
+          </div>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

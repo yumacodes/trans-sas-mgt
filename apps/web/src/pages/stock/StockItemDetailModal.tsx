@@ -50,13 +50,14 @@ export function StockItemDetailModal({ itemId, onOpenChange, onEdit, menu }: Pro
           label: 'Overview',
           content: (
             <div className="space-y-4">
-              {item.primaryImageUrl && (
-                <img
-                  src={item.primaryImageUrl}
-                  alt={item.name}
-                  className="max-h-48 w-full rounded-xl border border-border bg-surface-muted object-contain"
+              <section aria-label="Images">
+                <h3 className="eyebrow mb-2">Images</h3>
+                <StockItemImageManager
+                  itemId={item.id}
+                  itemName={item.name}
+                  canEdit={can('stock_items.update')}
                 />
-              )}
+              </section>
               <DetailList
                 items={[
                   { label: 'Category', value: item.category?.name ?? 'Uncategorised' },
@@ -97,17 +98,6 @@ export function StockItemDetailModal({ itemId, onOpenChange, onEdit, menu }: Pro
                 ]}
               />
             </div>
-          ),
-        },
-        {
-          value: 'images',
-          label: item.imageCount > 0 ? `Images (${item.imageCount})` : 'Images',
-          content: (
-            <StockItemImageManager
-              itemId={item.id}
-              itemName={item.name}
-              canEdit={can('stock_items.update')}
-            />
           ),
         },
         ...(can('inventory.read')

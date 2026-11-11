@@ -42,6 +42,25 @@ const blankForm = (): ProformaInput => ({
   items: [{ ...blankItem }],
 });
 
+const fromProforma = (p: ProformaDto): ProformaInput => ({
+  issueDate: p.issueDate,
+  currency: p.currency,
+  clientId: p.clientId,
+  customerName: p.customerName,
+  customerAddress: p.customerAddress ?? '',
+  customerEmail: p.customerEmail ?? '',
+  customerPhone: p.customerPhone ?? '',
+  taxRate: p.taxRate,
+  notes: p.notes ?? '',
+  items: p.items.map((i) => ({
+    stockItemId: i.stockItemId,
+    name: i.name,
+    quantity: i.quantity,
+    unit: i.unit,
+    unitPrice: i.unitPrice,
+  })),
+});
+
 /** A decimal string safe for arithmetic; anything half-typed counts as zero in the preview. */
 const numeric = (v: unknown) => {
   const s = String(v ?? '').trim();
@@ -52,9 +71,12 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved?: (proforma: ProformaDto) => void;
+  /** Present when editing an existing proforma. */
+  proforma?: ProformaDto | null;
 }
 
-export function ProformaFormDialog({ open, onOpenChange, onSaved }: Props) {
+export function ProformaFormDialog({ open, onOpenChange, onSaved, proforma }: Props) {
+  const isEdit = Boolean(proforma);
   const queryClient = useQueryClient();
   const { run } = useOperation();
   const idem = useIdempotencyKey();
@@ -62,7 +84,7 @@ export function ProformaFormDialog({ open, onOpenChange, onSaved }: Props) {
   const nextNumber = useQuery({
     queryKey: [...qk.proformas, 'next-number'],
     queryFn: ({ signal }) => api.get<{ number: string }>('/proformas/next-number', undefined, signal),
-    enabled: open,
+    enabled: open && !isEdit,
     staleTime: 0,
     gcTime: 0,
   });
@@ -75,8 +97,8 @@ export function ProformaFormDialog({ open, onOpenChange, onSaved }: Props) {
   const items = useFieldArray({ control: form.control, name: 'items' });
 
   useEffect(() => {
-    if (open) form.reset(blankForm());
-  }, [open, form]);
+    if (open) form.reset(proforma ? fromProforma(proforma) : blankForm());
+  }, [open, proforma, form]);
 
   const watched = form.watch();
   const lines = watched.items ?? [];
@@ -90,10 +112,16 @@ export function ProformaFormDialog({ open, onOpenChange, onSaved }: Props) {
   const onSubmit = form.handleSubmit(async (values) => {
     onOpenChange(false);
     try {
-      const saved = await run(() => api.post<ProformaDto>('/proformas', values, idem.keyFor(values)), {
-        pending: 'Creating proforma…',
-        success: 'Proforma created',
-      });
+      const saved = await run(
+        () =>
+          isEdit
+            ? api.put<ProformaDto>(`/proformas/${proforma!.id}`, values)
+            : api.post<ProformaDto>('/proformas', values, idem.keyFor(values)),
+        {
+          pending: isEdit ? 'Saving proforma…' : 'Creating proforma…',
+          success: isEdit ? 'Proforma updated' : 'Proforma created',
+        },
+      );
       idem.reset();
       void queryClient.invalidateQueries({ queryKey: qk.proformas });
       void queryClient.invalidateQueries({ queryKey: qk.clients });
@@ -111,15 +139,15 @@ export function ProformaFormDialog({ open, onOpenChange, onSaved }: Props) {
       onOpenChange={onOpenChange}
       isDirty={isDirty}
       size="xl"
-      title="New proforma"
+      title={isEdit ? `Edit ${proforma!.number}` : 'New proforma'}
       description="A proforma is a quotation. It does not change stock or count as a sale."
     >
       <form onSubmit={onSubmit} noValidate className="flex min-h-0 flex-1 flex-col">
         <DialogBody className="space-y-6">
           <FormSection title="Customer details">
             <FormGrid>
-              <Field label="Invoice number" hint="Assigned when you save.">
-                <Input readOnly value={nextNumber.data?.number ?? '…'} className="bg-surface-muted font-mono" />
+              <Field label="Invoice number" hint={isEdit ? undefined : 'Assigned when you save.'}>
+                <Input readOnly value={isEdit ? proforma!.number : (nextNumber.data?.number ?? '…')} className="bg-surface-muted font-mono" />
               </Field>
               <Field label="Invoice date" error={errors.issueDate?.message} required>
                 <Input type="date" {...form.register('issueDate')} />
@@ -277,7 +305,7 @@ export function ProformaFormDialog({ open, onOpenChange, onSaved }: Props) {
           <DialogClose asChild>
             <Button variant="secondary">Cancel</Button>
           </DialogClose>
-          <Button type="submit">Create proforma</Button>
+          <Button type="submit">{isEdit ? 'Save changes' : 'Create proforma'}</Button>
         </DialogFooter>
       </form>
     </FormDialog>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
-import { Plus } from 'lucide-react';
+import { Pencil, Plus } from 'lucide-react';
 import { ACCEPTANCE_STATUSES, ACCEPTANCE_STATUS_LABELS, type AcceptanceDto } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
 import { CellLink, DataTable, FilterSelect } from '@/components/app/DataTable';
@@ -62,6 +62,14 @@ export default function AcceptancePage() {
         state={state}
         getRowId={(l) => l.id}
         onRowClick={(l) => setViewId(l.id)}
+        rowActions={(l) => [
+          {
+            label: 'Edit',
+            icon: <Pencil />,
+            hidden: !canCreate || l.status !== 'draft',
+            onSelect: () => setForm({ open: true, letter: l }),
+          },
+        ]}
         caption="Acceptance letters"
         searchPlaceholder="Search ref, recipient or contract number"
         filters={

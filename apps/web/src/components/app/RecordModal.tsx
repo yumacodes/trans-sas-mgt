@@ -44,6 +44,8 @@ interface RecordModalProps {
   loading?: boolean;
   error?: string | null;
   onRetry?: () => void;
+  /** Tab to open first; defaults to the first tab. */
+  initialTab?: string;
 }
 
 /** Centered record detail panel (full-height sheet on small screens) with tabbed sections. */
@@ -60,6 +62,7 @@ export function RecordModal({
   loading,
   error,
   onRetry,
+  initialTab,
 }: RecordModalProps) {
   const copyReference = async () => {
     if (!reference) return;
@@ -130,7 +133,7 @@ export function RecordModal({
           ) : tabs.length === 1 ? (
             tabs[0]?.content
           ) : (
-            <Tabs defaultValue={tabs[0]?.value}>
+            <Tabs defaultValue={tabs.some((t) => t.value === initialTab) ? initialTab : tabs[0]?.value}>
               <TabsList>
                 {tabs.map((t) => (
                   <TabsTrigger key={t.value} value={t.value}>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
-import { Plus } from 'lucide-react';
+import { Pencil, Plus } from 'lucide-react';
 import { TENDER_STATUSES, TENDER_STATUS_LABELS, type TenderDto } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
 import { CellLink, DataTable, FilterSelect } from '@/components/app/DataTable';
@@ -74,6 +74,14 @@ export default function TendersPage() {
         state={state}
         getRowId={(t) => t.id}
         onRowClick={(t) => setViewId(t.id)}
+        rowActions={(t) => [
+          {
+            label: 'Edit',
+            icon: <Pencil />,
+            hidden: !canCreate || t.status !== 'draft',
+            onSelect: () => setForm({ open: true, tender: t }),
+          },
+        ]}
         caption="Price schedules"
         searchPlaceholder="Search number, organisation, tender ref or lot"
         filters={
