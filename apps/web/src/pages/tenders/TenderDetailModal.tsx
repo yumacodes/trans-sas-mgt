@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { FileDown, Pencil, Printer } from 'lucide-react';
-import { TENDER_STATUSES, TENDER_STATUS_LABELS, type TenderDto, type TenderStatus } from '@tsm/shared';
+import { useNavigate } from 'react-router';
+import { FileDown, Pencil, Printer, ShoppingCart } from 'lucide-react';
+import { TENDER_STATUSES, TENDER_STATUS_LABELS, type SaleDto, type TenderDto, type TenderStatus } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
 import { EntityHistory } from '@/components/app/EntityHistory';
 import { Field } from '@/components/app/form';
@@ -25,6 +26,7 @@ export function TenderDetailModal({ tenderId, onOpenChange, onEdit }: Props) {
   const { can } = useAuth();
   const queryClient = useQueryClient();
   const { run } = useOperation();
+  const navigate = useNavigate();
   const pdf = usePdfActions('/tenders');
   const canManage = can('tenders.manage');
 
@@ -44,6 +46,18 @@ export function TenderDetailModal({ tenderId, onOpenChange, onEdit }: Props) {
         success: `Marked as ${TENDER_STATUS_LABELS[status].toLowerCase()}`,
       });
       void queryClient.invalidateQueries({ queryKey: qk.tenders });
+    } catch {
+      // The error dialog already explained the failure.
+    }
+  };
+
+  const makeSale = async () => {
+    if (!t) return;
+    try {
+      const sale = await run(() => api.post<SaleDto>(`/sales/from-tender/${t.id}`));
+      void queryClient.invalidateQueries({ queryKey: qk.sales });
+      onOpenChange(false);
+      void navigate(`/sales?open=${sale.id}`);
     } catch {
       // The error dialog already explained the failure.
     }
@@ -150,6 +164,11 @@ export function TenderDetailModal({ tenderId, onOpenChange, onEdit }: Props) {
       actions={
         t && (
           <>
+            {t.status === 'awarded' && can('sales.manage') && (
+              <Button variant="secondary" onClick={() => void makeSale()}>
+                <ShoppingCart aria-hidden /> Create sale
+              </Button>
+            )}
             {canManage && t.status === 'draft' && (
               <Button variant="secondary" onClick={() => onEdit(t)}>
                 <Pencil aria-hidden /> Edit

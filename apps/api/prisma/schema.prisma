@@ -57,6 +57,9 @@ model UserProfile {
   approvedExpenses      Expense[]              @relation("ExpenseApprovedBy")
   tenders               Tender[]
   acceptanceLetters     AcceptanceLetter[]
+  sales                 Sale[]
+  waybills              Waybill[]
+  payments              Payment[]
 
   @@index([isActive])
   @@map("user_profiles")
@@ -236,6 +239,9 @@ model Branch {
   proformas       Proforma[]
   tenders         Tender[]
   acceptanceLetters AcceptanceLetter[]
+  sales           Sale[]
+  waybills        Waybill[]
+  payments        Payment[]
 
   @@index([managerUserId])
   @@map("branches")
@@ -312,6 +318,8 @@ model Client {
   accountOwner      UserProfile?         @relation("ClientAccountOwner", fields: [accountOwnerId], references: [id], onDelete: Restrict)
   createdBy         UserProfile          @relation("ClientCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   registrations     ClientRegistration[]
+  sales             Sale[]
+  waybills          Waybill[]
   proformas         Proforma[]
   tenders           Tender[]
   acceptanceLetters AcceptanceLetter[]
@@ -419,6 +427,8 @@ model StockItem {
   images        StockItemImage[]
   proformaItems ProformaItem[]
   tenderItems   TenderItem[]
+  saleItems     SaleItem[]
+  waybillItems  WaybillItem[]
 
   @@index([categoryId])
   @@index([isActive])
@@ -633,6 +643,7 @@ model Proforma {
   createdBy UserProfile    @relation(fields: [createdById], references: [id], onDelete: Restrict)
   items     ProformaItem[]
   branch    Branch?        @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  sales     Sale[]
 
   @@index([branchId])
   @@index([issueDate])
@@ -757,6 +768,7 @@ model Tender {
   items             TenderItem[]
   acceptanceLetters AcceptanceLetter[]
   branch            Branch?            @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  sales             Sale[]
 
   @@index([branchId])
   @@index([scheduleDate])
@@ -833,4 +845,170 @@ model AcceptanceLetter {
   @@index([recipientName(ops: raw("gin_trgm_ops"))], map: "acceptance_letters_recipient_trgm", type: Gin)
   @@index([number(ops: raw("gin_trgm_ops"))], map: "acceptance_letters_number_trgm", type: Gin)
   @@map("acceptance_letters")
+}
+
+enum SaleStatus {
+  draft
+  confirmed
+  cancelled
+}
+
+/// Confirming a sale issues its stock once; cancelling a confirmed sale returns it.
+model Sale {
+  id              String     @id @default(uuid()) @db.Uuid
+  number          String     @unique
+  saleDate        DateTime   @db.Date
+  dueDate         DateTime?  @db.Date
+  currency        String     @db.Char(3)
+  branchId        String     @db.Uuid
+  clientId        String?    @db.Uuid
+  customerName    String
+  customerAddress String?
+  customerEmail   String?
+  customerPhone   String?
+  taxRate         Decimal    @db.Decimal(5, 2)
+  subtotal        Decimal    @db.Decimal(18, 2)
+  taxAmount       Decimal    @db.Decimal(18, 2)
+  total           Decimal    @db.Decimal(18, 2)
+  notes           String?
+  status          SaleStatus @default(draft)
+  cancelReason    String?
+  confirmedAt     DateTime?  @db.Timestamptz(6)
+  proformaId      String?    @db.Uuid
+  tenderId        String?    @db.Uuid
+  createdById     String     @db.Uuid
+  createdAt       DateTime   @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime   @updatedAt @db.Timestamptz(6)
+
+  branch    Branch      @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  client    Client?     @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  proforma  Proforma?   @relation(fields: [proformaId], references: [id], onDelete: Restrict)
+  tender    Tender?     @relation(fields: [tenderId], references: [id], onDelete: Restrict)
+  createdBy UserProfile @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  items     SaleItem[]
+  waybills  Waybill[]
+  payments  Payment[]
+
+  @@index([branchId])
+  @@index([saleDate])
+  @@index([status])
+  @@index([clientId])
+  @@map("sales")
+}
+
+model SaleItem {
+  id          String  @id @default(uuid()) @db.Uuid
+  saleId      String  @db.Uuid
+  position    Int
+  /// Null for a line with no stock item, such as a service; it never moves stock.
+  stockItemId String? @db.Uuid
+  name        String
+  quantity    Decimal @db.Decimal(18, 3)
+  unit        String
+  unitPrice   Decimal @db.Decimal(18, 2)
+  amount      Decimal @db.Decimal(18, 2)
+
+  sale         Sale          @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  stockItem    StockItem?    @relation(fields: [stockItemId], references: [id], onDelete: Restrict)
+  waybillItems WaybillItem[]
+
+  @@index([saleId, position])
+  @@index([stockItemId])
+  @@map("sale_items")
+}
+
+enum WaybillStatus {
+  draft
+  dispatched
+  delivered
+  cancelled
+}
+
+/// A waybill linked to a sale never moves stock. One with no sale issues it at dispatch.
+model Waybill {
+  id              String        @id @default(uuid()) @db.Uuid
+  number          String        @unique
+  branchId        String        @db.Uuid
+  saleId          String?       @db.Uuid
+  clientId        String?       @db.Uuid
+  recipientName   String
+  deliveryAddress String?
+  deliveryDate    DateTime      @db.Date
+  carrier         String?
+  vehicleNumber   String?
+  receivedBy      String?
+  notes           String?
+  status          WaybillStatus @default(draft)
+  stockIssued     Boolean       @default(false)
+  dispatchedAt    DateTime?     @db.Timestamptz(6)
+  deliveredAt     DateTime?     @db.Timestamptz(6)
+  createdById     String        @db.Uuid
+  createdAt       DateTime      @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime      @updatedAt @db.Timestamptz(6)
+
+  branch    Branch        @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  sale      Sale?         @relation(fields: [saleId], references: [id], onDelete: Restrict)
+  client    Client?       @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  createdBy UserProfile   @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  items     WaybillItem[]
+
+  @@index([branchId])
+  @@index([saleId])
+  @@index([status])
+  @@index([deliveryDate])
+  @@map("waybills")
+}
+
+model WaybillItem {
+  id          String  @id @default(uuid()) @db.Uuid
+  waybillId   String  @db.Uuid
+  position    Int
+  saleItemId  String? @db.Uuid
+  stockItemId String? @db.Uuid
+  name        String
+  quantity    Decimal @db.Decimal(18, 3)
+  unit        String
+
+  waybill   Waybill    @relation(fields: [waybillId], references: [id], onDelete: Cascade)
+  saleItem  SaleItem?  @relation(fields: [saleItemId], references: [id], onDelete: Restrict)
+  stockItem StockItem? @relation(fields: [stockItemId], references: [id], onDelete: Restrict)
+
+  @@index([waybillId, position])
+  @@index([saleItemId])
+  @@map("waybill_items")
+}
+
+enum PaymentStatus {
+  posted
+  reversed
+}
+
+/// Customer receipt against a confirmed sale. Never edited: mistakes are reversed.
+model Payment {
+  id                String        @id @default(uuid()) @db.Uuid
+  number            String        @unique
+  saleId            String        @db.Uuid
+  branchId          String        @db.Uuid
+  paymentDate       DateTime      @db.Date
+  amount            Decimal       @db.Decimal(18, 2)
+  currency          String        @db.Char(3)
+  method            PaymentMethod
+  externalReference String?
+  notes             String?
+  status            PaymentStatus @default(posted)
+  reverseReason     String?
+  reversedAt        DateTime?     @db.Timestamptz(6)
+  createdById       String        @db.Uuid
+  createdAt         DateTime      @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime      @updatedAt @db.Timestamptz(6)
+
+  sale      Sale        @relation(fields: [saleId], references: [id], onDelete: Restrict)
+  branch    Branch      @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  createdBy UserProfile @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([saleId])
+  @@index([branchId])
+  @@index([paymentDate])
+  @@index([status])
+  @@map("payments")
 }

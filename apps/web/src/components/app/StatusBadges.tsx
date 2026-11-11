@@ -1,5 +1,11 @@
 import {
   ACCEPTANCE_STATUS_LABELS,
+  PAYMENT_STATUS_LABELS,
+  SALE_STATUS_LABELS,
+  WAYBILL_STATUS_LABELS,
+  type PaymentStatus,
+  type SaleStatus,
+  type WaybillStatus,
   EXPENSE_STATUS_LABELS,
   TENDER_STATUS_LABELS,
   MESSAGE_STATUS_LABELS,
@@ -135,6 +141,43 @@ export function AcceptanceStatusBadge({ status }: { status: AcceptanceStatus }) 
   return (
     <Badge tone={ACCEPTANCE_TONES[status]} dot>
       {ACCEPTANCE_STATUS_LABELS[status]}
+    </Badge>
+  );
+}
+
+const SALE_TONES: Record<SaleStatus, BadgeProps['tone']> = {
+  draft: 'neutral',
+  confirmed: 'success',
+  cancelled: 'danger',
+};
+
+export function SaleStatusBadge({ status }: { status: SaleStatus }) {
+  return (
+    <Badge tone={SALE_TONES[status]} dot>
+      {SALE_STATUS_LABELS[status]}
+    </Badge>
+  );
+}
+
+const WAYBILL_TONES: Record<WaybillStatus, BadgeProps['tone']> = {
+  draft: 'neutral',
+  dispatched: 'warning',
+  delivered: 'success',
+  cancelled: 'danger',
+};
+
+export function WaybillStatusBadge({ status }: { status: WaybillStatus }) {
+  return (
+    <Badge tone={WAYBILL_TONES[status]} dot>
+      {WAYBILL_STATUS_LABELS[status]}
+    </Badge>
+  );
+}
+
+export function PaymentStatusBadge({ status }: { status: PaymentStatus }) {
+  return (
+    <Badge tone={status === 'posted' ? 'success' : 'danger'} dot>
+      {PAYMENT_STATUS_LABELS[status]}
     </Badge>
   );
 }

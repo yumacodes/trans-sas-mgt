@@ -27,13 +27,21 @@ const longDate = (iso: string) =>
     timeZone: 'UTC',
   });
 
+/** Replaces the proforma wording, so other invoices can share this layout. */
+export interface InvoiceLabels {
+  heading: string;
+  subheading: string;
+  documentTitle: string;
+  statusLabel: string;
+}
+
 /** Render a proforma invoice as an A4 PDF. */
-export function renderProformaPdf(proforma: ProformaDto, company: PdfCompany): Promise<Buffer> {
+export function renderProformaPdf(proforma: ProformaDto, company: PdfCompany, labels?: InvoiceLabels): Promise<Buffer> {
   const doc = new PDFDocument({
     size: 'A4',
     margin: 40,
     bufferPages: true,
-    info: { Title: `Proforma Invoice ${proforma.number}`, Author: company.name },
+    info: { Title: `${labels?.documentTitle ?? 'Proforma Invoice'} ${proforma.number}`, Author: company.name },
   });
   const chunks: Buffer[] = [];
   doc.on('data', (c: Buffer) => chunks.push(c));
@@ -56,8 +64,8 @@ export function renderProformaPdf(proforma: ProformaDto, company: PdfCompany): P
   if (company.tagline) {
     doc.fillColor(ON_NAVY).font('Helvetica').fontSize(8.5).text(company.tagline, left, doc.y + 3, { width: width * 0.62 });
   }
-  doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(17).text('PROFORMA', left, 32, { width, align: 'right', characterSpacing: 1 });
-  doc.fillColor(ON_NAVY).font('Helvetica').fontSize(10).text('INVOICE', left, 54, { width, align: 'right', characterSpacing: 4 });
+  doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(17).text(labels?.heading ?? 'PROFORMA', left, 32, { width, align: 'right', characterSpacing: 1 });
+  doc.fillColor(ON_NAVY).font('Helvetica').fontSize(10).text(labels?.subheading ?? 'INVOICE', left, 54, { width, align: 'right', characterSpacing: 4 });
 
   // Company contact (left) and invoice meta (right)
   const top = 128;
@@ -73,7 +81,7 @@ export function renderProformaPdf(proforma: ProformaDto, company: PdfCompany): P
     ['Invoice no.', proforma.number],
     ['Date', longDate(proforma.issueDate)],
     ['Currency', proforma.currency],
-    ['Status', PROFORMA_STATUS_LABELS[proforma.status]],
+    ['Status', labels?.statusLabel ?? PROFORMA_STATUS_LABELS[proforma.status]],
   ];
   let my = top;
   for (const [label, value] of meta) {

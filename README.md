@@ -57,13 +57,13 @@ Then:
 
 ```sh
 pnpm db:deploy   # apply migrations
-pnpm db:seed     # development data only; its records are marked [DEMO]
+pnpm db:seed     # permissions and roles; add --demo for sample records marked [DEMO]
 pnpm dev         # web on http://localhost:5173, API on port 4000
 ```
 
 ## Initial administrator
 
-Create the user in Supabase Auth, then run the seed with the admin variables described in `apps/api/prisma/seed.ts`. Never add a public route that grants privileged access.
+Run `pnpm db:seed` to load the permissions and roles, then `pnpm --filter api bootstrap:admin`; see `apps/api/scripts/bootstrap-admin.ts` for its inputs. Never add a public route that grants privileged access.
 
 ## Commands
 

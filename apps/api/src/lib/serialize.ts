@@ -19,6 +19,10 @@ export function isoDateOnly(value: Date): string {
   return value.toISOString().slice(0, 10);
 }
 
+export function optionalIso(value: Date | null | undefined): string | null {
+  return value ? iso(value) : null;
+}
+
 export function optionalIsoDateOnly(value: Date | null | undefined): string | null {
   return value ? isoDateOnly(value) : null;
 }

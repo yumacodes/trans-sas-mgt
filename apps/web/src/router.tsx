@@ -14,6 +14,9 @@ const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
 const ClientsPage = lazy(() => import('@/pages/clients/ClientsPage'));
 const ProformaPage = lazy(() => import('@/pages/proforma/ProformaPage'));
 const TendersPage = lazy(() => import('@/pages/tenders/TendersPage'));
+const SalesPage = lazy(() => import('@/pages/sales/SalesPage'));
+const WaybillsPage = lazy(() => import('@/pages/waybills/WaybillsPage'));
+const PaymentsPage = lazy(() => import('@/pages/payments/PaymentsPage'));
 const AcceptancePage = lazy(() => import('@/pages/acceptance/AcceptancePage'));
 const GeneralExpensesPage = lazy(() =>
   import('@/pages/expenses/ExpensesPage').then((m) => ({ default: m.GeneralExpensesPage })),
@@ -66,6 +69,21 @@ export const routes: RouteObject[] = [
         children: [{ index: true, element: <ProformaPage />, handle: h('Proforma', 'Overview') }],
       },
       { path: 'registered-clients', element: <Navigate to="/clients" replace /> },
+      {
+        path: 'sales',
+        element: <RequirePermission anyOf={['sales.read']} />,
+        children: [{ index: true, element: <SalesPage />, handle: h('Sales', 'Overview') }],
+      },
+      {
+        path: 'waybills',
+        element: <RequirePermission anyOf={['waybills.read']} />,
+        children: [{ index: true, element: <WaybillsPage />, handle: h('Way Bill', 'Overview') }],
+      },
+      {
+        path: 'payments',
+        element: <RequirePermission anyOf={['payments.read']} />,
+        children: [{ index: true, element: <PaymentsPage />, handle: h('Payment', 'Finance') }],
+      },
       {
         path: 'tender-schedule',
         element: <RequirePermission anyOf={['tenders.read']} />,

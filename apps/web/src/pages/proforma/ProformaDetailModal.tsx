@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { FileDown, Paperclip, Pencil, Printer, Send, X } from 'lucide-react';
+import { useNavigate } from 'react-router';
+import { FileDown, Paperclip, Pencil, Printer, Send, ShoppingCart, X } from 'lucide-react';
 import {
   PROFORMA_EMAIL_MAX_FILES,
   PROFORMA_EMAIL_MAX_FILE_BYTES,
   PROFORMA_STATUSES,
   PROFORMA_STATUS_LABELS,
   type ProformaDto,
+  type SaleDto,
   type ProformaStatus,
 } from '@tsm/shared';
 import { reportFailure } from '@/components/app/OperationFeedback';
@@ -172,6 +174,7 @@ export function ProformaDetailModal({ proformaId, onOpenChange, onEdit, initialT
   const [downloading, setDownloading] = useState(false);
   const [printing, setPrinting] = useState(false);
   const canManage = can('proformas.manage');
+  const navigate = useNavigate();
 
   const query = useQuery({
     queryKey: [...qk.proformas, 'detail', proformaId],
@@ -205,6 +208,18 @@ export function ProformaDetailModal({ proformaId, onOpenChange, onEdit, initialT
       reportFailure(errorMessage(error));
     } finally {
       setPrinting(false);
+    }
+  };
+
+  const makeSale = async () => {
+    if (!p) return;
+    try {
+      const sale = await run(() => api.post<SaleDto>(`/sales/from-proforma/${p.id}`));
+      void queryClient.invalidateQueries({ queryKey: qk.sales });
+      onOpenChange(false);
+      void navigate(`/sales?open=${sale.id}`);
+    } catch {
+      // The error dialog already explained the failure.
     }
   };
 
@@ -323,6 +338,11 @@ export function ProformaDetailModal({ proformaId, onOpenChange, onEdit, initialT
       actions={
         p && (
           <>
+            {p.status === 'accepted' && can('sales.manage') && (
+              <Button variant="secondary" onClick={() => void makeSale()}>
+                <ShoppingCart aria-hidden /> Create sale
+              </Button>
+            )}
             {canManage && onEdit && (p.status === 'draft' || p.status === 'issued') && (
               <Button variant="secondary" onClick={() => onEdit(p)}>
                 <Pencil aria-hidden /> Edit

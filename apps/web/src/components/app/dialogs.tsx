@@ -15,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -52,6 +53,66 @@ export function ConfirmDialog({
             onClick={() => {
               onOpenChange(false);
               void onConfirm();
+            }}
+          >
+            {confirmLabel}
+          </Button>
+        </div>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+/** Confirmation that needs a typed answer, such as a cancellation reason. */
+export function ReasonDialog({
+  open,
+  onOpenChange,
+  title,
+  description,
+  label,
+  confirmLabel,
+  destructive,
+  onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  description: ReactNode;
+  label: string;
+  confirmLabel: string;
+  destructive?: boolean;
+  onConfirm: (reason: string) => unknown;
+}) {
+  const [reason, setReason] = useState('');
+  const trimmed = reason.trim();
+  return (
+    <AlertDialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) setReason('');
+        onOpenChange(next);
+      }}
+    >
+      <AlertDialogContent>
+        <AlertDialogTitle>{title}</AlertDialogTitle>
+        <AlertDialogDescription asChild>
+          <div>{description}</div>
+        </AlertDialogDescription>
+        <label className="mt-4 block text-sm font-medium text-ink">
+          {label}
+          <Input className="mt-1.5" value={reason} onChange={(e) => setReason(e.target.value)} />
+        </label>
+        <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <AlertDialogCancel asChild>
+            <Button variant="secondary">Go back</Button>
+          </AlertDialogCancel>
+          <Button
+            variant={destructive ? 'destructive' : 'primary'}
+            disabled={!trimmed}
+            onClick={() => {
+              setReason('');
+              onOpenChange(false);
+              void onConfirm(trimmed);
             }}
           >
             {confirmLabel}
