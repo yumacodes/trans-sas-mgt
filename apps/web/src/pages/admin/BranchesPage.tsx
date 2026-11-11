@@ -7,6 +7,7 @@ import { Pencil, Plus, Power, PowerOff } from 'lucide-react';
 import type { z } from 'zod';
 import { branchInputSchema, type BranchDto } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
+import { useKeepInput } from '@/components/app/useKeepInput';
 import { DataTable, FilterSelect } from '@/components/app/DataTable';
 import { ConfirmDialog, FormDialog } from '@/components/app/dialogs';
 import { Field, FormGrid } from '@/components/app/form';
@@ -241,6 +242,7 @@ function BranchFormDialog({
   const queryClient = useQueryClient();
   const { run } = useOperation();
   const users = useUserOptions();
+  const recovery = useKeepInput();
   const form = useForm<BranchFormInput, unknown, BranchFormOutput>({
     resolver: zodForm(branchInputSchema),
     defaultValues: toValues(branch),
@@ -248,8 +250,8 @@ function BranchFormDialog({
   const { errors, isDirty } = form.formState;
 
   useEffect(() => {
-    if (open) form.reset(toValues(branch));
-  }, [open, branch, form]);
+    if (open && !recovery.restoring()) form.reset(toValues(branch));
+  }, [open, recovery, branch, form]);
 
   const onSubmit = form.handleSubmit(async (values) => {
     onOpenChange(false);
@@ -284,6 +286,8 @@ function BranchFormDialog({
       );
       onSaved();
     } catch {
+      recovery.keepNextOpen();
+      onOpenChange(true);
       // The error dialog already explained the failure.
     }
   });

@@ -12,6 +12,7 @@ import {
   type StockItemInput,
 } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
+import { useKeepInput } from '@/components/app/useKeepInput';
 import { FormDialog } from '@/components/app/dialogs';
 import {
   applyServerErrors,
@@ -68,6 +69,7 @@ export function StockItemFormDialog({ open, onOpenChange, item }: Props) {
   const queryClient = useQueryClient();
   const { run } = useOperation();
   const idem = useIdempotencyKey();
+  const recovery = useKeepInput();
   const categories = useStockCategories();
   const isEdit = Boolean(item);
   // A new item does not exist yet, so its images wait here until it has been created.
@@ -81,11 +83,11 @@ export function StockItemFormDialog({ open, onOpenChange, item }: Props) {
   const { errors, isDirty } = form.formState;
 
   useEffect(() => {
-    if (open) {
+    if (open && !recovery.restoring()) {
       form.reset(toFormValues(item));
       setStagedImages([]);
     }
-  }, [open, item, form]);
+  }, [open, recovery, item, form]);
 
   const onSubmit = form.handleSubmit(async (values) => {
     // Users who cannot see costs must not overwrite them with an empty value.
@@ -158,6 +160,9 @@ export function StockItemFormDialog({ open, onOpenChange, item }: Props) {
       void queryClient.invalidateQueries({ queryKey: qk.stockCategories });
       void queryClient.invalidateQueries({ queryKey: qk.dashboard });
     } catch (error) {
+      // Reopen with what was typed, and the problem highlighted where it has a field.
+      recovery.keepNextOpen();
+      onOpenChange(true);
       if (applyServerErrors(error, form.setError)) return;
       if (error instanceof ApiError && error.code === 'DUPLICATE') {
         form.setError(

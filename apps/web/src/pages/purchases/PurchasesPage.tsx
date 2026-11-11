@@ -17,6 +17,7 @@ import {
   type SupplierDto,
 } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
+import { useKeepInput } from '@/components/app/useKeepInput';
 import { AttachmentsPanel } from '@/components/app/AttachmentsPanel';
 import { useOpenParam } from '@/components/app/useOpenParam';
 import { DocumentEmailComposer } from '@/components/app/DocumentEmailComposer';
@@ -622,14 +623,15 @@ function PurchaseFormDialog({
   const idem = useIdempotencyKey();
   const suppliers = useSuppliers(open);
   const isEdit = Boolean(purchase);
+  const recovery = useKeepInput();
 
   const form = useForm<PurchaseInput, unknown, Output>({ resolver: zodForm(purchaseInputSchema), defaultValues: toValues(purchase) });
   const { errors, isDirty } = form.formState;
   const items = useFieldArray({ control: form.control, name: 'items' });
 
   useEffect(() => {
-    if (open) form.reset(toValues(purchase));
-  }, [open, purchase, form]);
+    if (open && !recovery.restoring()) form.reset(toValues(purchase));
+  }, [open, recovery, purchase, form]);
 
   const watched = form.watch();
   const currency = watched.currency ?? 'GHS';
@@ -696,6 +698,8 @@ function PurchaseFormDialog({
       idem.reset();
       void queryClient.invalidateQueries({ queryKey: qk.purchases });
     } catch {
+      recovery.keepNextOpen();
+      onOpenChange(true);
       // The error dialog already explained the failure.
     }
   });

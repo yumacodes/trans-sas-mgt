@@ -12,6 +12,7 @@ import {
 } from '@tsm/shared';
 import type { z } from 'zod';
 import { useAuth } from '@/auth/AuthProvider';
+import { useKeepInput } from '@/components/app/useKeepInput';
 import { BranchField } from '@/components/app/BranchControls';
 import { CustomerInput, ItemNameInput } from '@/components/app/DocumentPickers';
 import { FormDialog } from '@/components/app/dialogs';
@@ -86,6 +87,7 @@ export function ProformaFormDialog({ open, onOpenChange, onSaved, proforma }: Pr
   const queryClient = useQueryClient();
   const { run } = useOperation();
   const idem = useIdempotencyKey();
+  const recovery = useKeepInput();
 
   const nextNumber = useQuery({
     queryKey: [...qk.proformas, 'next-number'],
@@ -103,8 +105,8 @@ export function ProformaFormDialog({ open, onOpenChange, onSaved, proforma }: Pr
   const items = useFieldArray({ control: form.control, name: 'items' });
 
   useEffect(() => {
-    if (open) form.reset(proforma ? fromProforma(proforma) : blankForm());
-  }, [open, proforma, form]);
+    if (open && !recovery.restoring()) form.reset(proforma ? fromProforma(proforma) : blankForm());
+  }, [open, recovery, proforma, form]);
 
   const watched = form.watch();
   // What this client last paid for each item, shown as a hint beside the price.
@@ -194,6 +196,8 @@ export function ProformaFormDialog({ open, onOpenChange, onSaved, proforma }: Pr
       void queryClient.invalidateQueries({ queryKey: qk.clients });
       onSaved?.(saved);
     } catch {
+      recovery.keepNextOpen();
+      onOpenChange(true);
       // The error dialog already explained the failure.
     }
   });

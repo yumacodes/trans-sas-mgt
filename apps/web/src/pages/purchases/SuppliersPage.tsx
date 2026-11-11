@@ -6,6 +6,7 @@ import { Pencil, Plus, Power, PowerOff } from 'lucide-react';
 import type { z } from 'zod';
 import { supplierInputSchema, type SupplierDto, type SupplierInput } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
+import { useKeepInput } from '@/components/app/useKeepInput';
 import { CellLink, DataTable, FilterSelect } from '@/components/app/DataTable';
 import { FormDialog } from '@/components/app/dialogs';
 import { Field, FormGrid, useIdempotencyKey } from '@/components/app/form';
@@ -143,12 +144,13 @@ function SupplierFormDialog({
   const queryClient = useQueryClient();
   const { run } = useOperation();
   const idem = useIdempotencyKey();
+  const recovery = useKeepInput();
   const form = useForm<SupplierInput, unknown, Output>({ resolver: zodForm(supplierInputSchema), defaultValues: toValues(supplier) });
   const { errors, isDirty } = form.formState;
 
   useEffect(() => {
-    if (open) form.reset(toValues(supplier));
-  }, [open, supplier, form]);
+    if (open && !recovery.restoring()) form.reset(toValues(supplier));
+  }, [open, recovery, supplier, form]);
 
   const onSubmit = form.handleSubmit(async (values) => {
     onOpenChange(false);
@@ -185,6 +187,8 @@ function SupplierFormDialog({
       idem.reset();
       void queryClient.invalidateQueries({ queryKey: qk.suppliers });
     } catch {
+      recovery.keepNextOpen();
+      onOpenChange(true);
       // The error dialog already explained the failure.
     }
   });

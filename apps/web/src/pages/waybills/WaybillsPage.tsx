@@ -13,6 +13,7 @@ import {
   type WaybillInput,
 } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
+import { useKeepInput } from '@/components/app/useKeepInput';
 import { AttachmentsPanel } from '@/components/app/AttachmentsPanel';
 import { DocumentEmailComposer } from '@/components/app/DocumentEmailComposer';
 import { BranchField, BranchFilter } from '@/components/app/BranchControls';
@@ -406,6 +407,7 @@ function WaybillFormDialog({
   const isEdit = Boolean(waybill);
   // Lines on a sale's waybill come from the sale, so only their quantities can change.
   const linked = Boolean(waybill?.sale);
+  const recovery = useKeepInput();
 
   const form = useForm<WaybillInput, unknown, Output>({
     resolver: zodForm(waybillInputSchema),
@@ -415,8 +417,8 @@ function WaybillFormDialog({
   const items = useFieldArray({ control: form.control, name: 'items' });
 
   useEffect(() => {
-    if (open) form.reset(toFormValues(waybill));
-  }, [open, waybill, form]);
+    if (open && !recovery.restoring()) form.reset(toFormValues(waybill));
+  }, [open, recovery, waybill, form]);
 
   const onSubmit = form.handleSubmit(async (values) => {
     onOpenChange(false);
@@ -469,6 +471,8 @@ function WaybillFormDialog({
       idem.reset();
       void queryClient.invalidateQueries({ queryKey: qk.waybills });
     } catch {
+      recovery.keepNextOpen();
+      onOpenChange(true);
       // The error dialog already explained the failure.
     }
   });

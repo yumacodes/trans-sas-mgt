@@ -10,6 +10,7 @@ import {
   type ClientDto,
   type ClientInput,
 } from '@tsm/shared';
+import { useKeepInput } from '@/components/app/useKeepInput';
 import { FormDialog } from '@/components/app/dialogs';
 import { Field, FormGrid, useIdempotencyKey } from '@/components/app/form';
 import { useOperation } from '@/components/app/OperationFeedback';
@@ -55,6 +56,7 @@ export function ClientFormDialog({ open, onOpenChange, client, onSaved }: Props)
   const queryClient = useQueryClient();
   const { run } = useOperation();
   const idem = useIdempotencyKey();
+  const recovery = useKeepInput();
   const branches = useBranchOptions();
   const owners = useUserOptions();
   const isEdit = Boolean(client);
@@ -66,8 +68,8 @@ export function ClientFormDialog({ open, onOpenChange, client, onSaved }: Props)
   const { errors, isDirty } = form.formState;
 
   useEffect(() => {
-    if (open) form.reset(toFormValues(client));
-  }, [open, client, form]);
+    if (open && !recovery.restoring()) form.reset(toFormValues(client));
+  }, [open, recovery, client, form]);
 
   const onSubmit = form.handleSubmit(async (values) => {
     // Close straight away; the save carries on in the background.
@@ -114,6 +116,8 @@ export function ClientFormDialog({ open, onOpenChange, client, onSaved }: Props)
       void queryClient.invalidateQueries({ queryKey: qk.dashboard });
       onSaved?.(saved);
     } catch {
+      recovery.keepNextOpen();
+      onOpenChange(true);
       // The error dialog already explained the failure.
     }
   });

@@ -12,6 +12,7 @@ import {
   type TenderDto,
 } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
+import { useKeepInput } from '@/components/app/useKeepInput';
 import { FormDialog } from '@/components/app/dialogs';
 import { BranchField } from '@/components/app/BranchControls';
 import { CustomerInput } from '@/components/app/DocumentPickers';
@@ -83,6 +84,7 @@ export function AcceptanceFormDialog({ open, onOpenChange, letter, onSaved }: Pr
   const queryClient = useQueryClient();
   const { run } = useOperation();
   const idem = useIdempotencyKey();
+  const recovery = useKeepInput();
   const isEdit = Boolean(letter);
 
   const nextNumber = useQuery({
@@ -112,8 +114,8 @@ export function AcceptanceFormDialog({ open, onOpenChange, letter, onSaved }: Pr
   const { errors, isDirty } = form.formState;
 
   useEffect(() => {
-    if (open) form.reset(toFormValues(letter, defaults.data));
-  }, [open, letter, defaults.data, form]);
+    if (open && !recovery.restoring()) form.reset(toFormValues(letter, defaults.data));
+  }, [open, recovery, letter, defaults.data, form]);
 
   // Keep the template subject and text in step with the details until someone edits them.
   const [contractNumber, awardLetterDate, supplyDescription] = form.watch(['contractNumber', 'awardLetterDate', 'supplyDescription']);
@@ -173,6 +175,8 @@ export function AcceptanceFormDialog({ open, onOpenChange, letter, onSaved }: Pr
       void queryClient.invalidateQueries({ queryKey: qk.clients });
       onSaved?.(saved);
     } catch {
+      recovery.keepNextOpen();
+      onOpenChange(true);
       // The error dialog already explained the failure.
     }
   });

@@ -13,6 +13,7 @@ import {
   type ExpenseKind,
   type ExpenseUpdateInput,
 } from '@tsm/shared';
+import { useKeepInput } from '@/components/app/useKeepInput';
 import { FormDialog } from '@/components/app/dialogs';
 import { Field, FormGrid, useIdempotencyKey } from '@/components/app/form';
 import { useOperation } from '@/components/app/OperationFeedback';
@@ -66,6 +67,7 @@ export function ExpenseFormDialog({ kind, open, onOpenChange, expense }: Props) 
   const queryClient = useQueryClient();
   const { run } = useOperation();
   const idem = useIdempotencyKey();
+  const recovery = useKeepInput();
   const branches = useBranchOptions();
   const listId = useId();
   const isEdit = Boolean(expense);
@@ -86,8 +88,8 @@ export function ExpenseFormDialog({ kind, open, onOpenChange, expense }: Props) 
   const { errors, isDirty } = form.formState;
 
   useEffect(() => {
-    if (open) form.reset(toFormValues(expense));
-  }, [open, expense, form]);
+    if (open && !recovery.restoring()) form.reset(toFormValues(expense));
+  }, [open, recovery, expense, form]);
 
   const onSubmit = form.handleSubmit(async (values) => {
     // Close straight away; the save carries on in the background.
@@ -140,6 +142,8 @@ export function ExpenseFormDialog({ kind, open, onOpenChange, expense }: Props) 
       idem.reset();
       void queryClient.invalidateQueries({ queryKey: qk.expenses });
     } catch {
+      recovery.keepNextOpen();
+      onOpenChange(true);
       // The error dialog already explained the failure.
     }
   });

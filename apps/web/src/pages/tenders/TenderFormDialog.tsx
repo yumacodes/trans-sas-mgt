@@ -12,6 +12,7 @@ import {
   type TenderDto,
   type TenderInput,
 } from '@tsm/shared';
+import { useKeepInput } from '@/components/app/useKeepInput';
 import { FormDialog } from '@/components/app/dialogs';
 import { BranchField } from '@/components/app/BranchControls';
 import { CustomerInput, ItemNameInput } from '@/components/app/DocumentPickers';
@@ -107,6 +108,7 @@ export function TenderFormDialog({ open, onOpenChange, tender, onSaved }: Props)
   const queryClient = useQueryClient();
   const { run } = useOperation();
   const idem = useIdempotencyKey();
+  const recovery = useKeepInput();
   const isEdit = Boolean(tender);
 
   const nextNumber = useQuery({
@@ -125,8 +127,8 @@ export function TenderFormDialog({ open, onOpenChange, tender, onSaved }: Props)
   const items = useFieldArray({ control: form.control, name: 'items' });
 
   useEffect(() => {
-    if (open) form.reset(toFormValues(tender));
-  }, [open, tender, form]);
+    if (open && !recovery.restoring()) form.reset(toFormValues(tender));
+  }, [open, recovery, tender, form]);
 
   const watched = form.watch();
   const totals = calculateTenderTotals(
@@ -201,6 +203,8 @@ export function TenderFormDialog({ open, onOpenChange, tender, onSaved }: Props)
       void queryClient.invalidateQueries({ queryKey: qk.clients });
       onSaved?.(saved);
     } catch {
+      recovery.keepNextOpen();
+      onOpenChange(true);
       // The error dialog already explained the failure.
     }
   });
