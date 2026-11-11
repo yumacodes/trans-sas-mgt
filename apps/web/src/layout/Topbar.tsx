@@ -14,6 +14,7 @@ import {
 import { RangeSelector } from '@/features/dashboard/components/Toolbar';
 import { useDashboardRange } from '@/features/dashboard/rangeStore';
 import { initials } from '@/lib/utils';
+import { NotificationBell } from './NotificationBell';
 
 export interface RouteHandle {
   title: string;
@@ -37,7 +38,7 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
   const user = me?.user;
   const { pathname } = useLocation();
   const [range, setRange] = useDashboardRange();
-  const showRange = pathname === '/' && import.meta.env.VITE_DASHBOARD_DEMO !== 'false';
+  const showRange = pathname === '/' && import.meta.env.VITE_DASHBOARD_DEMO === 'true';
 
   return (
     <header className="sticky top-0 z-30 flex h-24 shrink-0 items-center gap-3 border-b border-border bg-surface/95 px-4 backdrop-blur-md sm:px-6">
@@ -67,6 +68,8 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
       </nav>
 
       {showRange && <RangeSelector value={range} onChange={setRange} />}
+
+      {user && <NotificationBell />}
 
       {user && (
         <DropdownMenu>

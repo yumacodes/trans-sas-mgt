@@ -18,6 +18,7 @@ import { expensesRouter } from './modules/expenses';
 import { tendersRouter } from './modules/tenders';
 import { acceptanceLettersRouter } from './modules/acceptance-letters';
 import { salesRouter } from './modules/sales';
+import { notificationsRouter } from './modules/notifications';
 import { waybillsRouter } from './modules/waybills';
 import { paymentsRouter } from './modules/payments';
 import { companyRouter } from './modules/company';
@@ -94,6 +95,7 @@ export function createApp() {
   api.use('/expenses', expensesRouter);
   api.use('/tenders', tendersRouter);
   api.use('/acceptance-letters', acceptanceLettersRouter);
+  api.use('/notifications', notificationsRouter);
   api.use('/sales', salesRouter);
   api.use('/waybills', waybillsRouter);
   api.use('/payments', paymentsRouter);

@@ -9,7 +9,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * database; concurrency itself relies on the row locks and needs a real one to exercise.
  */
 const db = vi.hoisted(() => ({
-  userProfile: { findUnique: vi.fn() },
+  userProfile: { findUnique: vi.fn(), findMany: vi.fn() },
+  notification: { createMany: vi.fn() },
   auditLog: { create: vi.fn() },
   idempotencyRecord: { create: vi.fn(), findUnique: vi.fn(), update: vi.fn(), delete: vi.fn() },
   sale: { findUnique: vi.fn(), updateMany: vi.fn(), count: vi.fn() },
@@ -112,6 +113,8 @@ beforeEach(() => {
   db.sale.updateMany.mockResolvedValue({ count: 1 });
   db.waybill.updateMany.mockResolvedValue({ count: 1 });
   db.idempotencyRecord.create.mockResolvedValue({ id: 'record' });
+  db.userProfile.findMany.mockResolvedValue([]);
+  db.$queryRaw.mockResolvedValue([]);
   db.idempotencyRecord.delete.mockResolvedValue({});
   db.idempotencyRecord.update.mockResolvedValue({});
 });
@@ -295,5 +298,36 @@ describe('payment rules', () => {
     await post(body, '00000000-0000-4000-8000-00000000abc6');
     expect(db.$queryRaw.mock.invocationCallOrder[0]!).toBeLessThan(db.sale.findUnique.mock.invocationCallOrder.at(-1)!);
     expect(db.$queryRaw.mock.calls[0]![0].join(' ')).toContain('FOR UPDATE');
+  });
+});
+
+describe('stock item approval', () => {
+  const stock = { findUnique: vi.fn(), updateMany: vi.fn(), findUniqueOrThrow: vi.fn() };
+
+  beforeEach(() => {
+    Object.assign(db.stockItem, stock);
+    stock.findUnique.mockResolvedValue({ id: ID, sku: 'A-1', name: 'Monitor', createdById: 'someone' });
+  });
+
+  it('blocks approving without the permission', async () => {
+    signIn(['stock_items.read']);
+    const res = await request(app).post(`/api/v1/stock-items/${ID}/approve`).set('Authorization', await auth());
+    expect(res.status).toBe(403);
+    expect(stock.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('will not decide an item twice', async () => {
+    signIn(['stock_items.read', 'stock_items.approve']);
+    stock.updateMany.mockResolvedValue({ count: 0 });
+    const res = await request(app).post(`/api/v1/stock-items/${ID}/approve`).set('Authorization', await auth());
+    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(db.notification.createMany).not.toHaveBeenCalled();
+  });
+
+  it('needs a reason to reject', async () => {
+    signIn(['stock_items.read', 'stock_items.approve']);
+    const res = await request(app).post(`/api/v1/stock-items/${ID}/reject`).set('Authorization', await auth()).send({ reason: '' });
+    expect(res.status).toBe(422);
+    expect(stock.updateMany).not.toHaveBeenCalled();
   });
 });

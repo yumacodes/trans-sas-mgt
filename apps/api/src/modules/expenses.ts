@@ -25,6 +25,7 @@ import { actorFrom, recordAudit } from '../services/audit';
 import { assertBranchAccess, canAccessBranch, defaultBranchId, optionalBranchWhere } from '../services/branch-scope';
 import { nextDocumentNumber } from '../services/document-numbers';
 import { renderExpensePdf } from '../services/expense-pdf';
+import { notifyPermission } from '../services/notifications';
 import { pdfCompany } from '../services/pdf-company';
 
 /**
@@ -176,6 +177,13 @@ expensesRouter.post('/', requirePermission('expenses.manage'), idempotent, async
       entityType: 'expense',
       entityId: expense.id,
       summary: `${EXPENSE_KIND_LABELS[expense.kind]} ${expense.number} recorded (${input.currency} ${input.amount})`,
+    });
+    await notifyPermission(tx, 'expenses.approve', expense.branchId, ctx.profileId, {
+      type: 'expense_approval',
+      title: `${expense.number} is awaiting approval`,
+      body: `${input.currency} ${input.amount}, ${input.category}`,
+      link: `/expenses/${expense.kind.replace('_', '-')}?status=pending`,
+      dedupeKey: `expense-approval:${expense.id}`,
     });
     return expense;
   });

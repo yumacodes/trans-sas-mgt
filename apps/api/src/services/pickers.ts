@@ -36,6 +36,7 @@ export async function stockItemOptions(req: Request): Promise<ProformaItemOption
   const rows = await prisma.stockItem.findMany({
     where: {
       isActive: true,
+      approvalStatus: 'approved',
       ...(q ? { OR: [{ name: { contains: q, mode: 'insensitive' } }, { sku: { contains: q, mode: 'insensitive' } }] } : {}),
     },
     select: { id: true, sku: true, name: true, unit: true, sellingPrice: true },
@@ -49,9 +50,9 @@ export async function stockItemOptions(req: Request): Promise<ProformaItemOption
 export async function assertStockItemsExist(tx: Tx, ids: (string | null | undefined)[], field = 'items') {
   const unique = [...new Set(ids.filter((v): v is string => Boolean(v)))];
   if (!unique.length) return;
-  const found = await tx.stockItem.count({ where: { id: { in: unique } } });
+  const found = await tx.stockItem.count({ where: { id: { in: unique }, approvalStatus: 'approved' } });
   if (found !== unique.length) {
-    const message = 'One of the selected items no longer exists. Pick it again.';
+    const message = 'One of the selected items no longer exists or is awaiting approval. Pick another.';
     throw new AppError('VALIDATION_FAILED', message, { [field]: message });
   }
 }

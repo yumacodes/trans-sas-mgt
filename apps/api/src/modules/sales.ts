@@ -28,6 +28,7 @@ import {
 } from '../services/branch-scope';
 import { nextDocumentNumber, peekDocumentNumber } from '../services/document-numbers';
 import { recordMovement } from '../services/inventory';
+import { notifyLowStock } from '../services/notifications';
 import { pdfCompany } from '../services/pdf-company';
 import { assertStockItemsExist, customerOptions, resolveClient, stockItemOptions } from '../services/pickers';
 import { renderProformaPdf } from '../services/proforma-pdf';
@@ -344,6 +345,7 @@ salesRouter.post('/:id/confirm', requirePermission('sales.manage'), async (req, 
       entityId: id,
       summary: `Sale ${before.number} confirmed and its stock issued`,
     });
+    await notifyLowStock(tx, before.branchId, stockIds);
     return loadSale(tx, id);
   });
   ok(res, toDto(row));

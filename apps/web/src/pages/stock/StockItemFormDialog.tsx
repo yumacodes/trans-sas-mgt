@@ -139,6 +139,8 @@ export function StockItemFormDialog({ open, onOpenChange, item }: Props) {
                   id: pendingId(),
                   purchaseCost: values.purchaseCost ?? null,
                   isActive: true,
+                  approvalStatus: can('stock_items.approve') ? 'approved' : 'pending',
+                  rejectionReason: null,
                   quantityOnHand: '0',
                   isLowStock: false,
                   primaryImageUrl: preview,

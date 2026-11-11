@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
-import { FolderTree, ImagePlus, Pencil, Plus, Power, PowerOff } from 'lucide-react';
+import { CheckCircle2, FolderTree, ImagePlus, Pencil, Plus, Power, PowerOff, XCircle } from 'lucide-react';
+import { STOCK_APPROVAL_LABELS, STOCK_APPROVAL_STATUSES } from '@tsm/shared';
 import type { StockItemDto } from '@tsm/shared';
 import { useAuth, useCurrency } from '@/auth/AuthProvider';
-import { CellLink, DataTable, FilterPills, FilterSelect } from '@/components/app/DataTable';
+import { CellLink, DataTable, FilterPills, FilterSelect, type RowAction } from '@/components/app/DataTable';
+import { Badge } from '@/components/ui/badge';
 import { exportAction } from '@/components/app/bulkExport';
-import { ConfirmDialog } from '@/components/app/dialogs';
+import { ConfirmDialog, ReasonDialog } from '@/components/app/dialogs';
 import { useOperation } from '@/components/app/OperationFeedback';
 import { PageHeader } from '@/components/app/PageHeader';
 import { EntityTile, StatStrip, useTotal } from '@/components/app/StatStrip';
@@ -27,7 +29,7 @@ export default function StockItemsPage() {
   const currency = useCurrency();
   const queryClient = useQueryClient();
   const { run } = useOperation();
-  const state = useTableState(['categoryId', 'isActive', 'lowStock'], { sort: 'name:asc' });
+  const state = useTableState(['categoryId', 'isActive', 'lowStock', 'approvalStatus'], { sort: 'name:asc' });
   const result = useListQuery<StockItemDto>(qk.stockItems, '/stock-items', state.query);
   const categories = useStockCategories();
   const total = useTotal(qk.stockItems, '/stock-items');
@@ -42,6 +44,7 @@ export default function StockItemsPage() {
   });
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [statusTarget, setStatusTarget] = useState<StockItemDto | null>(null);
+  const [rejecting, setRejecting] = useState<StockItemDto | null>(null);
 
   const setStatus = async (item: StockItemDto, isActive: boolean) => {
     try {
@@ -56,6 +59,48 @@ export default function StockItemsPage() {
       /* explained in the feedback dialog */
     }
   };
+
+  const approve = async (item: StockItemDto) => {
+    try {
+      await run(() => api.post(`/stock-items/${item.id}/approve`), {
+        optimistic: () => patchRecord<StockItemDto>(queryClient, qk.stockItems, item.id, { approvalStatus: 'approved' }),
+      });
+      void queryClient.invalidateQueries({ queryKey: qk.stockItems });
+    } catch {
+      /* explained in the error dialog */
+    }
+  };
+
+  const reject = async (item: StockItemDto, reason: string) => {
+    try {
+      await run(() => api.post(`/stock-items/${item.id}/reject`, { reason }), {
+        optimistic: () =>
+          patchRecord<StockItemDto>(queryClient, qk.stockItems, item.id, {
+            approvalStatus: 'rejected',
+            rejectionReason: reason,
+          }),
+      });
+      void queryClient.invalidateQueries({ queryKey: qk.stockItems });
+    } catch {
+      /* explained in the error dialog */
+    }
+  };
+
+  const approvalActions = (i: StockItemDto): RowAction[] => [
+    {
+      label: 'Approve',
+      icon: <CheckCircle2 />,
+      hidden: !can('stock_items.approve') || i.approvalStatus !== 'pending',
+      onSelect: () => void approve(i),
+    },
+    {
+      label: 'Reject',
+      icon: <XCircle />,
+      destructive: true,
+      hidden: !can('stock_items.approve') || i.approvalStatus !== 'pending',
+      onSelect: () => setRejecting(i),
+    },
+  ];
 
   const columns: ColumnDef<StockItemDto>[] = [
     {
@@ -107,7 +152,13 @@ export default function StockItemsPage() {
       header: 'Status',
       cell: ({ row }) => (
         <div className="flex flex-wrap gap-1">
-          <ActiveBadge active={row.original.isActive} />
+          {row.original.approvalStatus === 'approved' ? (
+            <ActiveBadge active={row.original.isActive} />
+          ) : (
+            <Badge tone={row.original.approvalStatus === 'pending' ? 'warning' : 'danger'} dot>
+              {STOCK_APPROVAL_LABELS[row.original.approvalStatus]}
+            </Badge>
+          )}
           {row.original.isActive && row.original.isLowStock && <LowStockBadge />}
         </div>
       ),
@@ -168,6 +219,7 @@ export default function StockItemsPage() {
         getRowId={(i) => i.id}
         onRowClick={(i) => setViewId(i.id)}
         rowActions={(i) => [
+          ...approvalActions(i),
           {
             label: 'Edit',
             icon: <Pencil />,
@@ -206,6 +258,12 @@ export default function StockItemsPage() {
               options={[{ value: 'true', label: 'Low stock only' }]}
               allLabel="Any"
             />
+            <FilterSelect
+              label="Approval"
+              value={state.filters.approvalStatus}
+              onChange={(v) => state.setFilter('approvalStatus', v)}
+              options={STOCK_APPROVAL_STATUSES.map((s) => ({ value: s, label: STOCK_APPROVAL_LABELS[s] }))}
+            />
           </>
         }
         bulkActions={[
@@ -236,6 +294,7 @@ export default function StockItemsPage() {
       <StockItemDetailModal
         itemId={viewId}
         menu={(i) => [
+          ...approvalActions(i),
           {
             label: i.isActive ? 'Deactivate item' : 'Activate item',
             icon: i.isActive ? <PowerOff /> : <Power />,
@@ -256,6 +315,16 @@ export default function StockItemsPage() {
         onOpenChange={(open) => setForm((f) => ({ ...f, open }))}
       />
       <CategoriesDialog open={categoriesOpen} onOpenChange={setCategoriesOpen} />
+      <ReasonDialog
+        open={Boolean(rejecting)}
+        onOpenChange={(o) => !o && setRejecting(null)}
+        title={`Reject ${rejecting?.name ?? 'this item'}?`}
+        description="It stays in the catalogue marked rejected and can't be used on documents. The person who added it is told why."
+        label="Reason"
+        confirmLabel="Reject item"
+        destructive
+        onConfirm={(reason) => rejecting && void reject(rejecting, reason)}
+      />
       <ConfirmDialog
         open={Boolean(statusTarget)}
         onOpenChange={(o) => !o && setStatusTarget(null)}

@@ -16,3 +16,4 @@ export * from './schemas/expense';
 export * from './schemas/tender';
 export * from './schemas/acceptance';
 export * from './schemas/sale';
+export * from './schemas/notification';

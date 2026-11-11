@@ -16,6 +16,7 @@ export const qk = {
   expenses: ['expenses'] as const,
   tenders: ['tenders'] as const,
   sales: ['sales'] as const,
+  notifications: ['notifications'] as const,
   waybills: ['waybills'] as const,
   payments: ['payments'] as const,
   acceptanceLetters: ['acceptance-letters'] as const,

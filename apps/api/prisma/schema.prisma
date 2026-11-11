@@ -60,6 +60,8 @@ model UserProfile {
   sales                 Sale[]
   waybills              Waybill[]
   payments              Payment[]
+  approvedStockItems    StockItem[]            @relation("StockItemApprovedBy")
+  notifications         Notification[]
 
   @@index([isActive])
   @@map("user_profiles")
@@ -416,12 +418,18 @@ model StockItem {
   warrantyMonths Int?
   tracksExpiry   Boolean      @default(false)
   isActive       Boolean      @default(true)
+  /// A new item from someone who can't approve stays pending and can't go on documents.
+  approvalStatus StockApproval @default(approved)
+  approvedById   String?      @db.Uuid
+  approvedAt     DateTime?    @db.Timestamptz(6)
+  rejectionReason String?
   createdById    String       @db.Uuid
   createdAt      DateTime     @default(now()) @db.Timestamptz(6)
   updatedAt      DateTime     @updatedAt @db.Timestamptz(6)
 
   category      StockCategory?   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   createdBy     UserProfile      @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  approvedBy    UserProfile?     @relation("StockItemApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
   balances      StockBalance[]
   movements     StockMovement[]
   images        StockItemImage[]
@@ -432,6 +440,7 @@ model StockItem {
 
   @@index([categoryId])
   @@index([isActive])
+  @@index([approvalStatus])
   @@index([name])
   @@index([name(ops: raw("gin_trgm_ops"))], map: "stock_items_name_trgm", type: Gin)
   @@index([sku(ops: raw("gin_trgm_ops"))], map: "stock_items_sku_trgm", type: Gin)
@@ -1011,4 +1020,30 @@ model Payment {
   @@index([paymentDate])
   @@index([status])
   @@map("payments")
+}
+
+enum StockApproval {
+  pending
+  approved
+  rejected
+}
+
+/// In-app notice for one user. `dedupeKey` keeps a repeated event from notifying twice.
+model Notification {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  type      String
+  title     String
+  body      String?
+  link      String?
+  dedupeKey String?
+  readAt    DateTime? @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
+
+  user UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, dedupeKey])
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
+  @@map("notifications")
 }

@@ -66,6 +66,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   // Run transaction callbacks against the same mock client.
   db.$transaction.mockImplementation((fn: (tx: typeof db) => unknown) => fn(db));
+  db.userProfile.findMany.mockResolvedValue([]);
 });
 
 describe('authentication', () => {

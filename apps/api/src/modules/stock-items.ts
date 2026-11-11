@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Request } from 'express';
 import multer from 'multer';
 import { Prisma } from '@prisma/client';
 import {
@@ -6,6 +6,7 @@ import {
   STOCK_IMAGE_MAX_PER_ITEM,
   stockItemInputSchema,
   stockItemListQuerySchema,
+  stockItemRejectSchema,
   stockItemStatusSchema,
   stockMovementListQuerySchema,
   uuid,
@@ -28,6 +29,7 @@ import { iso, optionalDecimalString } from '../lib/serialize';
 import { parse } from '../lib/validate';
 import { actorFrom, diff, recordAudit } from '../services/audit';
 import { assertBranchAccess, branchWhere } from '../services/branch-scope';
+import { notify, notifyPermission } from '../services/notifications';
 import { isLowStock, lowStockItemIds, quantitiesByItem } from '../services/inventory';
 import {
   addImages,
@@ -78,6 +80,8 @@ function toDto(
     warrantyMonths: item.warrantyMonths,
     tracksExpiry: item.tracksExpiry,
     isActive: item.isActive,
+    approvalStatus: item.approvalStatus,
+    rejectionReason: item.rejectionReason,
     quantityOnHand: qty.toFixed(3),
     isLowStock: isLowStock(qty, item.reorderLevel, item.isActive),
     primaryImageUrl,
@@ -111,6 +115,7 @@ stockItemsRouter.get('/', async (req, res) => {
   const and: Prisma.StockItemWhereInput[] = [];
   if (query.categoryId) and.push({ categoryId: query.categoryId });
   if (query.isActive !== undefined) and.push({ isActive: query.isActive });
+  if (query.approvalStatus) and.push({ approvalStatus: query.approvalStatus });
   if (query.lowStock) and.push({ id: { in: await lowStockItemIds(prisma, ctx) } });
   if (query.q) {
     and.push({
@@ -257,9 +262,21 @@ stockItemsRouter.post('/', requirePermission('stock_items.create'), idempotent, 
             // Cost can only be set by users who are allowed to see it.
             purchaseCost: can(ctx, 'stock_items.view_cost') ? input.purchaseCost : null,
             createdById: ctx.profileId,
+            ...(can(ctx, 'stock_items.approve')
+              ? { approvalStatus: 'approved' as const, approvedById: ctx.profileId, approvedAt: new Date() }
+              : { approvalStatus: 'pending' as const }),
           },
           include,
         });
+        if (row.approvalStatus === 'pending') {
+          await notifyPermission(tx, 'stock_items.approve', null, ctx.profileId, {
+            type: 'stock_approval',
+            title: `${row.name} is awaiting approval`,
+            body: `Item code ${row.sku}`,
+            link: '/stock-items?approvalStatus=pending',
+            dedupeKey: `stock-approval:${row.id}`,
+          });
+        }
         await recordAudit(tx, actorFrom(req), {
           action: 'stock_item.created',
           entityType: 'stock_item',
@@ -271,6 +288,52 @@ stockItemsRouter.post('/', requirePermission('stock_items.create'), idempotent, 
     DUPLICATE,
   );
   created(res, toDto(item, ctx, undefined, null));
+});
+
+/** Decides a pending item. Only pending items can be decided, and only once. */
+async function decide(
+  req: Request,
+  id: string,
+  decision: { approvalStatus: 'approved' | 'rejected'; rejectionReason: string | null },
+) {
+  const ctx = getAuth(req);
+  return prisma.$transaction(async (tx) => {
+    const before = await tx.stockItem.findUnique({ where: { id } });
+    if (!before) throw notFound('The stock item');
+    const claimed = await tx.stockItem.updateMany({
+      where: { id, approvalStatus: 'pending' },
+      data: { ...decision, approvedById: ctx.profileId, approvedAt: new Date() },
+    });
+    if (claimed.count === 0) throw invalidState('This item has already been decided.');
+    const approved = decision.approvalStatus === 'approved';
+    await recordAudit(tx, actorFrom(req), {
+      action: approved ? 'stock_item.approved' : 'stock_item.rejected',
+      entityType: 'stock_item',
+      entityId: id,
+      summary: `${before.sku} ${approved ? 'approved' : `rejected: ${decision.rejectionReason}`}`,
+    });
+    await notify(tx, before.createdById === ctx.profileId ? [] : [before.createdById], {
+      type: 'stock_approval',
+      title: `${before.name} was ${approved ? 'approved' : 'rejected'}`,
+      body: approved ? 'It can now be used on documents.' : (decision.rejectionReason ?? undefined),
+      link: '/stock-items',
+      dedupeKey: `stock-decision:${id}`,
+    });
+    return tx.stockItem.findUniqueOrThrow({ where: { id }, include });
+  });
+}
+
+stockItemsRouter.post('/:id/approve', requirePermission('stock_items.approve'), async (req, res) => {
+  const ctx = getAuth(req);
+  const row = await decide(req, parse(uuid, req.params.id), { approvalStatus: 'approved', rejectionReason: null });
+  ok(res, (await toDtos([row], ctx))[0]);
+});
+
+stockItemsRouter.post('/:id/reject', requirePermission('stock_items.approve'), async (req, res) => {
+  const ctx = getAuth(req);
+  const { reason } = parse(stockItemRejectSchema, req.body);
+  const row = await decide(req, parse(uuid, req.params.id), { approvalStatus: 'rejected', rejectionReason: reason });
+  ok(res, (await toDtos([row], ctx))[0]);
 });
 
 const AUDITED = [

@@ -20,6 +20,7 @@ import { parse } from '../lib/validate';
 import { actorFrom, recordAudit } from '../services/audit';
 import { assertBranchAccess, branchGuard, branchWhere, canAccessBranch } from '../services/branch-scope';
 import { nextDocumentNumber } from '../services/document-numbers';
+import { notify } from '../services/notifications';
 import { pdfCompany } from '../services/pdf-company';
 import { renderReceiptPdf } from '../services/receipt-pdf';
 import { saleBalance } from './sales';
@@ -218,6 +219,13 @@ paymentsRouter.post('/', requirePermission('payments.record'), idempotent, async
       entityType: 'payment',
       entityId: payment.id,
       summary: `Payment ${payment.number} of ${sale.currency} ${input.amount} recorded against sale ${sale.number}`,
+    });
+    await notify(tx, sale.createdById === ctx.profileId ? [] : [sale.createdById], {
+      type: 'payment',
+      title: `Payment received on sale ${sale.number}`,
+      body: `${sale.currency} ${input.amount} from ${sale.customerName}`,
+      link: `/sales?open=${sale.id}`,
+      dedupeKey: `payment:${payment.id}`,
     });
     return payment;
   });

@@ -44,6 +44,7 @@ export const PERMISSION_DEFINITIONS = {
   'stock_items.create': { group: 'stock', description: 'Create stock items and categories' },
   'stock_items.update': { group: 'stock', description: 'Edit stock items and categories' },
   'stock_items.view_cost': { group: 'stock', description: 'View purchase costs of stock items' },
+  'stock_items.approve': { group: 'stock', description: 'Approve or reject new stock items' },
   'inventory.read': { group: 'stock', description: 'View stock balances and movements' },
   'inventory.adjust': { group: 'stock', description: 'Record stock adjustments' },
   'inventory.transfer': { group: 'stock', description: 'Transfer stock between branches' },
@@ -141,7 +142,6 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<
       'reports.view',
       'reports.financial',
       'branches.read',
-      'branches.all_access',
     ],
   },
   support: {

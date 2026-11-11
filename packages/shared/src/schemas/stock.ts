@@ -87,8 +87,19 @@ export type StockItemInput = z.input<typeof stockItemInputSchema>;
 
 export const stockItemStatusSchema = z.object({ isActive: z.boolean() });
 
+export const STOCK_APPROVAL_STATUSES = ['pending', 'approved', 'rejected'] as const;
+export type StockApprovalStatus = (typeof STOCK_APPROVAL_STATUSES)[number];
+export const STOCK_APPROVAL_LABELS: Record<StockApprovalStatus, string> = {
+  pending: 'Awaiting approval',
+  approved: 'Approved',
+  rejected: 'Rejected',
+};
+
+export const stockItemRejectSchema = z.object({ reason: requiredText('Reason', 500) });
+
 export const stockItemListQuerySchema = listQuerySchema.extend({
   categoryId: uuid.optional(),
+  approvalStatus: z.enum(STOCK_APPROVAL_STATUSES).optional(),
   isActive: booleanQuery,
   lowStock: booleanQuery,
 });
@@ -110,6 +121,8 @@ export interface StockItemDto {
   warrantyMonths: number | null;
   tracksExpiry: boolean;
   isActive: boolean;
+  approvalStatus: StockApprovalStatus;
+  rejectionReason: string | null;
   /** Sum of on-hand quantity across the branches visible to the requester. */
   quantityOnHand: string;
   isLowStock: boolean;

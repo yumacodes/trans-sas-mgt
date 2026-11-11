@@ -26,6 +26,7 @@ import {
 } from '../services/branch-scope';
 import { nextDocumentNumber, peekDocumentNumber } from '../services/document-numbers';
 import { recordMovement } from '../services/inventory';
+import { notify, notifyLowStock } from '../services/notifications';
 import { pdfCompany } from '../services/pdf-company';
 import { assertStockItemsExist, customerOptions, resolveClient, stockItemOptions } from '../services/pickers';
 import { renderWaybillPdf } from '../services/waybill-pdf';
@@ -317,12 +318,16 @@ waybillsRouter.post('/:id/dispatch', requirePermission('waybills.manage'), async
       entityId: id,
       summary: `Waybill ${before.number} dispatched${issuesStock ? ' and its stock issued' : ''}`,
     });
+    if (issuesStock) {
+      await notifyLowStock(tx, before.branchId, before.items.map((i) => i.stockItemId).filter((v): v is string => Boolean(v)));
+    }
     return loadWaybill(tx, id);
   });
   ok(res, toDto(row));
 });
 
 waybillsRouter.post('/:id/deliver', requirePermission('waybills.manage'), async (req, res) => {
+  const ctx = getAuth(req);
   const id = parse(uuid, req.params.id);
   const { receivedBy } = parse(waybillDeliverSchema, req.body);
   const row = await prisma.$transaction(async (tx) => {
@@ -339,6 +344,13 @@ waybillsRouter.post('/:id/deliver', requirePermission('waybills.manage'), async 
       entityType: 'waybill',
       entityId: id,
       summary: `Waybill ${before.number} delivered, received by ${receivedBy}`,
+    });
+    await notify(tx, before.createdById === ctx.profileId ? [] : [before.createdById], {
+      type: 'delivery',
+      title: `Waybill ${before.number} was delivered`,
+      body: `Received by ${receivedBy}`,
+      link: `/waybills?open=${id}`,
+      dedupeKey: `delivered:${id}`,
     });
     return loadWaybill(tx, id);
   });

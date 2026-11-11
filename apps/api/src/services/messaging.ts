@@ -9,6 +9,7 @@ import {
 } from '@tsm/shared';
 import { AppError } from '../lib/errors';
 import { logger } from '../lib/logger';
+import { notify } from './notifications';
 import { prisma } from '../lib/prisma';
 import type { AuthContext } from '../middleware/auth';
 import { assertBranchAccess, optionalBranchWhere } from '../services/branch-scope';
@@ -232,6 +233,16 @@ export async function dispatchMessage(messageId: string): Promise<void> {
       }
     }
     await finaliseMessage(messageId);
+    const finished = await prisma.message.findUnique({ where: { id: messageId } });
+    if (finished && finished.failedCount > 0) {
+      await notify(prisma, [finished.createdById], {
+        type: 'message_failed',
+        title: `"${finished.subject}" could not reach everyone`,
+        body: `${finished.failedCount} recipient(s) failed.`,
+        link: '/communication',
+        dedupeKey: `message-failed:${messageId}:${finished.failedCount}`,
+      });
+    }
   } catch (err) {
     logger.error({ err, messageId }, 'message dispatch failed');
     await finaliseMessage(messageId).catch(() => undefined);
