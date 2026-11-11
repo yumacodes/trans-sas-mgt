@@ -9,6 +9,7 @@ import {
   type ClientDto,
 } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
+import { useOpenParam } from '@/components/app/useOpenParam';
 import { CellLink, DataTable, FilterPills, FilterSelect } from '@/components/app/DataTable';
 import { exportAction } from '@/components/app/bulkExport';
 import { ConfirmDialog } from '@/components/app/dialogs';
@@ -36,7 +37,7 @@ export default function ClientsPage() {
   const active = useTotal(qk.clients, '/clients', { status: 'active' });
   const archived = useTotal(qk.clients, '/clients', { status: 'archived' });
 
-  const [viewId, setViewId] = useState<string | null>(null);
+  const [viewId, setViewId, closeView] = useOpenParam();
   const [form, setForm] = useState<{ open: boolean; client: ClientDto | null }>({
     open: false,
     client: null,
@@ -229,9 +230,9 @@ export default function ClientsPage() {
             separatorBefore: true,
           },
         ]}
-        onOpenChange={(o) => !o && setViewId(null)}
+        onOpenChange={(o) => !o && closeView()}
         onEdit={(c) => {
-          setViewId(null);
+          closeView();
           setForm({ open: true, client: c });
         }}
       />

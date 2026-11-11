@@ -5,6 +5,7 @@ import { CheckCircle2, FolderTree, ImagePlus, Pencil, Plus, Power, PowerOff, XCi
 import { STOCK_APPROVAL_LABELS, STOCK_APPROVAL_STATUSES } from '@tsm/shared';
 import type { StockItemDto } from '@tsm/shared';
 import { useAuth, useCurrency } from '@/auth/AuthProvider';
+import { useOpenParam } from '@/components/app/useOpenParam';
 import { CellLink, DataTable, FilterPills, FilterSelect, type RowAction } from '@/components/app/DataTable';
 import { Badge } from '@/components/ui/badge';
 import { exportAction } from '@/components/app/bulkExport';
@@ -37,7 +38,7 @@ export default function StockItemsPage() {
   const lowCount = useTotal(qk.stockItems, '/stock-items', { isActive: 'true', lowStock: 'true' });
   const inactiveCount = useTotal(qk.stockItems, '/stock-items', { isActive: 'false' });
 
-  const [viewId, setViewId] = useState<string | null>(null);
+  const [viewId, setViewId, closeView] = useOpenParam();
   const [form, setForm] = useState<{ open: boolean; item: StockItemDto | null }>({
     open: false,
     item: null,
@@ -303,9 +304,9 @@ export default function StockItemsPage() {
             destructive: i.isActive,
           },
         ]}
-        onOpenChange={(o) => !o && setViewId(null)}
+        onOpenChange={(o) => !o && closeView()}
         onEdit={(i) => {
-          setViewId(null);
+          closeView();
           setForm({ open: true, item: i });
         }}
       />

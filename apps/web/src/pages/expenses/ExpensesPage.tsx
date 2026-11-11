@@ -9,6 +9,7 @@ import {
   type ExpenseKind,
 } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
+import { useOpenParam } from '@/components/app/useOpenParam';
 import { CellLink, DataTable, FilterSelect } from '@/components/app/DataTable';
 import { PageHeader } from '@/components/app/PageHeader';
 import { StatStrip, useTotal } from '@/components/app/StatStrip';
@@ -33,7 +34,7 @@ export function ExpensesPage({ kind }: { kind: ExpenseKind }) {
   const { can } = useAuth();
   const state = useTableState(['status', 'dateFrom', 'dateTo'], { sort: 'transactionDate:desc' });
   const result = useListQuery<ExpenseDto>([...qk.expenses, kind], '/expenses', { ...state.query, kind });
-  const [viewId, setViewId] = useState<string | null>(null);
+  const [viewId, setViewId, closeView] = useOpenParam();
   const [form, setForm] = useState<{ open: boolean; expense: ExpenseDto | null }>({ open: false, expense: null });
   const [pickerOpen, setPickerOpen] = useState(false);
   const canCreate = can('expenses.manage');
@@ -196,9 +197,9 @@ export function ExpensesPage({ kind }: { kind: ExpenseKind }) {
       <ExpenseInvoiceDialog kind={kind} open={pickerOpen} onOpenChange={setPickerOpen} />
       <ExpenseDetailModal
         expenseId={viewId}
-        onOpenChange={(o) => !o && setViewId(null)}
+        onOpenChange={(o) => !o && closeView()}
         onEdit={(expense) => {
-          setViewId(null);
+          closeView();
           setForm({ open: true, expense });
         }}
       />

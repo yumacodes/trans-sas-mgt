@@ -20,6 +20,7 @@ import { acceptanceLettersRouter } from './modules/acceptance-letters';
 import { salesRouter } from './modules/sales';
 import { notificationsRouter } from './modules/notifications';
 import { jobsRouter } from './modules/jobs';
+import { searchRouter } from './modules/search';
 import { purchasesRouter } from './modules/purchases';
 import { suppliersRouter } from './modules/suppliers';
 import { waybillsRouter } from './modules/waybills';
@@ -100,6 +101,7 @@ export function createApp() {
   api.use('/tenders', tendersRouter);
   api.use('/acceptance-letters', acceptanceLettersRouter);
   api.use('/notifications', notificationsRouter);
+  api.use('/search', searchRouter);
   api.use('/suppliers', suppliersRouter);
   api.use('/purchases', purchasesRouter);
   api.use('/sales', salesRouter);

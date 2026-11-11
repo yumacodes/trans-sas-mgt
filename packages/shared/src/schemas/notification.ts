@@ -8,3 +8,13 @@ export interface NotificationDto {
   read: boolean;
   createdAt: string;
 }
+
+/** One match from the top-bar search. */
+export interface SearchResultDto {
+  kind: string;
+  id: string;
+  title: string;
+  detail: string | null;
+  /** Page that opens the record. */
+  link: string;
+}

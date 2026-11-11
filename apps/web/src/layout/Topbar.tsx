@@ -14,6 +14,7 @@ import {
 import { RangeSelector } from '@/features/dashboard/components/Toolbar';
 import { useDashboardRange } from '@/features/dashboard/rangeStore';
 import { initials } from '@/lib/utils';
+import { GlobalSearch } from './GlobalSearch';
 import { NotificationBell } from './NotificationBell';
 
 export interface RouteHandle {
@@ -68,6 +69,8 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
       </nav>
 
       {showRange && <RangeSelector value={range} onChange={setRange} />}
+
+      {user && <GlobalSearch />}
 
       {user && <NotificationBell />}
 
