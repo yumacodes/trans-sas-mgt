@@ -62,6 +62,9 @@ model UserProfile {
   payments              Payment[]
   approvedStockItems    StockItem[]            @relation("StockItemApprovedBy")
   notifications         Notification[]
+  suppliers             Supplier[]
+  purchases             Purchase[]
+  goodsReceipts         GoodsReceipt[]
 
   @@index([isActive])
   @@map("user_profiles")
@@ -244,6 +247,8 @@ model Branch {
   sales           Sale[]
   waybills        Waybill[]
   payments        Payment[]
+  purchases       Purchase[]
+  goodsReceipts   GoodsReceipt[]
 
   @@index([managerUserId])
   @@map("branches")
@@ -436,6 +441,7 @@ model StockItem {
   proformaItems ProformaItem[]
   tenderItems   TenderItem[]
   saleItems     SaleItem[]
+  purchaseItems PurchaseItem[]
   waybillItems  WaybillItem[]
 
   @@index([categoryId])
@@ -1046,4 +1052,122 @@ model Notification {
   @@index([userId, createdAt])
   @@index([userId, readAt])
   @@map("notifications")
+}
+
+/// Shared by every branch, and separate from clients.
+model Supplier {
+  id            String   @id @default(uuid()) @db.Uuid
+  code          String   @unique
+  name          String
+  contactPerson String?
+  email         String?
+  phone         String?
+  address       String?
+  taxId         String?
+  notes         String?
+  isActive      Boolean  @default(true)
+  createdById   String   @db.Uuid
+  createdAt     DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @db.Timestamptz(6)
+
+  createdBy UserProfile @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  purchases Purchase[]
+
+  @@index([name])
+  @@index([isActive])
+  @@map("suppliers")
+}
+
+enum PurchaseStatus {
+  draft
+  ordered
+  partially_received
+  received
+  cancelled
+}
+
+/// Stock rises only through a goods receipt, never from the purchase itself.
+model Purchase {
+  id                String         @id @default(uuid()) @db.Uuid
+  number            String         @unique
+  branchId          String         @db.Uuid
+  supplierId        String         @db.Uuid
+  purchaseDate      DateTime       @db.Date
+  expectedDate      DateTime?      @db.Date
+  supplierReference String?
+  currency          String         @db.Char(3)
+  taxRate           Decimal        @db.Decimal(5, 2)
+  subtotal          Decimal        @db.Decimal(18, 2)
+  taxAmount         Decimal        @db.Decimal(18, 2)
+  total             Decimal        @db.Decimal(18, 2)
+  notes             String?
+  status            PurchaseStatus @default(draft)
+  createdById       String         @db.Uuid
+  createdAt         DateTime       @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime       @updatedAt @db.Timestamptz(6)
+
+  branch    Branch         @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  supplier  Supplier       @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  createdBy UserProfile    @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  items     PurchaseItem[]
+  receipts  GoodsReceipt[]
+
+  @@index([branchId])
+  @@index([supplierId])
+  @@index([status])
+  @@index([purchaseDate])
+  @@map("purchases")
+}
+
+model PurchaseItem {
+  id               String  @id @default(uuid()) @db.Uuid
+  purchaseId       String  @db.Uuid
+  position         Int
+  stockItemId      String  @db.Uuid
+  name             String
+  quantity         Decimal @db.Decimal(18, 3)
+  receivedQuantity Decimal @default(0) @db.Decimal(18, 3)
+  unit             String
+  unitCost         Decimal @db.Decimal(18, 4)
+  amount           Decimal @db.Decimal(18, 2)
+
+  purchase  Purchase           @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  stockItem StockItem          @relation(fields: [stockItemId], references: [id], onDelete: Restrict)
+  received  GoodsReceiptLine[]
+
+  @@index([purchaseId, position])
+  @@index([stockItemId])
+  @@map("purchase_items")
+}
+
+model GoodsReceipt {
+  id           String   @id @default(uuid()) @db.Uuid
+  purchaseId   String   @db.Uuid
+  branchId     String   @db.Uuid
+  receivedDate DateTime @db.Date
+  note         String?
+  createdById  String   @db.Uuid
+  createdAt    DateTime @default(now()) @db.Timestamptz(6)
+
+  purchase  Purchase           @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
+  branch    Branch             @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  createdBy UserProfile        @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  lines     GoodsReceiptLine[]
+
+  @@index([purchaseId])
+  @@map("goods_receipts")
+}
+
+model GoodsReceiptLine {
+  id             String  @id @default(uuid()) @db.Uuid
+  receiptId      String  @db.Uuid
+  purchaseItemId String  @db.Uuid
+  quantity       Decimal @db.Decimal(18, 3)
+
+  receipt      GoodsReceipt @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  purchaseItem PurchaseItem @relation(fields: [purchaseItemId], references: [id], onDelete: Restrict)
+
+  @@index([receiptId])
+  @@index([purchaseItemId])
+  @@map("goods_receipt_lines")
 }

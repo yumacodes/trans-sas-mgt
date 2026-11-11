@@ -1,6 +1,8 @@
 import {
   ACCEPTANCE_STATUS_LABELS,
   PAYMENT_STATUS_LABELS,
+  PURCHASE_STATUS_LABELS,
+  type PurchaseStatus,
   SALE_STATUS_LABELS,
   WAYBILL_STATUS_LABELS,
   type PaymentStatus,
@@ -178,6 +180,22 @@ export function PaymentStatusBadge({ status }: { status: PaymentStatus }) {
   return (
     <Badge tone={status === 'posted' ? 'success' : 'danger'} dot>
       {PAYMENT_STATUS_LABELS[status]}
+    </Badge>
+  );
+}
+
+const PURCHASE_TONES: Record<PurchaseStatus, BadgeProps['tone']> = {
+  draft: 'neutral',
+  ordered: 'info',
+  partially_received: 'warning',
+  received: 'success',
+  cancelled: 'danger',
+};
+
+export function PurchaseStatusBadge({ status }: { status: PurchaseStatus }) {
+  return (
+    <Badge tone={PURCHASE_TONES[status]} dot>
+      {PURCHASE_STATUS_LABELS[status]}
     </Badge>
   );
 }

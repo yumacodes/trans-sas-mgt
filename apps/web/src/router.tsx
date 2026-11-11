@@ -17,6 +17,8 @@ const TendersPage = lazy(() => import('@/pages/tenders/TendersPage'));
 const SalesPage = lazy(() => import('@/pages/sales/SalesPage'));
 const WaybillsPage = lazy(() => import('@/pages/waybills/WaybillsPage'));
 const PaymentsPage = lazy(() => import('@/pages/payments/PaymentsPage'));
+const PurchasesPage = lazy(() => import('@/pages/purchases/PurchasesPage'));
+const SuppliersPage = lazy(() => import('@/pages/purchases/SuppliersPage'));
 const AcceptancePage = lazy(() => import('@/pages/acceptance/AcceptancePage'));
 const GeneralExpensesPage = lazy(() =>
   import('@/pages/expenses/ExpensesPage').then((m) => ({ default: m.GeneralExpensesPage })),
@@ -78,6 +80,16 @@ export const routes: RouteObject[] = [
         path: 'waybills',
         element: <RequirePermission anyOf={['waybills.read']} />,
         children: [{ index: true, element: <WaybillsPage />, handle: h('Way Bill', 'Overview') }],
+      },
+      {
+        path: 'purchases',
+        element: <RequirePermission anyOf={['purchases.read']} />,
+        children: [{ index: true, element: <PurchasesPage />, handle: h('Purchase', 'Stock Management') }],
+      },
+      {
+        path: 'suppliers',
+        element: <RequirePermission anyOf={['purchases.read']} />,
+        children: [{ index: true, element: <SuppliersPage />, handle: h('Suppliers', 'Stock Management') }],
       },
       {
         path: 'payments',

@@ -12,6 +12,7 @@ export const DOCUMENT_TYPES = [
   'payment',
   'purchase',
   'expense',
+  'supplier',
 ] as const;
 export type DocumentType = (typeof DOCUMENT_TYPES)[number];
 
@@ -26,6 +27,7 @@ export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
   payment: 'Payment receipt',
   purchase: 'Purchase',
   expense: 'Expense',
+  supplier: 'Supplier code',
 };
 
 export const DEFAULT_DOCUMENT_PREFIXES: Record<DocumentType, string> = {
@@ -39,6 +41,7 @@ export const DEFAULT_DOCUMENT_PREFIXES: Record<DocumentType, string> = {
   payment: 'RC',
   purchase: 'PO',
   expense: 'EX',
+  supplier: 'SUP',
 };
 
 const prefix = z

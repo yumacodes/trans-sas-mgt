@@ -331,3 +331,71 @@ describe('stock item approval', () => {
     expect(stock.updateMany).not.toHaveBeenCalled();
   });
 });
+
+describe('purchase receipts', () => {
+  const purchaseRow = (over: Record<string, unknown> = {}) => ({
+    id: ID,
+    number: 'PO-1',
+    branchId: BRANCH,
+    status: 'ordered',
+    items: [{ id: LINE, stockItemId: ITEM, name: 'Monitor', unit: 'unit', quantity: money('5'), receivedQuantity: money('2'), unitCost: money('10') }],
+    supplier: { id: SALE, code: 'SUP-1', name: 'Supplier' },
+    receipts: [],
+    ...over,
+  });
+  const purchase = { findUnique: vi.fn(), update: vi.fn() };
+  const goodsReceipt = { create: vi.fn() };
+  const purchaseItem = { update: vi.fn() };
+
+  beforeEach(() => {
+    Object.assign(db, { purchase, goodsReceipt, purchaseItem });
+    goodsReceipt.create.mockResolvedValue({ id: 'receipt' });
+  });
+
+  const receive = async (qty: string, key: string) =>
+    request(app)
+      .post(`/api/v1/purchases/${ID}/receive`)
+      .set('Authorization', await auth())
+      .set('Idempotency-Key', key)
+      .send({ receivedDate: '2026-11-11', items: [{ purchaseItemId: LINE, quantity: qty }] });
+
+  it('adds received goods to stock and marks a partial receipt', async () => {
+    signIn(['purchases.read', 'purchases.receive']);
+    purchase.findUnique.mockResolvedValue(purchaseRow());
+    await receive('1', '00000000-0000-4000-8000-00000000bbb1');
+    expect(recordMovement).toHaveBeenCalledTimes(1);
+    expect(recordMovement.mock.calls[0]![1]).toMatchObject({ type: 'purchase_receipt', itemId: ITEM, branchId: BRANCH });
+    expect(purchase.update.mock.calls[0]![0].data.status).toBe('partially_received');
+  });
+
+  it('marks the purchase received once everything has arrived', async () => {
+    signIn(['purchases.read', 'purchases.receive']);
+    purchase.findUnique.mockResolvedValue(purchaseRow());
+    await receive('3', '00000000-0000-4000-8000-00000000bbb2');
+    expect(purchase.update.mock.calls[0]![0].data.status).toBe('received');
+  });
+
+  it('refuses to receive more than is still due', async () => {
+    signIn(['purchases.read', 'purchases.receive']);
+    purchase.findUnique.mockResolvedValue(purchaseRow());
+    const res = await receive('4', '00000000-0000-4000-8000-00000000bbb3');
+    expect(res.status).toBe(422);
+    expect(recordMovement).not.toHaveBeenCalled();
+    expect(goodsReceipt.create).not.toHaveBeenCalled();
+  });
+
+  it('does not change stock for a draft purchase', async () => {
+    signIn(['purchases.read', 'purchases.receive']);
+    purchase.findUnique.mockResolvedValue(purchaseRow({ status: 'draft' }));
+    const res = await receive('1', '00000000-0000-4000-8000-00000000bbb4');
+    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(recordMovement).not.toHaveBeenCalled();
+  });
+
+  it('blocks receiving without the permission', async () => {
+    signIn(['purchases.read']);
+    const res = await receive('1', '00000000-0000-4000-8000-00000000bbb5');
+    expect(res.status).toBe(403);
+    expect(recordMovement).not.toHaveBeenCalled();
+  });
+});
