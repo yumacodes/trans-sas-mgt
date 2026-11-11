@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { RefreshCw } from 'lucide-react';
-import { toast } from 'sonner';
+import { reportFailure } from '@/components/app/OperationFeedback';
 import {
   MESSAGE_AUDIENCE_LABELS,
   MESSAGE_RECIPIENT_STATUS_LABELS,
@@ -62,7 +62,7 @@ export function MessageDetailModal({
       void queryClient.invalidateQueries({ queryKey: qk.messages });
       void query.refetch();
     } catch (error) {
-      toast.error(errorMessage(error));
+      reportFailure(errorMessage(error));
     }
   };
 

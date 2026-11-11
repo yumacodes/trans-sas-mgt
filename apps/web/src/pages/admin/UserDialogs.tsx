@@ -29,6 +29,7 @@ import { DialogBody, DialogClose, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { api } from '@/lib/api';
 import { useBranchOptions, useRoles } from '@/lib/queries';
+import { patchRecord } from '@/lib/optimistic';
 import { qk } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
 
@@ -148,7 +149,7 @@ export function CreateUserDialog({ open, onOpenChange }: { open: boolean; onOpen
       idem.reset();
       invalidate();
     } catch {
-      // The toast already explained the failure.
+      // The error dialog already explained the failure.
     }
   });
 
@@ -228,6 +229,7 @@ export function CreateUserDialog({ open, onOpenChange }: { open: boolean; onOpen
 type UpdateOutput = z.output<typeof userUpdateSchema>;
 
 export function EditUserDialog({ user, onOpenChange }: { user: UserDto | null; onOpenChange: (o: boolean) => void }) {
+  const queryClient = useQueryClient();
   const { run } = useOperation();
   const invalidate = useInvalidateUsers();
   const form = useForm<UserUpdateInput, unknown, UpdateOutput>({ resolver: zodForm(userUpdateSchema) });
@@ -244,10 +246,15 @@ export function EditUserDialog({ user, onOpenChange }: { user: UserDto | null; o
       await run(() => api.put(`/users/${user.id}`, values), {
         pending: 'Saving user…',
         success: 'User updated',
+        optimistic: () =>
+          patchRecord<UserDto>(queryClient, qk.users, user.id, {
+            fullName: values.fullName,
+            phone: values.phone ?? null,
+          }),
       });
       invalidate();
     } catch {
-      // The toast already explained the failure.
+      // The error dialog already explained the failure.
     }
   });
 
@@ -313,7 +320,7 @@ export function UserAccessDialog({ user, onOpenChange }: { user: UserDto | null;
       });
       invalidate();
     } catch {
-      // The toast already explained the failure.
+      // The error dialog already explained the failure.
     }
   });
 
@@ -393,7 +400,7 @@ export function TemporaryPasswordDialog({
       idem.reset();
       invalidate();
     } catch {
-      // The toast already explained the failure.
+      // The error dialog already explained the failure.
     }
   });
 

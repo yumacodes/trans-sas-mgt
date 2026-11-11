@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ban, Check, FileDown, Pencil, Printer, X } from 'lucide-react';
-import { toast } from 'sonner';
+import { reportFailure } from '@/components/app/OperationFeedback';
 import {
   EXPENSE_KIND_LABELS,
   EXPENSE_STATUS_LABELS,
@@ -29,6 +29,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { api, downloadFile, errorMessage, printFile } from '@/lib/api';
 import { formatDate, formatDateTime, formatMoney } from '@/lib/format';
+import { patchRecord } from '@/lib/optimistic';
 import { qk } from '@/lib/queryKeys';
 import { COUNTERPARTY_LABEL } from './ExpenseFormDialog';
 
@@ -41,7 +42,7 @@ export function useInvoicePdf() {
       if (mode === 'print') await printFile(`/expenses/${e.id}/pdf`);
       else await downloadFile(`/expenses/${e.id}/pdf`, `${e.number}.pdf`);
     } catch (error) {
-      toast.error(errorMessage(error));
+      reportFailure(errorMessage(error));
     } finally {
       setBusy(null);
     }
@@ -79,12 +80,13 @@ export function ExpenseDetailModal({ expenseId, onOpenChange, onEdit }: Props) {
     if (!e) return;
     try {
       await run(() => api.post<ExpenseDto>(`/expenses/${e.id}/status`, { status, reason: reason || null }), {
+        optimistic: () => patchRecord<ExpenseDto>(queryClient, qk.expenses, e.id, { status, statusReason: reason || null }),
         pending: 'Updating status…',
         success: `Marked as ${EXPENSE_STATUS_LABELS[status].toLowerCase()}`,
       });
       void queryClient.invalidateQueries({ queryKey: qk.expenses });
     } catch {
-      // The toast already explained the failure.
+      // The error dialog already explained the failure.
     }
   };
 

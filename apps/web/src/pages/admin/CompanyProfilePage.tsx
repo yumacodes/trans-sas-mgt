@@ -3,7 +3,6 @@ import { Controller, useForm } from 'react-hook-form';
 import { zodForm } from '@/lib/zodForm';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ImageUp, Trash2 } from 'lucide-react';
-import { toast } from 'sonner';
 import type { z } from 'zod';
 import {
   companyProfileSchema,
@@ -348,7 +347,7 @@ function LogoCard({ company }: { company: CompanyProfileDto | null }) {
       });
       onSaved(saved);
     } catch {
-      toast.error("The logo wasn't removed.");
+      /* explained in the error dialog */
     }
   };
 

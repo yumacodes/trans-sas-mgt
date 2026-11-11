@@ -24,6 +24,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { api } from '@/lib/api';
 import { todayIso } from '@/lib/format';
 import { useBranchOptions } from '@/lib/queries';
+import { insertRecord, patchRecord, pendingId } from '@/lib/optimistic';
 import { qk } from '@/lib/queryKeys';
 import { zodForm } from '@/lib/zodForm';
 
@@ -89,7 +90,7 @@ export function ExpenseFormDialog({ kind, open, onOpenChange, expense }: Props) 
   }, [open, expense, form]);
 
   const onSubmit = form.handleSubmit(async (values) => {
-    // Close straight away; the save carries on in the background with a toast.
+    // Close straight away; the save carries on in the background.
     onOpenChange(false);
     try {
       await run(
@@ -100,12 +101,46 @@ export function ExpenseFormDialog({ kind, open, onOpenChange, expense }: Props) 
         {
           pending: isEdit ? 'Saving changes…' : `Recording ${label.toLowerCase()}…`,
           success: isEdit ? 'Record updated' : `${label} recorded`,
+          optimistic: () => {
+            const shown = {
+              transactionDate: values.transactionDate,
+              currency: values.currency,
+              amount: values.amount,
+              category: values.category,
+              counterparty: values.counterparty ?? null,
+              tenderReference: values.tenderReference ?? null,
+              paymentMethod: values.paymentMethod,
+              paymentReference: values.paymentReference ?? null,
+              description: values.description ?? null,
+            };
+            return isEdit
+              ? patchRecord<ExpenseDto>(queryClient, qk.expenses, expense!.id, shown)
+              : insertRecord<ExpenseDto>(
+                  queryClient,
+                  [...qk.expenses, kind],
+                  {
+                    ...shown,
+                    id: pendingId(),
+                    number: '…',
+                    kind,
+                    status: 'pending',
+                    statusReason: null,
+                    branch: null,
+                    recordedBy: '',
+                    approvedBy: null,
+                    approvedAt: null,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                  },
+                  { kind },
+                );
+          },
         },
       );
       idem.reset();
       void queryClient.invalidateQueries({ queryKey: qk.expenses });
     } catch {
-      // The toast already explained the failure.
+      // The error dialog already explained the failure.
     }
   });
 

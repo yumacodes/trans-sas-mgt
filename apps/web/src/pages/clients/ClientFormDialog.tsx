@@ -20,6 +20,7 @@ import { NativeSelect } from '@/components/ui/native-select';
 import { Textarea } from '@/components/ui/textarea';
 import { api } from '@/lib/api';
 import { useBranchOptions, useUserOptions } from '@/lib/queries';
+import { insertRecord, patchRecord, pendingId } from '@/lib/optimistic';
 import { qk } from '@/lib/queryKeys';
 
 type ClientOutput = z.output<typeof clientInputSchema>;
@@ -69,7 +70,7 @@ export function ClientFormDialog({ open, onOpenChange, client, onSaved }: Props)
   }, [open, client, form]);
 
   const onSubmit = form.handleSubmit(async (values) => {
-    // Close straight away; the save carries on in the background with a toast.
+    // Close straight away; the save carries on in the background.
     onOpenChange(false);
     try {
       const saved = await run(
@@ -80,6 +81,32 @@ export function ClientFormDialog({ open, onOpenChange, client, onSaved }: Props)
         {
           pending: isEdit ? 'Saving changes…' : 'Creating client…',
           success: isEdit ? 'Client updated' : 'Client created',
+          optimistic: () => {
+            const shown = {
+              name: values.name,
+              organizationType: values.organizationType,
+              contactPerson: values.contactPerson ?? null,
+              email: values.email ?? null,
+              phone: values.phone ?? null,
+              billingAddress: values.billingAddress ?? null,
+              deliveryAddress: values.deliveryAddress ?? null,
+              taxId: values.taxId ?? null,
+              notes: values.notes ?? null,
+            };
+            return isEdit
+              ? patchRecord<ClientDto>(queryClient, qk.clients, client!.id, shown)
+              : insertRecord<ClientDto>(queryClient, qk.clients, {
+                  ...shown,
+                  id: pendingId(),
+                  code: '…',
+                  status: 'active',
+                  branch: null,
+                  accountOwner: null,
+                  activeRegistration: null,
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                });
+          },
         },
       );
       idem.reset();
@@ -87,7 +114,7 @@ export function ClientFormDialog({ open, onOpenChange, client, onSaved }: Props)
       void queryClient.invalidateQueries({ queryKey: qk.dashboard });
       onSaved?.(saved);
     } catch {
-      // The toast already explained the failure.
+      // The error dialog already explained the failure.
     }
   });
 

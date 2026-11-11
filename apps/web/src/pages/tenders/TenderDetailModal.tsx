@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { NativeSelect } from '@/components/ui/native-select';
 import { api, errorMessage } from '@/lib/api';
 import { formatDate, formatMoney, formatQuantity } from '@/lib/format';
+import { patchRecord } from '@/lib/optimistic';
 import { qk } from '@/lib/queryKeys';
 
 interface Props {
@@ -38,12 +39,13 @@ export function TenderDetailModal({ tenderId, onOpenChange, onEdit }: Props) {
     if (!t) return;
     try {
       await run(() => api.patch<TenderDto>(`/tenders/${t.id}/status`, { status }), {
+        optimistic: () => patchRecord<TenderDto>(queryClient, qk.tenders, t.id, { status }),
         pending: 'Updating status…',
         success: `Marked as ${TENDER_STATUS_LABELS[status].toLowerCase()}`,
       });
       void queryClient.invalidateQueries({ queryKey: qk.tenders });
     } catch {
-      // The toast already explained the failure.
+      // The error dialog already explained the failure.
     }
   };
 

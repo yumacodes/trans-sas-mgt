@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodForm } from '@/lib/zodForm';
 import { useQueryClient } from '@tanstack/react-query';
 import { Pencil, Plus } from 'lucide-react';
-import { toast } from 'sonner';
+import { reportFailure } from '@/components/app/OperationFeedback';
 import type { z } from 'zod';
 import {
   stockCategoryInputSchema,
@@ -49,10 +49,9 @@ export function CategoriesDialog({
   const toggle = async (c: StockCategoryDto) => {
     try {
       await api.patch(`/stock-categories/${c.id}/status`, { isActive: !c.isActive });
-      toast.success(`${c.name} ${c.isActive ? 'deactivated' : 'activated'}`);
       void queryClient.invalidateQueries({ queryKey: qk.stockCategories });
     } catch (error) {
-      toast.error(errorMessage(error));
+      reportFailure(errorMessage(error));
     }
   };
 
@@ -154,7 +153,7 @@ function CategoryForm({ category, onDone }: { category?: StockCategoryDto; onDon
       );
       void queryClient.invalidateQueries({ queryKey: qk.stockCategories });
     } catch {
-      // The toast already explained the failure.
+      // The error dialog already explained the failure.
     }
   });
 

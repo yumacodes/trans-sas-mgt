@@ -1,7 +1,7 @@
 import { Download } from 'lucide-react';
-import { toast } from 'sonner';
 import { downloadRowsExcel, type ExportColumn } from '@/lib/exportExcel';
 import type { BulkAction } from './DataTable';
+import { reportFailure } from './OperationFeedback';
 
 /** Bulk action that downloads the selected rows as an Excel workbook. */
 export function exportAction<T>(
@@ -14,12 +14,9 @@ export function exportAction<T>(
     icon: <Download aria-hidden />,
     onSelect: (rows, clear) => {
       void downloadRowsExcel(filename, rows, columns)
-        .then(() => {
-          toast.success(`Exported ${rows.length} ${noun}${rows.length === 1 ? '' : 's'}`);
-          clear();
-        })
+        .then(clear)
         .catch(() => {
-          toast.error("We couldn't prepare that download. Try again in a moment.");
+          reportFailure("We couldn't prepare that download. Try again in a moment.");
         });
     },
   };

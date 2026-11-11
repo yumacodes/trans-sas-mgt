@@ -14,7 +14,7 @@ import {
   UserCheck,
   UserRound,
 } from 'lucide-react';
-import { toast } from 'sonner';
+import { reportFailure } from '@/components/app/OperationFeedback';
 import { ORGANIZATION_TYPE_LABELS, type ClientDto } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
 import type { RowAction } from '@/components/app/DataTable';
@@ -110,9 +110,8 @@ export function ClientDetailModal({ clientId, onOpenChange, onEdit, menu }: Prop
     if (!c) return;
     try {
       await navigator.clipboard.writeText(c.code);
-      toast.success(`Copied ${c.code}`);
     } catch {
-      toast.error("Couldn't copy to the clipboard.");
+      reportFailure("Couldn't copy to the clipboard.");
     }
   };
 

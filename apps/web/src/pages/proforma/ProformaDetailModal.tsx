@@ -9,7 +9,7 @@ import {
   type ProformaDto,
   type ProformaStatus,
 } from '@tsm/shared';
-import { toast } from 'sonner';
+import { reportFailure } from '@/components/app/OperationFeedback';
 import { useAuth } from '@/auth/AuthProvider';
 import { Field } from '@/components/app/form';
 import { useOperation } from '@/components/app/OperationFeedback';
@@ -22,12 +22,14 @@ import { NativeSelect } from '@/components/ui/native-select';
 import { Textarea } from '@/components/ui/textarea';
 import { api, downloadFile, errorMessage, printFile } from '@/lib/api';
 import { formatDate, formatDateTime, formatMoney, formatQuantity } from '@/lib/format';
+import { patchRecord } from '@/lib/optimistic';
 import { qk } from '@/lib/queryKeys';
 
 const fileSize = (bytes: number) =>
   bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
 
 function EmailComposer({ proforma, onSent }: { proforma: ProformaDto; onSent: () => void }) {
+  const queryClient = useQueryClient();
   const { me } = useAuth();
   const { run } = useOperation();
   const [to, setTo] = useState(proforma.customerEmail ?? '');
@@ -75,11 +77,16 @@ function EmailComposer({ proforma, onSent }: { proforma: ProformaDto; onSent: ()
       await run(() => api.upload<ProformaDto>(`/proformas/${proforma.id}/email`, data), {
         pending: 'Sending email…',
         success: 'Email sent',
+        optimistic: () =>
+          patchRecord<ProformaDto>(queryClient, qk.proformas, proforma.id, {
+            emailedAt: new Date().toISOString(),
+            status: proforma.status === 'draft' ? 'issued' : proforma.status,
+          }),
       });
       // Refresh only once the server has answered: sending moves a draft to "issued".
       onSent();
     } catch {
-      // The toast already explained the failure.
+      // The error dialog already explained the failure.
     }
   };
 
@@ -183,7 +190,7 @@ export function ProformaDetailModal({ proformaId, onOpenChange, onEdit, initialT
     try {
       await downloadFile(`/proformas/${p.id}/pdf`, `${p.number}.pdf`);
     } catch (error) {
-      toast.error(errorMessage(error));
+      reportFailure(errorMessage(error));
     } finally {
       setDownloading(false);
     }
@@ -195,7 +202,7 @@ export function ProformaDetailModal({ proformaId, onOpenChange, onEdit, initialT
     try {
       await printFile(`/proformas/${p.id}/pdf`);
     } catch (error) {
-      toast.error(errorMessage(error));
+      reportFailure(errorMessage(error));
     } finally {
       setPrinting(false);
     }
@@ -207,6 +214,7 @@ export function ProformaDetailModal({ proformaId, onOpenChange, onEdit, initialT
       await run(() => api.patch<ProformaDto>(`/proformas/${p.id}/status`, { status }), {
         pending: 'Updating status…',
         success: `Marked as ${PROFORMA_STATUS_LABELS[status].toLowerCase()}`,
+        optimistic: () => patchRecord<ProformaDto>(queryClient, qk.proformas, p.id, { status }),
       });
       refresh();
     } catch {

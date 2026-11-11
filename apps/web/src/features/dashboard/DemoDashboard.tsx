@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Download } from 'lucide-react';
-import { toast } from 'sonner';
+import { reportFailure } from '@/components/app/OperationFeedback';
 import { useAuth } from '@/auth/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { formatLongDate, greetingFor } from '@/lib/format';
@@ -36,10 +36,7 @@ export default function DemoDashboard() {
 
   function exportReport() {
     void downloadDashboardReport(range)
-      .then(() =>
-        toast.success('Report downloaded'),
-      )
-      .catch(() => toast.error("We couldn't prepare that download. Try again in a moment."));
+      .catch(() => reportFailure("We couldn't prepare that download. Try again in a moment."));
   }
 
   return (

@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { MailWarning, PlugZap } from 'lucide-react';
-import { toast } from 'sonner';
 import {
   MESSAGE_AUDIENCE_LABELS,
   MESSAGE_AUDIENCES,
@@ -212,20 +211,29 @@ function EmailSetupNotice({ config }: { config: EmailConfigDto }) {
 
 function TestConnectionButton() {
   const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
   const test = async () => {
     setBusy(true);
+    setResult(null);
     try {
       await api.post('/messages/email-config/test');
-      toast.success('The mail server accepted the connection.');
+      setResult({ ok: true, text: 'The mail server accepted the connection.' });
     } catch (error) {
-      toast.error(errorMessage(error));
+      setResult({ ok: false, text: errorMessage(error) });
     } finally {
       setBusy(false);
     }
   };
   return (
-    <Button variant="secondary" size="sm" disabled={busy} onClick={() => void test()}>
-      <PlugZap aria-hidden /> {busy ? 'Testing…' : 'Test the mail server'}
-    </Button>
+    <div className="flex flex-wrap items-center gap-3">
+      <Button variant="secondary" size="sm" disabled={busy} onClick={() => void test()}>
+        <PlugZap aria-hidden /> {busy ? 'Testing…' : 'Test the mail server'}
+      </Button>
+      {result && (
+        <p role="status" className={result.ok ? 'text-xs text-success' : 'text-xs text-danger'}>
+          {result.text}
+        </p>
+      )}
+    </div>
   );
 }

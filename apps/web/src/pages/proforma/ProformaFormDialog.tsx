@@ -11,6 +11,7 @@ import {
   type ProformaInput,
 } from '@tsm/shared';
 import type { z } from 'zod';
+import { useAuth } from '@/auth/AuthProvider';
 import { CustomerInput, ItemNameInput } from '@/components/app/DocumentPickers';
 import { FormDialog } from '@/components/app/dialogs';
 import { Field, FormGrid, FormSection, useIdempotencyKey } from '@/components/app/form';
@@ -22,6 +23,7 @@ import { NativeSelect } from '@/components/ui/native-select';
 import { Textarea } from '@/components/ui/textarea';
 import { api } from '@/lib/api';
 import { formatMoney, todayIso } from '@/lib/format';
+import { insertRecord, patchRecord, pendingId } from '@/lib/optimistic';
 import { qk } from '@/lib/queryKeys';
 import { zodForm } from '@/lib/zodForm';
 
@@ -77,6 +79,7 @@ interface Props {
 
 export function ProformaFormDialog({ open, onOpenChange, onSaved, proforma }: Props) {
   const isEdit = Boolean(proforma);
+  const { me } = useAuth();
   const queryClient = useQueryClient();
   const { run } = useOperation();
   const idem = useIdempotencyKey();
@@ -120,6 +123,49 @@ export function ProformaFormDialog({ open, onOpenChange, onSaved, proforma }: Pr
         {
           pending: isEdit ? 'Saving proforma…' : 'Creating proforma…',
           success: isEdit ? 'Proforma updated' : 'Proforma created',
+          optimistic: () => {
+            const sums = calculateProformaTotals(values.items, 0, values.taxRate);
+            const shown = {
+              issueDate: values.issueDate,
+              currency: values.currency,
+              clientId: values.clientId ?? null,
+              customerName: values.customerName,
+              customerAddress: values.customerAddress ?? null,
+              customerEmail: values.customerEmail ?? null,
+              customerPhone: values.customerPhone ?? null,
+              vatRate: '0',
+              taxRate: values.taxRate,
+              subtotal: sums.subtotal,
+              vatAmount: sums.vatAmount,
+              taxAmount: sums.taxAmount,
+              total: sums.total,
+              notes: values.notes ?? null,
+              itemCount: values.items.length,
+              items: values.items.map((item, index) => ({
+                id: pendingId(),
+                stockItemId: item.stockItemId ?? null,
+                name: item.name,
+                quantity: item.quantity,
+                unit: item.unit,
+                unitPrice: item.unitPrice,
+                amount: sums.amounts[index]!,
+              })),
+            };
+            const fullName = me?.user.fullName.trim() ?? '';
+            return isEdit
+              ? patchRecord<ProformaDto>(queryClient, qk.proformas, proforma!.id, shown)
+              : insertRecord<ProformaDto>(queryClient, qk.proformas, {
+                  ...shown,
+                  id: pendingId(),
+                  number: nextNumber.data?.number ?? '…',
+                  status: 'draft',
+                  emailedAt: null,
+                  preparedBy: fullName.split(/\s+/)[0] ?? '',
+                  preparedByName: fullName,
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                });
+          },
         },
       );
       idem.reset();
@@ -127,7 +173,7 @@ export function ProformaFormDialog({ open, onOpenChange, onSaved, proforma }: Pr
       void queryClient.invalidateQueries({ queryKey: qk.clients });
       onSaved?.(saved);
     } catch {
-      // The toast already explained the failure.
+      // The error dialog already explained the failure.
     }
   });
 

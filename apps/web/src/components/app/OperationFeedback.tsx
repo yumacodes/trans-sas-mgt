@@ -1,7 +1,6 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { DualArc } from '@/components/ui/dual-arc';
 import { ApiError, errorMessage } from '@/lib/api';
@@ -30,10 +29,15 @@ export interface RunOptions {
   successDelayMs?: number;
   /**
    * Block the screen with the centred overlay until the server answers. Off by default:
-   * operations run in the background with a toast so the UI never waits. Use it only where
+   * operations run silently in the background so the UI never waits. Use it only where
    * the next screen depends on the answer (signing out, password reset).
    */
   blocking?: boolean;
+  /**
+   * Shows the expected result straight away; runs before the request. The returned undo
+   * runs if the operation finally fails, so the screen never keeps an unsaved change.
+   */
+  optimistic?: () => (() => void) | void;
 }
 
 type Runner = <T>(fn: () => Promise<T>, opts?: RunOptions) => Promise<T>;
@@ -121,6 +125,7 @@ export function OperationFeedbackProvider({ children }: { children: ReactNode })
   return (
     <OperationContext.Provider value={{ run, busy: open }}>
       {children}
+      {!open && <FailureDialog />}
       <DialogPrimitive.Root open={open}>
         <DialogPrimitive.Portal>
           <DialogPrimitive.Overlay className="fixed inset-0 z-[60] bg-ink/30 animate-fade-in" />
@@ -185,43 +190,112 @@ export function OperationFeedbackProvider({ children }: { children: ReactNode })
   );
 }
 
+/* ---------- Background failures ---------- */
+
+interface Failure {
+  id: number;
+  title: string;
+  message: string;
+  retry?: () => void;
+  dismiss?: () => void;
+}
+
+// Background work can fail after the component that started it has gone, so failures
+// live outside React and are shown one at a time.
+let failures: Failure[] = [];
+let nextFailureId = 1;
+const failureListeners = new Set<() => void>();
+
+function setFailures(next: Failure[]) {
+  failures = next;
+  failureListeners.forEach((listener) => listener());
+}
+
+function subscribeFailures(listener: () => void) {
+  failureListeners.add(listener);
+  return () => void failureListeners.delete(listener);
+}
+
+function pushFailure(failure: Omit<Failure, 'id'>) {
+  setFailures([...failures, { ...failure, id: nextFailureId++ }]);
+}
+
+/** Tells the user something didn't work, in the centred error dialog. */
+export function reportFailure(message: string, title = "This wasn't completed") {
+  pushFailure({ title, message });
+}
+
+function FailureDialog() {
+  const failure = useSyncExternalStore(subscribeFailures, () => failures[0]);
+  if (!failure) return null;
+
+  const remove = () => setFailures(failures.filter((f) => f.id !== failure.id));
+  const close = () => {
+    remove();
+    failure.dismiss?.();
+  };
+
+  return (
+    <DialogPrimitive.Root open>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className="fixed inset-0 z-[60] bg-ink/30 animate-fade-in" />
+        <DialogPrimitive.Content
+          className="glass fixed left-1/2 top-1/2 z-[60] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-3xl p-6 text-center animate-scale-in focus:outline-none"
+          onEscapeKeyDown={close}
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+          aria-describedby={undefined}
+        >
+          <div role="alert">
+            <FailureCross />
+            <DialogPrimitive.Title className="mt-4 text-sm font-semibold text-ink">{failure.title}</DialogPrimitive.Title>
+            <p className="mt-1.5 text-sm text-ink-muted">{failure.message}</p>
+            <div className="mt-5 flex justify-center gap-2">
+              <Button variant="secondary" size="sm" onClick={close}>
+                Close
+              </Button>
+              {failure.retry && (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    remove();
+                    failure.retry?.();
+                  }}
+                >
+                  Try again
+                </Button>
+              )}
+            </div>
+          </div>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
+  );
+}
+
 /**
- * Non-blocking run: a loading toast while the request is in flight, then success or an
- * error with "Try again" (same closure, so the same idempotency key). The returned promise
- * settles with the server's answer, so callers can refresh data after it lands; on failure
- * it rejects only once the user dismisses the error (or it times out) without retrying.
+ * Non-blocking run: nothing is shown while the request is in flight or when it succeeds.
+ * A failure opens the error dialog with "Try again" (same closure, so the same idempotency
+ * key). The returned promise settles with the server's answer; on failure it rejects, and
+ * the optimistic change is undone, only once the user closes the error without retrying.
  */
 function runInBackground<T>(fn: () => Promise<T>, opts: RunOptions): Promise<T> {
-  const id = toast.loading(opts.pending ?? 'Saving…');
+  const undo = opts.optimistic?.();
   return new Promise<T>((resolve, reject) => {
     const attempt = async () => {
-      toast.loading(opts.pending ?? 'Saving…', { id, action: undefined, description: undefined });
       try {
-        const result = await fn();
-        toast.success(opts.success ?? 'Saved successfully', { id, duration: 2500 });
-        resolve(result);
+        resolve(await fn());
       } catch (error) {
         const canRetry =
           error instanceof ApiError ? error.retryable || error.code === 'INTERNAL' : true;
-        let retried = false;
-        const giveUp = () => {
-          if (!retried) reject(error);
-        };
-        toast.error("This wasn't completed", {
-          id,
-          description: errorMessage(error),
-          duration: 15_000,
-          action: canRetry
-            ? {
-                label: 'Try again',
-                onClick: () => {
-                  retried = true;
-                  void attempt();
-                },
-              }
-            : undefined,
-          onDismiss: giveUp,
-          onAutoClose: giveUp,
+        pushFailure({
+          title: "This wasn't completed",
+          message: errorMessage(error),
+          retry: canRetry ? () => void attempt() : undefined,
+          dismiss: () => {
+            undo?.();
+            reject(error);
+          },
         });
       }
     };

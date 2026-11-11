@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import { formatMoney, formatQuantity } from '@/lib/format';
 import { useListQuery, useStockCategories } from '@/lib/queries';
+import { patchRecord } from '@/lib/optimistic';
 import { qk } from '@/lib/queryKeys';
 import { CategoriesDialog } from './CategoriesDialog';
 import { StockItemDetailModal } from './StockItemDetailModal';
@@ -45,6 +46,7 @@ export default function StockItemsPage() {
   const setStatus = async (item: StockItemDto, isActive: boolean) => {
     try {
       await run(() => api.patch(`/stock-items/${item.id}/status`, { isActive }), {
+        optimistic: () => patchRecord<StockItemDto>(queryClient, qk.stockItems, item.id, { isActive }),
         pending: isActive ? 'Activating item…' : 'Deactivating item…',
         success: `${item.sku} ${isActive ? 'activated' : 'deactivated'}`,
       });

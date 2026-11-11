@@ -1,6 +1,5 @@
-import type { ReactNode } from 'react';
-import { Copy, MoreHorizontal } from 'lucide-react';
-import { toast } from 'sonner';
+import { useState, type ReactNode } from 'react';
+import { Check, Copy, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -21,6 +20,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { RowAction } from './DataTable';
 import { SectionLoader } from './FullScreenLoader';
+import { reportFailure } from './OperationFeedback';
 import { ErrorState } from './States';
 
 export interface RecordTab {
@@ -64,13 +64,15 @@ export function RecordModal({
   onRetry,
   initialTab,
 }: RecordModalProps) {
+  const [copied, setCopied] = useState(false);
   const copyReference = async () => {
     if (!reference) return;
     try {
       await navigator.clipboard.writeText(reference);
-      toast.success(`Copied ${reference}`);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
     } catch {
-      toast.error("Couldn't copy to the clipboard.");
+      reportFailure("Couldn't copy to the clipboard.");
     }
   };
 
@@ -119,7 +121,7 @@ export function RecordModal({
                   className="inline-flex items-center gap-1 rounded px-1 font-mono text-xs text-ink-muted hover:bg-surface-muted hover:text-ink"
                   aria-label={`Copy reference ${reference}`}
                 >
-                  {reference} <Copy className="size-3" aria-hidden />
+                  {reference} {copied ? <Check className="size-3 text-success" aria-hidden /> : <Copy className="size-3" aria-hidden />}
                 </button>
               )}
             </div>

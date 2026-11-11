@@ -32,6 +32,7 @@ import { NativeSelect } from '@/components/ui/native-select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { errorMessage } from '@/lib/api';
 import { formatCount } from '@/lib/format';
+import { isPendingId } from '@/lib/optimistic';
 import { cn } from '@/lib/utils';
 import { EmptyState, ErrorState } from './States';
 import type { TableStateApi } from './useTableState';
@@ -317,15 +318,19 @@ export function DataTable<T>({
             ) : (
               table.getRowModel().rows.map((row, i) => {
                 const checked = selected.has(row.id);
+                // Not saved yet: visible straight away, but there is nothing to open until it is.
+                const pending = isPendingId(row.id);
                 return (
                 <tr
                   key={row.id}
                   style={{ animationDelay: `${Math.min(i, 12) * 22}ms` }}
                   data-selected={checked || undefined}
-                  onClick={onRowClick ? (e) => handleRowClick(e, row.original) : undefined}
+                  inert={pending || undefined}
+                  onClick={onRowClick && !pending ? (e) => handleRowClick(e, row.original) : undefined}
                   className={cn(
                     'animate-rise border-b border-border/40 transition-colors duration-200 last:border-0 hover:bg-surface-muted/60 data-[selected]:bg-surface-muted/80',
-                    onRowClick && 'cursor-pointer',
+                    onRowClick && !pending && 'cursor-pointer',
+                    pending && 'opacity-60',
                   )}
                 >
                   {selectable && (

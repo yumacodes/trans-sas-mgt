@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { ChevronLeft, ChevronRight, Download, Plus, Search } from 'lucide-react';
-import { toast } from 'sonner';
+import { reportFailure } from '@/components/app/OperationFeedback';
 import { Badge, type BadgeProps } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -109,7 +109,7 @@ export default function SamplePage({ config }: { config: PageConfig }) {
     ).then(
       () => true,
       () => {
-        toast.error("We couldn't prepare that download. Try again in a moment.");
+        reportFailure("We couldn't prepare that download. Try again in a moment.");
         return false;
       },
     );
@@ -118,16 +118,12 @@ export default function SamplePage({ config }: { config: PageConfig }) {
   function exportSelected() {
     void exportRows(selectedRows, `${config.exportName}-selected.xlsx`).then((ok) => {
       if (!ok) return;
-      toast.success(`Exported ${selectedRows.length} row${selectedRows.length === 1 ? '' : 's'}`);
       setSelected(new Set());
     });
   }
 
   function exportVisible() {
-    void exportRows(filtered, `${config.exportName}.xlsx`).then((ok) => {
-      if (!ok) return;
-      toast.success('Download ready');
-    });
+    void exportRows(filtered, `${config.exportName}.xlsx`);
   }
 
   return (

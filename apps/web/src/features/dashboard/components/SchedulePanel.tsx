@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { CalendarDays } from 'lucide-react';
-import { toast } from 'sonner';
 import { Card } from '@/components/ui/card';
 import {
   Dialog,
@@ -34,12 +33,9 @@ export function SchedulePanel() {
         </div>
         <button
           type="button"
-          onClick={() =>
-            toast.info('No calendar is connected yet', {
-              description: 'Scheduling will be available once a calendar module is added.',
-            })
-          }
-          className="inline-flex items-center gap-1.5 rounded-full bg-surface-muted px-3 py-1.5 text-xs font-semibold text-ink hover:bg-accent-soft hover:text-accent"
+          disabled
+          title="No calendar is connected yet. Scheduling will be available once a calendar module is added."
+          className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-full bg-surface-muted px-3 py-1.5 text-xs font-semibold text-ink-subtle"
         >
           <CalendarDays className="size-3.5" aria-hidden /> Calendar
         </button>

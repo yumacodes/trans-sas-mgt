@@ -12,6 +12,7 @@ import { usePdfActions } from '@/components/app/usePdfActions';
 import { Button } from '@/components/ui/button';
 import { api, errorMessage } from '@/lib/api';
 import { formatDate } from '@/lib/format';
+import { patchRecord } from '@/lib/optimistic';
 import { qk } from '@/lib/queryKeys';
 
 interface Props {
@@ -39,12 +40,13 @@ export function AcceptanceDetailModal({ letterId, onOpenChange, onEdit }: Props)
     if (!l) return;
     try {
       await run(() => api.patch<AcceptanceDto>(`/acceptance-letters/${l.id}/status`, { status }), {
+        optimistic: () => patchRecord<AcceptanceDto>(queryClient, qk.acceptanceLetters, l.id, { status }),
         pending: 'Updating status…',
         success: `Marked as ${ACCEPTANCE_STATUS_LABELS[status].toLowerCase()}`,
       });
       void queryClient.invalidateQueries({ queryKey: qk.acceptanceLetters });
     } catch {
-      // The toast already explained the failure.
+      // The error dialog already explained the failure.
     }
   };
 

@@ -33,6 +33,7 @@ import { Button } from '@/components/ui/button';
 import { api, errorMessage } from '@/lib/api';
 import { formatDateTime, formatRelative } from '@/lib/format';
 import { useListQuery, useResetRequests, useRoles } from '@/lib/queries';
+import { patchRecord } from '@/lib/optimistic';
 import { qk } from '@/lib/queryKeys';
 import { initials } from '@/lib/utils';
 import { CreateUserDialog, EditUserDialog, TemporaryPasswordDialog, UserAccessDialog } from './UserDialogs';
@@ -62,6 +63,7 @@ export default function UsersPage() {
     try {
       const isActive = c.kind === 'activate';
       await run(() => api.patch(`/users/${user.id}/status`, { isActive }), {
+        optimistic: () => patchRecord<UserDto>(queryClient, qk.users, user.id, { isActive }),
         pending: isActive ? 'Activating account…' : 'Deactivating account…',
         success: `${user.fullName} ${isActive ? 'activated' : 'deactivated'}`,
       });

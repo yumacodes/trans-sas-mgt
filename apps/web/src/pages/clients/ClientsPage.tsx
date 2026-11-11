@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { Archive, ArchiveRestore, Mail, Pencil, Plus } from 'lucide-react';
-import { toast } from 'sonner';
 import {
   CLIENT_STATUSES,
   ORGANIZATION_TYPE_LABELS,
@@ -21,6 +20,7 @@ import { useTableState } from '@/components/app/useTableState';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import { useBranchOptions, useListQuery } from '@/lib/queries';
+import { patchRecord } from '@/lib/optimistic';
 import { qk } from '@/lib/queryKeys';
 import { ClientDetailModal } from './ClientDetailModal';
 import { ClientFormDialog } from './ClientFormDialog';
@@ -46,6 +46,7 @@ export default function ClientsPage() {
   const restore = async (client: ClientDto) => {
     try {
       await run(() => api.post(`/clients/${client.id}/restore`), {
+        optimistic: () => patchRecord<ClientDto>(queryClient, qk.clients, client.id, { status: 'active' }),
         pending: 'Restoring client…',
         success: `${client.name} restored`,
       });
@@ -58,6 +59,7 @@ export default function ClientsPage() {
   const archive = async (client: ClientDto) => {
     try {
       await run(() => api.post(`/clients/${client.id}/archive`), {
+        optimistic: () => patchRecord<ClientDto>(queryClient, qk.clients, client.id, { status: 'archived' }),
         pending: 'Archiving client…',
         success: `${client.name} archived`,
       });
@@ -237,9 +239,6 @@ export default function ClientsPage() {
         open={form.open}
         client={form.client}
         onOpenChange={(open) => setForm((f) => ({ ...f, open }))}
-        onSaved={(c) => {
-          if (!form.client) toast.message(`Client code ${c.code} assigned`);
-        }}
       />
       <ConfirmDialog
         open={Boolean(archiveTarget)}

@@ -23,6 +23,7 @@ import { NativeSelect } from '@/components/ui/native-select';
 import { Textarea } from '@/components/ui/textarea';
 import { api } from '@/lib/api';
 import { todayIso } from '@/lib/format';
+import { insertRecord, patchRecord, pendingId } from '@/lib/optimistic';
 import { qk } from '@/lib/queryKeys';
 import { zodForm } from '@/lib/zodForm';
 
@@ -132,6 +133,35 @@ export function AcceptanceFormDialog({ open, onOpenChange, letter, onSaved }: Pr
         {
           pending: isEdit ? 'Saving letter…' : 'Creating letter…',
           success: isEdit ? 'Letter updated' : 'Acceptance letter created',
+          optimistic: () => {
+            const linked = tenders.data?.find((t) => t.id === values.tenderId);
+            const shown = {
+              letterDate: values.letterDate,
+              yourReference: values.yourReference ?? null,
+              clientId: values.clientId ?? null,
+              recipientName: values.recipientName,
+              recipientAddress: values.recipientAddress ?? null,
+              contractNumber: values.contractNumber,
+              awardLetterDate: values.awardLetterDate ?? null,
+              supplyDescription: values.supplyDescription,
+              subject: values.subject,
+              body: values.body,
+              signatoryName: values.signatoryName,
+              signatoryTitle: values.signatoryTitle ?? null,
+              tender: linked ? { id: linked.id, number: linked.number } : null,
+            };
+            return isEdit
+              ? patchRecord<AcceptanceDto>(queryClient, qk.acceptanceLetters, letter!.id, shown)
+              : insertRecord<AcceptanceDto>(queryClient, qk.acceptanceLetters, {
+                  ...shown,
+                  id: pendingId(),
+                  number: nextNumber.data?.number ?? '…',
+                  status: 'draft',
+                  preparedBy: '',
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                });
+          },
         },
       );
       idem.reset();
@@ -139,7 +169,7 @@ export function AcceptanceFormDialog({ open, onOpenChange, letter, onSaved }: Pr
       void queryClient.invalidateQueries({ queryKey: qk.clients });
       onSaved?.(saved);
     } catch {
-      // The toast already explained the failure.
+      // The error dialog already explained the failure.
     }
   });
 

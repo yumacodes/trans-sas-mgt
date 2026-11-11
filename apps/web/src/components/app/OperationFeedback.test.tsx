@@ -112,4 +112,57 @@ describe('OperationFeedback', () => {
     expect(fn).toHaveBeenCalledTimes(1);
     await act(async () => d.resolve('ok'));
   });
+
+  describe('background operations', () => {
+    function Background({ fn, onDone, undo }: { fn: () => Promise<unknown>; onDone: (r: unknown) => void; undo: () => void }) {
+      const { run } = useOperation();
+      return (
+        <button
+          onClick={() =>
+            run(fn, { optimistic: () => undo }).then(
+              (r) => onDone({ ok: r }),
+              (e) => onDone({ error: e }),
+            )
+          }
+        >
+          Go
+        </button>
+      );
+    }
+
+    function setupBackground(fn: () => Promise<unknown>) {
+      const onDone = vi.fn();
+      const undo = vi.fn();
+      render(
+        <OperationFeedbackProvider>
+          <Background fn={fn} onDone={onDone} undo={undo} />
+        </OperationFeedbackProvider>,
+      );
+      return { onDone, undo };
+    }
+
+    it('shows nothing while running or when it succeeds', async () => {
+      const { onDone, undo } = setupBackground(() => Promise.resolve('saved'));
+      await userEvent.click(screen.getByRole('button', { name: 'Go' }));
+      await vi.waitFor(() => expect(onDone).toHaveBeenCalledWith({ ok: 'saved' }));
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(undo).not.toHaveBeenCalled();
+    });
+
+    it('keeps the change during a retry and undoes it only when the error is closed', async () => {
+      const error = new ApiError({ status: 500, code: 'INTERNAL', message: 'Not saved.' });
+      const fn = vi.fn().mockRejectedValue(error);
+      const { onDone, undo } = setupBackground(fn);
+      await userEvent.click(screen.getByRole('button', { name: 'Go' }));
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Try again' }));
+      await vi.waitFor(() => expect(fn).toHaveBeenCalledTimes(2));
+      expect(undo).not.toHaveBeenCalled();
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Close' }));
+      await vi.waitFor(() => expect(onDone).toHaveBeenCalledWith({ error }));
+      expect(undo).toHaveBeenCalledTimes(1);
+      expect(screen.queryByText('Not saved.')).not.toBeInTheDocument();
+    });
+  });
 });

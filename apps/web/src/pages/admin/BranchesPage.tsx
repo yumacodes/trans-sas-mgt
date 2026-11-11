@@ -22,6 +22,7 @@ import { NativeSelect } from '@/components/ui/native-select';
 import { api } from '@/lib/api';
 import { useListQuery, useUserOptions } from '@/lib/queries';
 import { formatDateTime } from '@/lib/format';
+import { insertRecord, patchRecord, pendingId } from '@/lib/optimistic';
 import { qk } from '@/lib/queryKeys';
 
 type BranchFormInput = z.input<typeof branchInputSchema>;
@@ -46,6 +47,7 @@ export default function BranchesPage() {
   const setStatus = async (b: BranchDto, isActive: boolean) => {
     try {
       await run(() => api.patch(`/branches/${b.id}/status`, { isActive }), {
+        optimistic: () => patchRecord<BranchDto>(queryClient, qk.branches, b.id, { isActive }),
         pending: isActive ? 'Activating branch…' : 'Deactivating branch…',
         success: `${b.name} ${isActive ? 'activated' : 'deactivated'}`,
       });
@@ -236,6 +238,7 @@ function BranchFormDialog({
   onOpenChange: (o: boolean) => void;
   onSaved: () => void;
 }) {
+  const queryClient = useQueryClient();
   const { run } = useOperation();
   const users = useUserOptions();
   const form = useForm<BranchFormInput, unknown, BranchFormOutput>({
@@ -253,11 +256,35 @@ function BranchFormDialog({
     try {
       await run(
         () => (branch ? api.put(`/branches/${branch.id}`, values) : api.post('/branches', values)),
-        { pending: 'Saving branch…', success: branch ? 'Branch updated' : 'Branch created' },
+        {
+          pending: 'Saving branch…',
+          success: branch ? 'Branch updated' : 'Branch created',
+          optimistic: () => {
+            const shown = {
+              code: values.code.toUpperCase(),
+              name: values.name,
+              addressLine1: values.addressLine1 ?? null,
+              city: values.city ?? null,
+              region: values.region ?? null,
+              phone: values.phone ?? null,
+              email: values.email ?? null,
+            };
+            return branch
+              ? patchRecord<BranchDto>(queryClient, qk.branches, branch.id, shown)
+              : insertRecord<BranchDto>(queryClient, qk.branches, {
+                  ...shown,
+                  id: pendingId(),
+                  manager: null,
+                  isActive: true,
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                });
+          },
+        },
       );
       onSaved();
     } catch {
-      // The toast already explained the failure.
+      // The error dialog already explained the failure.
     }
   });
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { toast } from 'sonner';
+import { reportFailure } from './OperationFeedback';
 import { downloadFile, errorMessage, printFile } from '@/lib/api';
 
 /** Print or download a record's PDF (`${base}/${id}/pdf`), tracking which button is busy. */
@@ -11,7 +11,7 @@ export function usePdfActions(base: string) {
       if (mode === 'print') await printFile(`${base}/${record.id}/pdf`);
       else await downloadFile(`${base}/${record.id}/pdf`, `${record.number}.pdf`);
     } catch (error) {
-      toast.error(errorMessage(error));
+      reportFailure(errorMessage(error));
     } finally {
       setBusy(null);
     }

@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2 } from 'lucide-react';
 import type { z } from 'zod';
 import {
+  amountInWords,
   calculateTenderTotals,
   PROFORMA_CURRENCIES,
   PROFORMA_CURRENCY_LABELS,
@@ -22,6 +23,7 @@ import { NativeSelect } from '@/components/ui/native-select';
 import { Textarea } from '@/components/ui/textarea';
 import { api } from '@/lib/api';
 import { formatMoney, todayIso } from '@/lib/format';
+import { insertRecord, patchRecord, pendingId } from '@/lib/optimistic';
 import { qk } from '@/lib/queryKeys';
 import { zodForm } from '@/lib/zodForm';
 
@@ -142,6 +144,52 @@ export function TenderFormDialog({ open, onOpenChange, tender, onSaved }: Props)
         {
           pending: isEdit ? 'Saving price schedule…' : 'Creating price schedule…',
           success: isEdit ? 'Price schedule updated' : 'Price schedule created',
+          optimistic: () => {
+            const sums = calculateTenderTotals(values.items, values.taxRate);
+            const shown = {
+              scheduleDate: values.scheduleDate,
+              tenderReference: values.tenderReference ?? null,
+              submissionDeadline: values.submissionDeadline ?? null,
+              clientId: values.clientId ?? null,
+              customerName: values.customerName,
+              customerAddress: values.customerAddress ?? null,
+              lot: values.lot ?? null,
+              currency: values.currency,
+              taxLabel: values.taxLabel,
+              taxRate: values.taxRate,
+              subtotal: sums.subtotal,
+              taxAmount: sums.taxAmount,
+              total: sums.total,
+              totalInWords: amountInWords(sums.total, values.currency),
+              notes: values.notes ?? null,
+              itemCount: values.items.length,
+              items: values.items.map((item, index) => ({
+                id: pendingId(),
+                stockItemId: item.stockItemId ?? null,
+                description: item.description,
+                quantity: item.quantity,
+                unit: item.unit,
+                unitPrice: item.unitPrice,
+                amount: sums.amounts[index]!,
+                amountWithTax: sums.amountsWithTax[index]!,
+                countryOfOrigin: item.countryOfOrigin ?? null,
+                manufacturer: item.manufacturer ?? null,
+                brand: item.brand ?? null,
+                expiryDate: item.expiryDate ?? null,
+              })),
+            };
+            return isEdit
+              ? patchRecord<TenderDto>(queryClient, qk.tenders, tender!.id, shown)
+              : insertRecord<TenderDto>(queryClient, qk.tenders, {
+                  ...shown,
+                  id: pendingId(),
+                  number: nextNumber.data?.number ?? '…',
+                  status: 'draft',
+                  preparedBy: '',
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                });
+          },
         },
       );
       idem.reset();
@@ -149,7 +197,7 @@ export function TenderFormDialog({ open, onOpenChange, tender, onSaved }: Props)
       void queryClient.invalidateQueries({ queryKey: qk.clients });
       onSaved?.(saved);
     } catch {
-      // The toast already explained the failure.
+      // The error dialog already explained the failure.
     }
   });
 

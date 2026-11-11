@@ -2,7 +2,6 @@ import { StrictMode, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from 'react-router';
-import { Toaster } from 'sonner';
 import { AuthProvider } from '@/auth/AuthProvider';
 import { FullScreenLoader } from '@/components/app/FullScreenLoader';
 import { OperationFeedbackProvider } from '@/components/app/OperationFeedback';
@@ -41,7 +40,6 @@ createRoot(document.getElementById('root')!).render(
             </OperationFeedbackProvider>
           </TooltipProvider>
         </AuthProvider>
-        <Toaster position="bottom-right" richColors closeButton />
       </QueryClientProvider>
     ) : (
       <SetupRequiredPage />

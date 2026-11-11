@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { FileDown, Printer, Search } from 'lucide-react';
-import { toast } from 'sonner';
+import { reportFailure } from '@/components/app/OperationFeedback';
 import type { ProformaDto } from '@tsm/shared';
 import { ProformaStatusBadge } from '@/components/app/StatusBadges';
 import { EmptyState, ErrorState } from '@/components/app/States';
@@ -41,9 +41,8 @@ export function GenerateInvoiceDialog({ open, onOpenChange }: Props) {
     setBusyId(`download:${p.id}`);
     try {
       await downloadFile(`/proformas/${p.id}/pdf`, `${p.number}.pdf`);
-      toast.success(`Invoice ${p.number} downloaded`);
     } catch (error) {
-      toast.error(errorMessage(error));
+      reportFailure(errorMessage(error));
     } finally {
       setBusyId(null);
     }
@@ -54,7 +53,7 @@ export function GenerateInvoiceDialog({ open, onOpenChange }: Props) {
     try {
       await printFile(`/proformas/${p.id}/pdf`);
     } catch (error) {
-      toast.error(errorMessage(error));
+      reportFailure(errorMessage(error));
     } finally {
       setBusyId(null);
     }

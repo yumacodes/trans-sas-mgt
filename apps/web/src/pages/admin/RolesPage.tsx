@@ -177,7 +177,7 @@ function RoleFormDialog({
       void queryClient.invalidateQueries({ queryKey: qk.roles });
       void queryClient.invalidateQueries({ queryKey: qk.me });
     } catch {
-      // The toast already explained the failure.
+      // The error dialog already explained the failure.
     }
   });
 

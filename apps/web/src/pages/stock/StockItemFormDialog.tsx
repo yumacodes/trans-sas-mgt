@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { zodForm } from '@/lib/zodForm';
 import { useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
 import type { z } from 'zod';
 import {
   stockItemInputSchema,
@@ -21,7 +20,7 @@ import {
   FormSection,
   useIdempotencyKey,
 } from '@/components/app/form';
-import { useOperation } from '@/components/app/OperationFeedback';
+import { reportFailure, useOperation } from '@/components/app/OperationFeedback';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DialogBody, DialogClose, DialogFooter } from '@/components/ui/dialog';
@@ -30,6 +29,7 @@ import { NativeSelect } from '@/components/ui/native-select';
 import { Textarea } from '@/components/ui/textarea';
 import { ApiError, api, errorMessage } from '@/lib/api';
 import { useStockCategories } from '@/lib/queries';
+import { insertRecord, patchRecord, pendingId } from '@/lib/optimistic';
 import { qk } from '@/lib/queryKeys';
 import { StagedImagePicker, StockItemImageManager, uploadStagedImages } from './StockItemImages';
 
@@ -91,8 +91,25 @@ export function StockItemFormDialog({ open, onOpenChange, item }: Props) {
     // Users who cannot see costs must not overwrite them with an empty value.
     const payload: Partial<Output> = { ...values };
     if (!canViewCost) delete payload.purchaseCost;
-    // Close straight away; the save carries on in the background with a toast.
+    // Close straight away; the save carries on in the background.
     onOpenChange(false);
+    const category = categories.data?.find((c) => c.id === values.categoryId);
+    const shown = {
+      sku: values.sku.toUpperCase(),
+      name: values.name,
+      description: values.description ?? null,
+      category: category ? { id: category.id, name: category.name } : null,
+      brand: values.brand ?? null,
+      model: values.model ?? null,
+      unit: values.unit,
+      sellingPrice: values.sellingPrice,
+      reorderLevel: values.reorderLevel,
+      trackingMode: values.trackingMode,
+      warrantyMonths: values.warrantyMonths ?? null,
+      tracksExpiry: values.tracksExpiry ?? false,
+    };
+    const preview = stagedImages[0] ? URL.createObjectURL(stagedImages[0]) : null;
+    if (preview) setTimeout(() => URL.revokeObjectURL(preview), 60_000);
     try {
       // The item is created first; its staged images are uploaded straight afterwards,
       // inside the same feedback dialog. An image that fails does not undo the item, so
@@ -114,11 +131,26 @@ export function StockItemFormDialog({ open, onOpenChange, item }: Props) {
         {
           pending: isEdit ? 'Saving item…' : 'Creating item…',
           success: isEdit ? 'Stock item updated' : 'Stock item created',
+          optimistic: () =>
+            isEdit
+              ? patchRecord<StockItemDto>(queryClient, qk.stockItems, item!.id, shown)
+              : insertRecord<StockItemDto>(queryClient, qk.stockItems, {
+                  ...shown,
+                  id: pendingId(),
+                  purchaseCost: values.purchaseCost ?? null,
+                  isActive: true,
+                  quantityOnHand: '0',
+                  isLowStock: false,
+                  primaryImageUrl: preview,
+                  imageCount: stagedImages.length,
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                }),
         },
       );
       idem.reset();
       if (imageError) {
-        toast.error(`The item was saved, but its images were not uploaded. ${imageError}`);
+        reportFailure(`The item was saved, but its images were not uploaded. ${imageError}`);
       }
       void queryClient.invalidateQueries({ queryKey: qk.stockItems });
       void queryClient.invalidateQueries({ queryKey: qk.stockCategories });
@@ -146,6 +178,24 @@ export function StockItemFormDialog({ open, onOpenChange, item }: Props) {
     >
       <form onSubmit={onSubmit} noValidate className="flex min-h-0 flex-1 flex-col">
         <DialogBody className="space-y-6">
+          <FormSection
+            title="Images"
+            description={
+              isEdit
+                ? 'Photographs of this item. Changes here are saved immediately.'
+                : 'Photographs are uploaded as soon as the item has been created.'
+            }
+          >
+            {isEdit ? (
+              <StockItemImageManager
+                itemId={item!.id}
+                itemName={item!.name}
+                canEdit={can('stock_items.update')}
+              />
+            ) : (
+              <StagedImagePicker files={stagedImages} onChange={setStagedImages} />
+            )}
+          </FormSection>
           <FormSection title="Identification">
             <FormGrid className="lg:grid-cols-3">
               <Field
@@ -155,7 +205,6 @@ export function StockItemFormDialog({ open, onOpenChange, item }: Props) {
                 hint="Stored in capitals; must be unique."
               >
                 <Input
-                  autoFocus={!isEdit}
                   className="font-mono uppercase"
                   {...form.register('sku')}
                 />
@@ -270,24 +319,6 @@ export function StockItemFormDialog({ open, onOpenChange, item }: Props) {
                 />
               </div>
             </FormGrid>
-          </FormSection>
-          <FormSection
-            title="Images"
-            description={
-              isEdit
-                ? 'Photographs of this item. Changes here are saved immediately.'
-                : 'Photographs are uploaded as soon as the item has been created.'
-            }
-          >
-            {isEdit ? (
-              <StockItemImageManager
-                itemId={item!.id}
-                itemName={item!.name}
-                canEdit={can('stock_items.update')}
-              />
-            ) : (
-              <StagedImagePicker files={stagedImages} onChange={setStagedImages} />
-            )}
           </FormSection>
         </DialogBody>
         <DialogFooter>
