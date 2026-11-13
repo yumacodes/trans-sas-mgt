@@ -44,6 +44,7 @@ import { insertRecord, patchRecord, pendingId } from '@/lib/optimistic';
 import { useListQuery } from '@/lib/queries';
 import { qk } from '@/lib/queryKeys';
 import { zodForm } from '@/lib/zodForm';
+import { useDeleteRecord } from '@/components/app/useDeleteRecord';
 
 const BASE = '/purchases';
 
@@ -59,6 +60,13 @@ function useSuppliers(enabled: boolean) {
 export default function PurchasesPage() {
   const { can } = useAuth();
   const state = useTableState(['status', 'branchId'], { sort: 'purchaseDate:desc' });
+  const del = useDeleteRecord<PurchaseDto>({
+    path: '/purchases',
+    queryKey: qk.purchases,
+    noun: 'purchase',
+    label: (p) => p.number,
+    allowed: (p) => canManage && (p.status === 'draft' || p.status === 'cancelled'),
+  });
   const result = useListQuery<PurchaseDto>(qk.purchases, BASE, state.query);
   const [viewId, setViewId, closeView] = useOpenParam();
   const [form, setForm] = useState<{ open: boolean; purchase: PurchaseDto | null }>({ open: false, purchase: null });
@@ -122,6 +130,7 @@ export default function PurchasesPage() {
             hidden: !canManage || p.status !== 'draft',
             onSelect: () => setForm({ open: true, purchase: p }),
           },
+          del.action(p),
         ]}
         caption="Purchases"
         searchPlaceholder="Search PO number, supplier or their reference"
@@ -140,6 +149,7 @@ export default function PurchasesPage() {
         emptyDescription="Record an order to a supplier, or draft one from the low-stock list."
         emptyAction={newButton('sm')}
       />
+      {del.dialog}
       <PurchaseDetailModal
         purchaseId={viewId}
         onOpenChange={(o) => !o && closeView()}

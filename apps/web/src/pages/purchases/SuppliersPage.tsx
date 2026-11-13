@@ -23,12 +23,20 @@ import { insertRecord, patchRecord, pendingId } from '@/lib/optimistic';
 import { useListQuery } from '@/lib/queries';
 import { qk } from '@/lib/queryKeys';
 import { zodForm } from '@/lib/zodForm';
+import { useDeleteRecord } from '@/components/app/useDeleteRecord';
 
 export default function SuppliersPage() {
   const { can } = useAuth();
   const queryClient = useQueryClient();
   const { run } = useOperation();
   const state = useTableState(['isActive'], { sort: 'name:asc' });
+  const del = useDeleteRecord<SupplierDto>({
+    path: '/suppliers',
+    queryKey: qk.suppliers,
+    noun: 'supplier',
+    label: (s) => s.name,
+    allowed: (s) => canManage,
+  });
   const result = useListQuery<SupplierDto>(qk.suppliers, '/suppliers', state.query);
   const [form, setForm] = useState<{ open: boolean; supplier: SupplierDto | null }>({ open: false, supplier: null });
   const canManage = can('purchases.manage');
@@ -91,6 +99,7 @@ export default function SuppliersPage() {
             destructive: s.isActive,
             onSelect: () => void setActive(s, !s.isActive),
           },
+          del.action(s),
         ]}
         caption="Suppliers"
         searchPlaceholder="Search name, code or contact"
@@ -109,6 +118,7 @@ export default function SuppliersPage() {
         emptyDescription="Add the companies you buy from before recording purchases."
         emptyAction={newButton('sm')}
       />
+      {del.dialog}
       {canManage && (
         <SupplierFormDialog
           open={form.open}

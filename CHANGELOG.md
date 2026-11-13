@@ -2,6 +2,7 @@
 
 ## 2026-11-13
 
+- **Delete in every table's three-dots menu.** Proformas, price schedules, sales, waybills, purchases, acceptance letters, expenses, suppliers, clients and stock items. The row disappears at once. The server refuses, and says why, when the record is already in use: a proforma or sale past draft, an approved expense, a client with documents, a stock item with stock history. Those should be cancelled, archived or deactivated instead. Every delete is recorded in the audit log.
 - **The letterhead now has the tagline and full contact details.** Company Profile has a new Tagline field. The company details were filled in from your preview PDF, so every PDF prints the name, tagline, P.O. Box, six phone numbers and email.
 - **Every PDF uses the original letterhead design again.** Proforma, price schedule, acceptance letter, waybill, receipt, expense invoice and reports now share the original deep-blue header band and colours, with the document type at the top right. Only the body tables differ. An earlier change had lightened the blue and shrunk the header on landscape documents.
 - **The charted dashboard is back, with real figures.** It keeps the original design: key figure cards with trend lines, the revenue chart, category cards, inventory health and the activity stream.

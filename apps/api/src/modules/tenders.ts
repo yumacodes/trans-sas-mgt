@@ -26,6 +26,7 @@ import { pdfCompany } from '../services/pdf-company';
 import { documentEmailRoute } from '../services/document-email';
 import { assertStockItemsExist, customerOptions, resolveClient, stockItemOptions } from '../services/pickers';
 import { renderTenderPdf } from '../services/tender-pdf';
+import { deleteRecord, onlyWhen } from '../services/delete-record';
 
 /**
  * Tender price schedules. A schedule is a priced submission; it never moves stock or counts
@@ -350,3 +351,14 @@ tendersRouter.patch('/:id/status', requirePermission('tenders.manage'), async (r
   ok(res, toDto(row));
 });
 
+/** Deletes a record nothing depends on; anything already in use is cancelled or archived instead. */
+tendersRouter.delete('/:id', requirePermission('tenders.manage'), async (req, res) => {
+  const id = parse(uuid, req.params.id);
+  await deleteRecord(req, 'tender', id, 'price schedule', async (tx) => {
+    const row = await loadTender(tx, id);
+    onlyWhen(row.status, ['draft'], `Price schedule ${row.number} has been submitted and can't be deleted.`);
+    await tx.tender.delete({ where: { id } });
+    return `Draft price schedule ${row.number} deleted`;
+  });
+  res.status(204).end();
+});

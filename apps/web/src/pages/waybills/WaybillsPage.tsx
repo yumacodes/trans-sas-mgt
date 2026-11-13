@@ -38,6 +38,7 @@ import { insertRecord, patchRecord, pendingId } from '@/lib/optimistic';
 import { useListQuery } from '@/lib/queries';
 import { qk } from '@/lib/queryKeys';
 import { zodForm } from '@/lib/zodForm';
+import { useDeleteRecord } from '@/components/app/useDeleteRecord';
 
 const BASE = '/waybills';
 
@@ -45,6 +46,13 @@ export default function WaybillsPage() {
   const { can } = useAuth();
   const [params, setParams] = useSearchParams();
   const state = useTableState(['status', 'branchId'], { sort: 'deliveryDate:desc' });
+  const del = useDeleteRecord<WaybillDto>({
+    path: '/waybills',
+    queryKey: qk.waybills,
+    noun: 'waybill',
+    label: (w) => w.number,
+    allowed: (w) => canManage && (w.status === 'draft' || w.status === 'cancelled'),
+  });
   const result = useListQuery<WaybillDto>(qk.waybills, BASE, state.query);
   const [viewId, setViewId] = useState<string | null>(params.get('open'));
   const [form, setForm] = useState<{ open: boolean; waybill: WaybillDto | null }>({ open: false, waybill: null });
@@ -106,6 +114,7 @@ export default function WaybillsPage() {
             hidden: !canManage || w.status !== 'draft',
             onSelect: () => setForm({ open: true, waybill: w }),
           },
+          del.action(w),
         ]}
         caption="Waybills"
         searchPlaceholder="Search waybill, recipient or sale"
@@ -124,6 +133,7 @@ export default function WaybillsPage() {
         emptyDescription="Make one from a confirmed sale, or create one for a delivery with no sale."
         emptyAction={newButton('sm')}
       />
+      {del.dialog}
       <WaybillDetailModal
         waybillId={viewId}
         onOpenChange={(o) => !o && closeView()}

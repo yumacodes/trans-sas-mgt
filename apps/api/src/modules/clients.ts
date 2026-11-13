@@ -19,6 +19,7 @@ import { parse } from '../lib/validate';
 import { actorFrom, diff, recordAudit } from '../services/audit';
 import { assertBranchAccess, canAccessBranch, defaultBranchId, optionalBranchWhere } from '../services/branch-scope';
 import { nextDocumentNumber } from '../services/document-numbers';
+import { deleteRecord, onlyWhen } from '../services/delete-record';
 
 export const clientsRouter = Router();
 
@@ -243,3 +244,14 @@ for (const action of ['archive', 'restore'] as const) {
     ok(res, toClientDto(client));
   });
 }
+
+/** Deletes a record nothing depends on; anything already in use is cancelled or archived instead. */
+clientsRouter.delete('/:id', requirePermission('clients.archive'), async (req, res) => {
+  const id = parse(uuid, req.params.id);
+  await deleteRecord(req, 'client', id, 'client', async (tx) => {
+    const row = await findAccessibleClient(tx, getAuth(req), id);
+    await tx.client.delete({ where: { id } });
+    return `Client ${row.code} deleted`;
+  });
+  res.status(204).end();
+});

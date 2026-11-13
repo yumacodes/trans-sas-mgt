@@ -18,10 +18,18 @@ import { qk } from '@/lib/queryKeys';
 import { GenerateInvoiceDialog } from './GenerateInvoiceDialog';
 import { ProformaDetailModal } from './ProformaDetailModal';
 import { ProformaFormDialog } from './ProformaFormDialog';
+import { useDeleteRecord } from '@/components/app/useDeleteRecord';
 
 export default function ProformaPage() {
   const { can } = useAuth();
   const state = useTableState(['status', 'branchId', 'dateFrom', 'dateTo'], { sort: 'issueDate:desc' });
+  const del = useDeleteRecord<ProformaDto>({
+    path: '/proformas',
+    queryKey: qk.proformas,
+    noun: 'proforma',
+    label: (p) => p.number,
+    allowed: (p) => canCreate && p.status === 'draft',
+  });
   const result = useListQuery<ProformaDto>(qk.proformas, '/proformas', state.query);
   const [viewId, setViewId, closeView] = useOpenParam();
   const [viewTab, setViewTab] = useState<string | undefined>();
@@ -139,6 +147,7 @@ export default function ProformaPage() {
               setViewId(p.id);
             },
           },
+          del.action(p),
         ]}
         caption="Proformas"
         searchPlaceholder="Search invoice number or customer"
@@ -185,6 +194,7 @@ export default function ProformaPage() {
           )
         }
       />
+      {del.dialog}
       <GenerateInvoiceDialog open={pickerOpen} onOpenChange={setPickerOpen} />
       <ProformaDetailModal
         proformaId={viewId}

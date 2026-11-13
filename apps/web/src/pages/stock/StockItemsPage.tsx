@@ -25,6 +25,7 @@ import { qk } from '@/lib/queryKeys';
 import { CategoriesDialog } from './CategoriesDialog';
 import { StockItemDetailModal } from './StockItemDetailModal';
 import { StockItemFormDialog } from './StockItemFormDialog';
+import { useDeleteRecord } from '@/components/app/useDeleteRecord';
 
 export default function StockItemsPage() {
   const { can } = useAuth();
@@ -32,6 +33,13 @@ export default function StockItemsPage() {
   const queryClient = useQueryClient();
   const { run } = useOperation();
   const state = useTableState(['categoryId', 'isActive', 'lowStock', 'approvalStatus'], { sort: 'name:asc' });
+  const del = useDeleteRecord<StockItemDto>({
+    path: '/stock-items',
+    queryKey: qk.stockItems,
+    noun: 'stock item',
+    label: (i) => `${i.name} (${i.sku})`,
+    allowed: (i) => can('stock_items.update'),
+  });
   const result = useListQuery<StockItemDto>(qk.stockItems, '/stock-items', state.query);
   const categories = useStockCategories();
   const total = useTotal(qk.stockItems, '/stock-items');
@@ -239,6 +247,7 @@ export default function StockItemsPage() {
             icon: <ImagePlus />,
             onSelect: () => setViewId(i.id),
           },
+          del.action(i),
         ]}
         caption="Stock items"
         searchPlaceholder="Search code, name, brand or model"
@@ -298,6 +307,7 @@ export default function StockItemsPage() {
           )
         }
       />
+      {del.dialog}
 
       <StockItemDetailModal
         itemId={viewId}

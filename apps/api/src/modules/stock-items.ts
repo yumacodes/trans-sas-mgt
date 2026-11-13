@@ -39,6 +39,7 @@ import {
   thumbnailUrls,
 } from '../services/stock-images';
 import { balanceInclude, toBalanceDto } from './stock-balances';
+import { deleteRecord, onlyWhen } from '../services/delete-record';
 
 export const stockItemsRouter = Router();
 
@@ -411,4 +412,20 @@ stockItemsRouter.patch('/:id/status', requirePermission('stock_items.update'), a
     return row;
   });
   ok(res, (await toDtos([item], ctx))[0]);
+});
+
+/** Deletes a record nothing depends on; anything already in use is cancelled or archived instead. */
+stockItemsRouter.delete('/:id', requirePermission('stock_items.update'), async (req, res) => {
+  const id = parse(uuid, req.params.id);
+  await deleteRecord(req, 'stock_item', id, 'stock item', async (tx) => {
+    const row = await tx.stockItem.findUnique({ where: { id } });
+    if (!row) throw notFound('The stock item');
+    if ((await tx.stockMovement.count({ where: { itemId: id } })) > 0) {
+      throw new AppError('CONFLICT', `${row.name} has stock history and can't be deleted. Deactivate it instead.`);
+    }
+    await tx.stockBalance.deleteMany({ where: { itemId: id } });
+    await tx.stockItem.delete({ where: { id } });
+    return `Stock item ${row.sku} deleted`;
+  });
+  res.status(204).end();
 });

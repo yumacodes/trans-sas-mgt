@@ -16,10 +16,18 @@ import { useListQuery } from '@/lib/queries';
 import { qk } from '@/lib/queryKeys';
 import { AcceptanceDetailModal } from './AcceptanceDetailModal';
 import { AcceptanceFormDialog } from './AcceptanceFormDialog';
+import { useDeleteRecord } from '@/components/app/useDeleteRecord';
 
 export default function AcceptancePage() {
   const { can } = useAuth();
   const state = useTableState(['status', 'branchId', 'dateFrom', 'dateTo'], { sort: 'letterDate:desc' });
+  const del = useDeleteRecord<AcceptanceDto>({
+    path: '/acceptance-letters',
+    queryKey: qk.acceptanceLetters,
+    noun: 'acceptance letter',
+    label: (l) => l.number,
+    allowed: (l) => canCreate && (l.status === 'draft' || l.status === 'cancelled'),
+  });
   const result = useListQuery<AcceptanceDto>(qk.acceptanceLetters, '/acceptance-letters', state.query);
   const [viewId, setViewId, closeView] = useOpenParam();
   const [form, setForm] = useState<{ open: boolean; letter: AcceptanceDto | null }>({ open: false, letter: null });
@@ -71,6 +79,7 @@ export default function AcceptancePage() {
             hidden: !canCreate || l.status !== 'draft',
             onSelect: () => setForm({ open: true, letter: l }),
           },
+          del.action(l),
         ]}
         caption="Acceptance letters"
         searchPlaceholder="Search ref, recipient or contract number"
@@ -117,6 +126,7 @@ export default function AcceptancePage() {
           )
         }
       />
+      {del.dialog}
       <AcceptanceDetailModal
         letterId={viewId}
         onOpenChange={(o) => !o && closeView()}

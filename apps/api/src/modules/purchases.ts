@@ -28,6 +28,7 @@ import { pdfCompany } from '../services/pdf-company';
 import { documentEmailRoute } from '../services/document-email';
 import { assertStockItemsExist, stockItemOptions } from '../services/pickers';
 import { renderProformaPdf } from '../services/proforma-pdf';
+import { deleteRecord, onlyWhen } from '../services/delete-record';
 
 /**
  * Purchases. Lifecycle: draft (editable) → ordered → partly received → received, or
@@ -495,4 +496,16 @@ purchasesRouter.post('/reorder', requirePermission('purchases.manage'), idempote
     return purchase;
   });
   created(res, toDto(row));
+});
+
+/** Deletes a record nothing depends on; anything already in use is cancelled or archived instead. */
+purchasesRouter.delete('/:id', requirePermission('purchases.manage'), async (req, res) => {
+  const id = parse(uuid, req.params.id);
+  await deleteRecord(req, 'purchase', id, 'purchase', async (tx) => {
+    const row = await loadPurchase(tx, id);
+    onlyWhen(row.status, ['draft', 'cancelled'], `Purchase ${row.number} has been ordered or received and can't be deleted. Cancel it instead.`);
+    await tx.purchase.delete({ where: { id } });
+    return `Purchase ${row.number} deleted`;
+  });
+  res.status(204).end();
 });

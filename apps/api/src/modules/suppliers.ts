@@ -17,6 +17,7 @@ import { iso } from '../lib/serialize';
 import { parse } from '../lib/validate';
 import { actorFrom, recordAudit } from '../services/audit';
 import { nextDocumentNumber } from '../services/document-numbers';
+import { deleteRecord, onlyWhen } from '../services/delete-record';
 
 /** Suppliers are shared by every branch and kept separate from clients. */
 export const suppliersRouter = Router();
@@ -135,4 +136,15 @@ suppliersRouter.patch('/:id/status', requirePermission('purchases.manage'), asyn
     return updated;
   });
   ok(res, toDto(row));
+});
+
+/** Deletes a record nothing depends on; anything already in use is cancelled or archived instead. */
+suppliersRouter.delete('/:id', requirePermission('purchases.manage'), async (req, res) => {
+  const id = parse(uuid, req.params.id);
+  await deleteRecord(req, 'supplier', id, 'supplier', async (tx) => {
+    const row = await loadSupplier(tx, id);
+    await tx.supplier.delete({ where: { id } });
+    return `Supplier ${row.code} deleted`;
+  });
+  res.status(204).end();
 });

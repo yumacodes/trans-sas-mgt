@@ -16,10 +16,18 @@ import { useListQuery } from '@/lib/queries';
 import { qk } from '@/lib/queryKeys';
 import { TenderDetailModal } from './TenderDetailModal';
 import { TenderFormDialog } from './TenderFormDialog';
+import { useDeleteRecord } from '@/components/app/useDeleteRecord';
 
 export default function TendersPage() {
   const { can } = useAuth();
   const state = useTableState(['status', 'branchId', 'dateFrom', 'dateTo'], { sort: 'scheduleDate:desc' });
+  const del = useDeleteRecord<TenderDto>({
+    path: '/tenders',
+    queryKey: qk.tenders,
+    noun: 'price schedule',
+    label: (t) => t.number,
+    allowed: (t) => canCreate && t.status === 'draft',
+  });
   const result = useListQuery<TenderDto>(qk.tenders, '/tenders', state.query);
   const [viewId, setViewId, closeView] = useOpenParam();
   const [form, setForm] = useState<{ open: boolean; tender: TenderDto | null }>({ open: false, tender: null });
@@ -83,6 +91,7 @@ export default function TendersPage() {
             hidden: !canCreate || t.status !== 'draft',
             onSelect: () => setForm({ open: true, tender: t }),
           },
+          del.action(t),
         ]}
         caption="Price schedules"
         searchPlaceholder="Search number, organisation, tender ref or lot"
@@ -129,6 +138,7 @@ export default function TendersPage() {
           )
         }
       />
+      {del.dialog}
       <TenderDetailModal
         tenderId={viewId}
         onOpenChange={(o) => !o && closeView()}

@@ -96,3 +96,15 @@ export function insertRecord<T extends { id: string }>(
     };
   });
 }
+
+/** Takes a record out of every cached list under `key`, so a deleted row disappears at once. */
+export function removeRecord(client: QueryClient, key: QueryKey, id: string): Undo {
+  return optimisticUpdate(client, key, (_queryKey, old) => {
+    if (!isPage(old) || !old.data.some((r) => r.id === id)) return old;
+    return {
+      ...old,
+      data: old.data.filter((r) => r.id !== id),
+      meta: old.meta ? { ...old.meta, total: Math.max(0, old.meta.total - 1) } : old.meta,
+    };
+  });
+}

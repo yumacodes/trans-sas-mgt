@@ -31,6 +31,7 @@ import { pdfCompany } from '../services/pdf-company';
 import { documentEmailRoute } from '../services/document-email';
 import { assertStockItemsExist, customerOptions, resolveClient, stockItemOptions } from '../services/pickers';
 import { renderWaybillPdf } from '../services/waybill-pdf';
+import { deleteRecord, onlyWhen } from '../services/delete-record';
 
 /**
  * Waybills separate three events: created (draft), goods left (dispatched), goods arrived
@@ -461,4 +462,16 @@ waybillsRouter.post('/from-sale/:saleId', requirePermission('waybills.manage'), 
     return waybill;
   });
   created(res, toDto(row));
+});
+
+/** Deletes a record nothing depends on; anything already in use is cancelled or archived instead. */
+waybillsRouter.delete('/:id', requirePermission('waybills.manage'), async (req, res) => {
+  const id = parse(uuid, req.params.id);
+  await deleteRecord(req, 'waybill', id, 'waybill', async (tx) => {
+    const row = await loadWaybill(tx, id);
+    onlyWhen(row.status, ['draft', 'cancelled'], `Waybill ${row.number} has been dispatched and can't be deleted. Cancel it instead.`);
+    await tx.waybill.delete({ where: { id } });
+    return `Waybill ${row.number} deleted`;
+  });
+  res.status(204).end();
 });

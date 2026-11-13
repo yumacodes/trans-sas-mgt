@@ -27,6 +27,7 @@ import { nextDocumentNumber, peekDocumentNumber } from '../services/document-num
 import { pdfCompany } from '../services/pdf-company';
 import { documentEmailRoute } from '../services/document-email';
 import { customerOptions, resolveClient } from '../services/pickers';
+import { deleteRecord, onlyWhen } from '../services/delete-record';
 
 /**
  * Acceptance letters for contract awards. A draft can be edited; "issued" records that the
@@ -359,4 +360,16 @@ acceptanceLettersRouter.patch('/:id/status', requirePermission('acceptance.manag
     return updated;
   });
   ok(res, toDto(row));
+});
+
+/** Deletes a record nothing depends on; anything already in use is cancelled or archived instead. */
+acceptanceLettersRouter.delete('/:id', requirePermission('acceptance.manage'), async (req, res) => {
+  const id = parse(uuid, req.params.id);
+  await deleteRecord(req, 'acceptance_letter', id, 'acceptance letter', async (tx) => {
+    const row = await loadLetter(tx, id);
+    onlyWhen(row.status, ['draft', 'cancelled'], `Letter ${row.number} has been issued and can't be deleted. Cancel it instead.`);
+    await tx.acceptanceLetter.delete({ where: { id } });
+    return `Acceptance letter ${row.number} deleted`;
+  });
+  res.status(204).end();
 });

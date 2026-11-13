@@ -16,11 +16,19 @@ import { useListQuery } from '@/lib/queries';
 import { qk } from '@/lib/queryKeys';
 import { SaleDetailModal } from './SaleDetailModal';
 import { SaleFormDialog } from './SaleFormDialog';
+import { useDeleteRecord } from '@/components/app/useDeleteRecord';
 
 export default function SalesPage() {
   const { can } = useAuth();
   const [params, setParams] = useSearchParams();
   const state = useTableState(['status', 'branchId', 'dateFrom', 'dateTo'], { sort: 'saleDate:desc' });
+  const del = useDeleteRecord<SaleDto>({
+    path: '/sales',
+    queryKey: qk.sales,
+    noun: 'sale',
+    label: (s) => s.number,
+    allowed: (s) => canCreate && s.status === 'draft',
+  });
   const result = useListQuery<SaleDto>(qk.sales, '/sales', state.query);
   // `?open=` lets a conversion from another page land on the new sale.
   const [viewId, setViewId] = useState<string | null>(params.get('open'));
@@ -96,6 +104,7 @@ export default function SalesPage() {
             hidden: !canCreate || s.status !== 'draft',
             onSelect: () => setForm({ open: true, sale: s }),
           },
+          del.action(s),
         ]}
         caption="Sales"
         searchPlaceholder="Search sale number or client"
@@ -136,6 +145,7 @@ export default function SalesPage() {
         emptyDescription="Create a sale, or convert an accepted proforma or awarded tender."
         emptyAction={newButton('sm')}
       />
+      {del.dialog}
       <SaleDetailModal
         saleId={viewId}
         onOpenChange={(o) => !o && closeView()}

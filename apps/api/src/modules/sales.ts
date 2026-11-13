@@ -33,6 +33,7 @@ import { pdfCompany } from '../services/pdf-company';
 import { assertStockItemsExist, customerOptions, lastPrices, resolveClient, stockItemOptions } from '../services/pickers';
 import { renderProformaPdf } from '../services/proforma-pdf';
 import { documentEmailRoute } from '../services/document-email';
+import { deleteRecord, onlyWhen } from '../services/delete-record';
 
 /**
  * Sales. A draft changes nothing. Confirming a sale issues its stock in the same
@@ -576,4 +577,16 @@ salesRouter.post('/from-tender/:tenderId', requirePermission('sales.manage'), as
     return sale;
   });
   created(res, toDto(row));
+});
+
+/** Deletes a record nothing depends on; anything already in use is cancelled or archived instead. */
+salesRouter.delete('/:id', requirePermission('sales.manage'), async (req, res) => {
+  const id = parse(uuid, req.params.id);
+  await deleteRecord(req, 'sale', id, 'sale', async (tx) => {
+    const row = await loadSale(tx, id);
+    onlyWhen(row.status, ['draft'], `Sale ${row.number} has been confirmed or cancelled and can't be deleted. Cancel it to return its stock.`);
+    await tx.sale.delete({ where: { id } });
+    return `Draft sale ${row.number} deleted`;
+  });
+  res.status(204).end();
 });

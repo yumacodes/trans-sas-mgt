@@ -28,6 +28,7 @@ import { renderExpensePdf } from '../services/expense-pdf';
 import { notifyPermission } from '../services/notifications';
 import { getCompanySettings } from '../services/company-settings';
 import { pdfCompany } from '../services/pdf-company';
+import { deleteRecord, onlyWhen } from '../services/delete-record';
 
 /**
  * General expenses and Tender-In / Tender-Out transactions. Records are never deleted:
@@ -271,4 +272,16 @@ expensesRouter.post('/:id/status', requirePermission('expenses.approve'), async 
     return loadExpense(tx, ctx, id);
   });
   ok(res, toDto(row));
+});
+
+/** Deletes a record nothing depends on; anything already in use is cancelled or archived instead. */
+expensesRouter.delete('/:id', requirePermission('expenses.manage'), async (req, res) => {
+  const id = parse(uuid, req.params.id);
+  await deleteRecord(req, 'expense', id, 'record', async (tx) => {
+    const row = await loadExpense(tx, getAuth(req), id);
+    onlyWhen(row.status, ['pending', 'rejected'], `Record ${row.number} has been approved and can't be deleted. Void it instead.`);
+    await tx.expense.delete({ where: { id } });
+    return `Expense ${row.number} deleted`;
+  });
+  res.status(204).end();
 });

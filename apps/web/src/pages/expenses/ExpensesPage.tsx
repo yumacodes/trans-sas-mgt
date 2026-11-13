@@ -27,6 +27,7 @@ import { qk } from '@/lib/queryKeys';
 import { ExpenseDetailModal } from './ExpenseDetailModal';
 import { COUNTERPARTY_LABEL, ExpenseFormDialog } from './ExpenseFormDialog';
 import { ExpenseInvoiceDialog } from './ExpenseInvoiceDialog';
+import { useDeleteRecord } from '@/components/app/useDeleteRecord';
 
 const DESCRIPTIONS: Record<ExpenseKind, string> = {
   general: 'Day-to-day business expenses by category and branch.',
@@ -37,6 +38,13 @@ const DESCRIPTIONS: Record<ExpenseKind, string> = {
 export function ExpensesPage({ kind }: { kind: ExpenseKind }) {
   const { can } = useAuth();
   const state = useTableState(['status', 'dateFrom', 'dateTo'], { sort: 'transactionDate:desc' });
+  const del = useDeleteRecord<ExpenseDto>({
+    path: '/expenses',
+    queryKey: qk.expenses,
+    noun: 'record',
+    label: (e) => e.number,
+    allowed: (e) => canCreate && (e.status === 'pending' || e.status === 'rejected'),
+  });
   const result = useListQuery<ExpenseDto>([...qk.expenses, kind], '/expenses', { ...state.query, kind });
   const [viewId, setViewId, closeView] = useOpenParam();
   const [form, setForm] = useState<{ open: boolean; expense: ExpenseDto | null }>({ open: false, expense: null });
@@ -175,6 +183,7 @@ export function ExpensesPage({ kind }: { kind: ExpenseKind }) {
             hidden: !canCreate || e.status !== 'pending',
             onSelect: () => setForm({ open: true, expense: e }),
           },
+          del.action(e),
         ]}
         caption={label}
         searchPlaceholder="Search reference, category or counterparty"
@@ -220,6 +229,7 @@ export function ExpensesPage({ kind }: { kind: ExpenseKind }) {
           )
         }
       />
+      {del.dialog}
       <ExpenseInvoiceDialog kind={kind} open={pickerOpen} onOpenChange={setPickerOpen} />
       <ExpenseDetailModal
         expenseId={viewId}

@@ -30,6 +30,7 @@ import { EMAIL_NOT_CONFIGURED, emailConfigured, sendEmail } from '../services/em
 import { pdfCompany } from '../services/pdf-company';
 import { renderProformaPdf } from '../services/proforma-pdf';
 import { assertStockItemsExist, customerOptions, lastPrices, resolveClient, stockItemOptions } from '../services/pickers';
+import { deleteRecord, onlyWhen } from '../services/delete-record';
 
 /**
  * Proforma invoices. A proforma is a quotation: it never moves stock or counts as
@@ -456,4 +457,17 @@ proformasRouter.post('/:id/email', requirePermission('proformas.manage'), emailL
     return updated;
   });
   ok(res, toDto(row));
+});
+
+/** Deletes a record nothing depends on; anything already in use is cancelled or archived instead. */
+proformasRouter.delete('/:id', requirePermission('proformas.manage'), async (req, res) => {
+  const id = parse(uuid, req.params.id);
+  await deleteRecord(req, 'proforma', id, 'proforma', async (tx) => {
+    const row = await tx.proforma.findUnique({ where: { id } });
+    if (!row) throw notFound('The proforma');
+    onlyWhen(row.status, ['draft'], `Proforma ${row.number} has been issued and can't be deleted. Mark it rejected or expired instead.`);
+    await tx.proforma.delete({ where: { id } });
+    return `Draft proforma ${row.number} deleted`;
+  });
+  res.status(204).end();
 });

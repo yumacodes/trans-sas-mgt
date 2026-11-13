@@ -26,12 +26,20 @@ import { patchRecord } from '@/lib/optimistic';
 import { qk } from '@/lib/queryKeys';
 import { ClientDetailModal } from './ClientDetailModal';
 import { ClientFormDialog } from './ClientFormDialog';
+import { useDeleteRecord } from '@/components/app/useDeleteRecord';
 
 export default function ClientsPage() {
   const { can } = useAuth();
   const queryClient = useQueryClient();
   const { run } = useOperation();
   const state = useTableState(['status', 'organizationType', 'branchId'], { sort: 'name:asc' });
+  const del = useDeleteRecord<ClientDto>({
+    path: '/clients',
+    queryKey: qk.clients,
+    noun: 'client',
+    label: (c) => `${c.name} (${c.code})`,
+    allowed: (c) => can('clients.archive'),
+  });
   const result = useListQuery<ClientDto>(qk.clients, '/clients', state.query);
   const branches = useBranchOptions();
   const total = useTotal(qk.clients, '/clients');
@@ -160,6 +168,7 @@ export default function ClientsPage() {
               window.location.href = `mailto:${c.email}`;
             },
           },
+          del.action(c),
         ]}
         caption="Clients"
         searchPlaceholder="Search name, code, contact or email"
@@ -211,6 +220,7 @@ export default function ClientsPage() {
           )
         }
       />
+      {del.dialog}
 
       <ClientDetailModal
         clientId={viewId}
