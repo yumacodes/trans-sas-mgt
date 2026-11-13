@@ -141,6 +141,7 @@ export function CreateUserDialog({ open, onOpenChange }: { open: boolean; onOpen
       await run(() => api.post<UserDto>('/users', values, idem.keyFor(values)), {
         pending: 'Creating user account…',
         success: 'User account created',
+        blocking: true,
       });
       idem.reset();
       invalidate();
@@ -304,6 +305,7 @@ export function UserAccessDialog({ user, onOpenChange }: { user: UserDto | null;
       await run(() => api.put(`/users/${user.id}/access`, values), {
         pending: 'Updating access…',
         success: 'Access updated',
+        blocking: true,
       });
       invalidate();
     } catch {
@@ -370,6 +372,7 @@ export function TemporaryPasswordDialog({
       await run(() => api.post(`/users/${user.id}/temporary-password`), {
         pending: 'Resetting password…',
         success: `Password reset for ${user.fullName}`,
+        blocking: true,
       });
       invalidate();
     } catch {
