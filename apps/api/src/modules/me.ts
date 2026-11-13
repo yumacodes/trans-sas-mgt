@@ -1,5 +1,9 @@
 import { Router } from 'express';
-import { profileUpdateSchema, type MeDto } from '@tsm/shared';
+import { DEFAULT_USER_PASSWORD, newPasswordSchema, profileUpdateSchema, type MeDto } from '@tsm/shared';
+import rateLimit from 'express-rate-limit';
+import { AppError, invalidState } from '../lib/errors';
+import { logger } from '../lib/logger';
+import { supabaseAdmin } from '../lib/supabase';
 import { getAuth, type AuthContext } from '../middleware/auth';
 import { prisma } from '../lib/prisma';
 import { ok } from '../lib/respond';
@@ -35,6 +39,7 @@ async function buildMe(ctx: AuthContext): Promise<MeDto> {
     },
     permissions: [...ctx.permissions].sort(),
     allBranches: ctx.allBranches,
+    mustChangePassword: Boolean(ctx.mustChangePassword),
     company: company
       ? {
           name: company.name,
@@ -71,4 +76,41 @@ meRouter.patch('/', async (req, res) => {
     });
   });
   ok(res, await buildMe(ctx));
+});
+
+const passwordLimiter = rateLimit({
+  windowMs: 15 * 60_000,
+  limit: 20,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  handler: (_req, _res, next) => next(new AppError('RATE_LIMITED', 'Too many attempts. Wait a few minutes and try again.')),
+});
+
+/**
+ * The first-sign-in password change. Only available while the account still has the default
+ * password; afterwards users change it from Account settings.
+ */
+meRouter.post('/password', passwordLimiter, async (req, res) => {
+  const ctx = getAuth(req);
+  const { password } = parse(newPasswordSchema, req.body);
+  if (!ctx.mustChangePassword) throw invalidState('Your password has already been set. Change it from Account settings.');
+  if (password === DEFAULT_USER_PASSWORD) {
+    const message = 'Choose a password that is different from the default one.';
+    throw new AppError('VALIDATION_FAILED', message, { password: message });
+  }
+  const { error } = await supabaseAdmin().auth.admin.updateUserById(ctx.authUserId, { password });
+  if (error) {
+    logger.error({ err: error }, 'first sign-in password change failed');
+    throw new AppError('SERVICE_UNAVAILABLE', "We couldn't save your new password. Try again shortly.");
+  }
+  await prisma.$transaction(async (tx) => {
+    await tx.userProfile.update({ where: { id: ctx.profileId }, data: { mustChangePassword: false } });
+    await recordAudit(tx, actorFrom(req), {
+      action: 'user.password_changed',
+      entityType: 'user',
+      entityId: ctx.profileId,
+      summary: `${ctx.fullName} chose a new password at first sign-in`,
+    });
+  });
+  ok(res, { updated: true });
 });

@@ -2,6 +2,7 @@
 
 ## 2026-11-13
 
+- **New users get the default password 123456789 and must change it at first sign-in.** The New user form no longer asks for a password. On first sign-in the user sees only a "Choose your password" screen, and the server blocks every other request until a new password is saved. The default can't be kept as the new password. "Set temporary password" is now "Reset to default password", which puts the default back and asks for a new one at the next sign-in. Database change `20261113000000_must_change_password` is applied.
 - **Generate Invoice now previews the PDF.** Pick a proforma and see the invoice as it will print, with Print and Download buttons on the preview.
 - **The Duplicate button is gone from the proforma, sale and price schedule windows.**
 - **Delete in every table's three-dots menu.** Proformas, price schedules, sales, waybills, purchases, acceptance letters, expenses, suppliers, clients and stock items. The row disappears at once. The server refuses, and says why, when the record is already in use: a proforma or sale past draft, an approved expense, a client with documents, a stock item with stock history. Those should be cancelled, archived or deactivated instead. Every delete is recorded in the audit log.

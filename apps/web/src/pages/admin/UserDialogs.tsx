@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Controller, useForm, type Control, type FieldValues, type Path } from 'react-hook-form';
 import { zodForm } from '@/lib/zodForm';
 import { useQueryClient } from '@tanstack/react-query';
@@ -6,15 +6,14 @@ import type { z } from 'zod';
 import {
   userAccessSchema,
   userCreateSchema,
-  userTemporaryPasswordSchema,
+  DEFAULT_USER_PASSWORD,
   userUpdateSchema,
   type UserAccessInput,
   type UserCreateInput,
   type UserDto,
-  type UserTemporaryPasswordInput,
   type UserUpdateInput,
 } from '@tsm/shared';
-import { FormDialog } from '@/components/app/dialogs';
+import { ConfirmDialog, FormDialog } from '@/components/app/dialogs';
 import {
   Field,
   FormGrid,
@@ -22,7 +21,6 @@ import {
   useIdempotencyKey,
 } from '@/components/app/form';
 import { useOperation } from '@/components/app/OperationFeedback';
-import { PasswordInput } from '@/pages/auth/LoginPage';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DialogBody, DialogClose, DialogFooter } from '@/components/ui/dialog';
@@ -119,7 +117,6 @@ const createDefaults: UserCreateInput = {
   phone: '',
   roleIds: [],
   branchIds: [],
-  temporaryPassword: '',
 };
 
 export function CreateUserDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
@@ -127,7 +124,6 @@ export function CreateUserDialog({ open, onOpenChange }: { open: boolean; onOpen
   const idem = useIdempotencyKey();
   const invalidate = useInvalidateUsers();
   const { roleOptions, branchOptions } = useAccessOptions();
-  const [showPassword, setShowPassword] = useState(false);
   const form = useForm<UserCreateInput, unknown, CreateOutput>({
     resolver: zodForm(userCreateSchema),
     defaultValues: createDefaults,
@@ -179,19 +175,10 @@ export function CreateUserDialog({ open, onOpenChange }: { open: boolean; onOpen
             </FormGrid>
           </FormSection>
 
-          <FormSection
-            title="Temporary password"
-            description="Share it securely. The user signs in with it, then sets a password of their own under Account settings."
-          >
-            <Field label="Temporary password" error={errors.temporaryPassword?.message} required className="sm:max-w-sm">
-              <PasswordInput
-                visible={showPassword}
-                onToggle={() => setShowPassword((v) => !v)}
-                autoComplete="new-password"
-                {...form.register('temporaryPassword')}
-              />
-            </Field>
-          </FormSection>
+          <p className="rounded-xl bg-surface-muted px-4 py-3 text-sm text-ink-muted">
+            The account starts with the password <strong className="font-mono text-ink">{DEFAULT_USER_PASSWORD}</strong>.
+            The user is asked to choose their own the first time they sign in.
+          </p>
 
           <FormSection title="Roles" description="Roles determine what the user can see and do.">
             <IdChecklist control={form.control} name="roleIds" options={roleOptions} emptyText="No roles available." />
@@ -365,7 +352,7 @@ export function UserAccessDialog({ user, onOpenChange }: { user: UserDto | null;
   );
 }
 
-/* ---------- Set temporary password ---------- */
+/* ---------- Reset to the default password ---------- */
 
 export function TemporaryPasswordDialog({
   user,
@@ -376,67 +363,34 @@ export function TemporaryPasswordDialog({
 }) {
   const { run } = useOperation();
   const invalidate = useInvalidateUsers();
-  const idem = useIdempotencyKey();
-  const [showPassword, setShowPassword] = useState(false);
-  const form = useForm<UserTemporaryPasswordInput>({
-    resolver: zodForm(userTemporaryPasswordSchema),
-    defaultValues: { temporaryPassword: '' },
-  });
-  const { errors, isDirty } = form.formState;
 
-  useEffect(() => {
-    if (user) form.reset({ temporaryPassword: '' });
-  }, [user, form]);
-
-  const onSubmit = form.handleSubmit(async (values) => {
+  const reset = async () => {
     if (!user) return;
-    onClose();
-    form.reset({ temporaryPassword: '' });
     try {
-      await run(() => api.post(`/users/${user.id}/temporary-password`, values, idem.keyFor(values)), {
-        pending: 'Setting temporary password…',
-        success: `Temporary password set for ${user.fullName}`,
+      await run(() => api.post(`/users/${user.id}/temporary-password`), {
+        pending: 'Resetting password…',
+        success: `Password reset for ${user.fullName}`,
       });
-      idem.reset();
       invalidate();
     } catch {
       // The error dialog already explained the failure.
     }
-  });
+  };
 
   return (
-    <FormDialog
+    <ConfirmDialog
       open={Boolean(user)}
       onOpenChange={(o) => !o && onClose()}
-      isDirty={isDirty}
-      size="md"
-      title="Set temporary password"
-    >
-      <form onSubmit={onSubmit} noValidate className="flex min-h-0 flex-1 flex-col">
-        <DialogBody className="space-y-4">
-          <p className="text-sm text-ink-muted">
-            This replaces the password for <strong className="text-ink">{user?.fullName}</strong>. Share the new one
-            securely; they can then choose their own under Account settings.
-          </p>
-          <Field label="Temporary password" error={errors.temporaryPassword?.message} required>
-            <PasswordInput
-              visible={showPassword}
-              onToggle={() => setShowPassword((v) => !v)}
-              autoComplete="new-password"
-              autoFocus
-              {...form.register('temporaryPassword')}
-            />
-          </Field>
-        </DialogBody>
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="secondary">Cancel</Button>
-          </DialogClose>
-          <Button type="submit">
-            Set password
-          </Button>
-        </DialogFooter>
-      </form>
-    </FormDialog>
+      title="Reset to the default password?"
+      description={
+        <p>
+          {user?.fullName}'s password will be replaced with {DEFAULT_USER_PASSWORD}. They will be asked to choose a
+          new one the next time they sign in.
+        </p>
+      }
+      confirmLabel="Reset password"
+      destructive
+      onConfirm={reset}
+    />
   );
 }

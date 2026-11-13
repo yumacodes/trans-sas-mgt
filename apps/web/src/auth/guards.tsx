@@ -3,6 +3,7 @@ import { Navigate, Outlet, useLocation } from 'react-router';
 import type { Permission } from '@tsm/shared';
 import { ErrorState } from '@/components/app/States';
 import { ForbiddenPage } from '@/pages/ForbiddenPage';
+import { ChangePasswordRequiredPage } from '@/pages/auth/ChangePasswordRequiredPage';
 import { errorMessage } from '@/lib/api';
 import { useAuth } from './AuthProvider';
 import { SessionCheck } from './SessionCheck';
@@ -19,7 +20,7 @@ export function safeNextPath(next: string | null | undefined) {
  * status is unresolved nothing protected is shown.
  */
 export function RequireAuth({ children }: { children?: ReactNode }) {
-  const { status, meError, retryMe, signOut } = useAuth();
+  const { status, me, meError, retryMe, signOut } = useAuth();
   const location = useLocation();
 
   if (status === 'loading') return <SessionCheck />;
@@ -39,6 +40,7 @@ export function RequireAuth({ children }: { children?: ReactNode }) {
       </div>
     );
   }
+  if (me?.mustChangePassword) return <ChangePasswordRequiredPage />;
   return children ?? <Outlet />;
 }
 

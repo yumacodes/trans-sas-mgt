@@ -2,12 +2,11 @@ import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import type { Prisma } from '@prisma/client';
 import {
-  passwordPolicy,
+  DEFAULT_USER_PASSWORD,
   userAccessSchema,
   userCreateSchema,
   userListQuerySchema,
   userStatusSchema,
-  userTemporaryPasswordSchema,
   userUpdateSchema,
   uuid,
   listQuerySchema,
@@ -174,13 +173,12 @@ const USERNAME_IN_USE = 'This username is already taken. Choose a different one.
 const DUPLICATE = { email: EMAIL_IN_USE, username: USERNAME_IN_USE };
 
 /**
- * Creates the Supabase Auth identity first (with the temporary password the administrator chose), then
+ * Creates the Supabase Auth identity first (with the default password, which the user must change at first sign-in), then
  * the application profile. If the profile cannot be saved, the auth user is deleted
  * again so no orphaned login remains.
  */
 usersRouter.post('/', idempotent, credentialLimiter, async (req, res) => {
   const input = parse(userCreateSchema, req.body);
-  parse(passwordPolicy, input.temporaryPassword);
 
   const existing = await prisma.userProfile.findUnique({ where: { email: input.email } });
   if (existing) throw new AppError('DUPLICATE', EMAIL_IN_USE, { email: EMAIL_IN_USE });
@@ -193,7 +191,7 @@ usersRouter.post('/', idempotent, credentialLimiter, async (req, res) => {
   const metadata = { full_name: input.fullName };
   const result = await admin.createUser({
     email: input.email,
-    password: input.temporaryPassword,
+    password: DEFAULT_USER_PASSWORD,
     email_confirm: true,
     user_metadata: metadata,
   });
@@ -220,6 +218,7 @@ usersRouter.post('/', idempotent, credentialLimiter, async (req, res) => {
           username: input.username,
           fullName: input.fullName,
           phone: input.phone ?? null,
+          mustChangePassword: true,
           roles: { create: input.roleIds.map((roleId) => ({ roleId })) },
           branches: { create: input.branchIds.map((branchId) => ({ branchId })) },
         },
@@ -229,7 +228,7 @@ usersRouter.post('/', idempotent, credentialLimiter, async (req, res) => {
         action: 'user.created',
         entityType: 'user',
         entityId: row.id,
-        summary: `User ${row.fullName} (${row.email}) created with a temporary password`,
+        summary: `User ${row.fullName} (${row.email}) created with the default password`,
         changes: { roles: row.roles.map((r) => r.role.key), branches: row.branches.map((b) => b.branch.code) },
       });
       return row;
@@ -361,31 +360,30 @@ usersRouter.patch('/:id/status', async (req, res) => {
   ok(res, toDto(user));
 });
 
-/** Replaces a user's password with a new temporary one; the user changes it from Account settings. */
+/** Puts the default password back on an account; the user must choose their own at the next sign-in. */
 usersRouter.post('/:id/temporary-password', credentialLimiter, async (req, res) => {
   const id = parse(uuid, req.params.id);
-  const { temporaryPassword } = parse(userTemporaryPasswordSchema, req.body);
-  parse(passwordPolicy, temporaryPassword);
   const user = await prisma.userProfile.findUnique({ where: { id } });
   if (!user) throw notFound('The user');
   if (!user.isActive) throw invalidState('Activate this account before setting a new password.');
   const { error } = await supabaseAdmin().auth.admin.updateUserById(user.authUserId, {
-    password: temporaryPassword,
+    password: DEFAULT_USER_PASSWORD,
   });
   if (error) {
     logger.error({ err: error }, 'temporary password update failed');
     throw new AppError('SERVICE_UNAVAILABLE', 'We could not set the new password. Try again shortly.');
   }
   await prisma.$transaction(async (tx) => {
+    await tx.userProfile.update({ where: { id }, data: { mustChangePassword: true } });
     await tx.passwordResetRequest.updateMany({
       where: { userId: id, resolvedAt: null },
       data: { resolvedAt: new Date(), resolvedById: req.auth?.profileId ?? null },
     });
     await recordAudit(tx, actorFrom(req), {
-      action: 'user.temporary_password_set',
+      action: 'user.password_reset_to_default',
       entityType: 'user',
       entityId: id,
-      summary: `Temporary password set for ${user.email}`,
+      summary: `Password reset to the default for ${user.email}`,
     });
   });
   ok(res, { updated: true });

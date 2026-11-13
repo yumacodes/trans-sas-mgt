@@ -7,7 +7,7 @@ import { pinoHttp } from 'pino-http';
 import { env } from './config/env';
 import { AppError } from './lib/errors';
 import { logger } from './lib/logger';
-import { authenticate } from './middleware/auth';
+import { authenticate, requirePasswordChanged } from './middleware/auth';
 import { errorHandler, notFoundHandler } from './middleware/error';
 import { auditLogsRouter } from './modules/audit-logs';
 import { authRouter } from './modules/auth';
@@ -94,6 +94,8 @@ export function createApp() {
   api.use('/jobs', jobsRouter);
   api.use(authenticate);
   api.use('/me', meRouter);
+  // Accounts still on the default password can reach nothing else until they choose their own.
+  api.use(requirePasswordChanged);
   api.use('/dashboard', dashboardRouter);
   api.use('/company', companyRouter);
   api.use('/branches', branchesRouter);

@@ -15,6 +15,8 @@ export interface AuthContext {
   /** True when the user may see records of every branch. */
   allBranches: boolean;
   branchIds: readonly string[];
+  /** True until the user replaces the default password; most of the API is closed until then. */
+  mustChangePassword?: boolean;
 }
 
 type Verifier = (token: string) => Promise<JWTPayload>;
@@ -80,6 +82,7 @@ export async function loadAuthContext(authUserId: string): Promise<AuthContext> 
     permissions,
     allBranches: permissions.has('branches.all_access'),
     branchIds: profile.branches.map((b) => b.branchId),
+    mustChangePassword: profile.mustChangePassword,
   };
 }
 
@@ -136,4 +139,12 @@ export function requireAnyPermission(...permissions: Permission[]) {
     if (!permissions.some((p) => ctx.permissions.has(p))) throw forbidden();
     next();
   };
+}
+
+/** Blocks everything after `/me` for accounts that still have the default password. */
+export function requirePasswordChanged(req: Request, _res: Response, next: NextFunction) {
+  if (req.auth?.mustChangePassword) {
+    throw new AppError('PASSWORD_CHANGE_REQUIRED', 'Choose a new password to continue.');
+  }
+  next();
 }

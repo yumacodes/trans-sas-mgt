@@ -17,19 +17,13 @@ export const userCreateSchema = z
     phone: optionalPhone,
     roleIds: z.array(uuid).min(1, 'Assign at least one role.'),
     branchIds: z.array(uuid).default([]),
-    /** Set by the administrator; the user replaces it from Account settings after signing in. */
-    temporaryPassword: z
-      .string()
-      .min(10, 'Enter a temporary password of at least 10 characters.')
-      .max(128),
   });
-export const userTemporaryPasswordSchema = z.object({
-  temporaryPassword: z
-    .string()
-    .min(10, 'Enter a temporary password of at least 10 characters.')
-    .max(128),
-});
-export type UserTemporaryPasswordInput = z.input<typeof userTemporaryPasswordSchema>;
+
+/**
+ * Every new or reset account starts with this password and must replace it at first sign-in.
+ * It is deliberately not a secret: the server refuses it as anyone's chosen password.
+ */
+export const DEFAULT_USER_PASSWORD = '123456789';
 export type UserCreateInput = z.input<typeof userCreateSchema>;
 
 export const userUpdateSchema = z.object({
@@ -83,6 +77,8 @@ export interface MeDto {
   user: Pick<UserDto, 'id' | 'email' | 'username' | 'fullName' | 'phone' | 'roles' | 'branches'>;
   permissions: Permission[];
   allBranches: boolean;
+  /** True while the user still has the default password and must choose their own. */
+  mustChangePassword: boolean;
   company: { name: string; defaultCurrency: string; logoUrl: string | null } | null;
 }
 

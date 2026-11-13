@@ -22,6 +22,7 @@ export function fakeAuth(
           },
           permissions: [...permissions],
           allBranches: false,
+          mustChangePassword: false,
           company: { name: 'Test Medical Ltd', defaultCurrency: 'GHS', logoUrl: null },
           ...opts.me,
         }

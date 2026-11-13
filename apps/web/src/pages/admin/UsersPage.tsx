@@ -79,7 +79,7 @@ export default function UsersPage() {
     { label: 'Edit profile', icon: <Pencil />, onSelect: () => setEdit(u) },
     { label: 'Roles & branches', icon: <ShieldCheck />, onSelect: () => setAccess(u), hidden: isSelf(u) },
     {
-      label: 'Set temporary password',
+      label: 'Reset to default password',
       icon: <KeyRound />,
       onSelect: () => setTempPassword(u),
       hidden: !u.isActive,
@@ -175,7 +175,7 @@ export default function UsersPage() {
                   </p>
                 </div>
                 <Button size="sm" variant="dark" onClick={() => setTempPassword(r.user)}>
-                  <KeyRound aria-hidden /> Set temporary password
+                  <KeyRound aria-hidden /> Reset to default password
                 </Button>
               </li>
             ))}
