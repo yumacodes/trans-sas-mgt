@@ -38,7 +38,7 @@ export default function StockItemsPage() {
     queryKey: qk.stockItems,
     noun: 'stock item',
     label: (i) => `${i.name} (${i.sku})`,
-    allowed: (i) => can('stock_items.update'),
+    allowed: () => can('stock_items.update'),
   });
   const result = useListQuery<StockItemDto>(qk.stockItems, '/stock-items', state.query);
   const categories = useStockCategories();

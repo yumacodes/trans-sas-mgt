@@ -14,7 +14,7 @@ import {
   quantityFormat,
   signatureY, ruledHead } from './pdf-theme';
 
-const { NAVY, MUTED, RULE, SHADE, INK, ACCENT } = PDF_COLORS;
+const { MUTED, RULE, SHADE, INK, ACCENT } = PDF_COLORS;
 
 /** Render a tender price schedule as A4 landscape; one page unless the items need more. */
 export function renderTenderPdf(tender: TenderDto, company: PdfCompany): Promise<Buffer> {

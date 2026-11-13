@@ -3,7 +3,7 @@ import { PAYMENT_METHOD_LABELS, PAYMENT_STATUS_LABELS, amountInWords, type Payme
 import { collect, contactAndMeta, footers, headerBand, longDate, money, partyCard, PDF_COLORS, signatureY, ruledHead } from './pdf-theme';
 import type { PdfCompany } from './proforma-pdf';
 
-const { NAVY, MUTED, RULE, SHADE, INK } = PDF_COLORS;
+const { MUTED, RULE, SHADE, INK } = PDF_COLORS;
 
 /** One-page receipt for a customer payment. */
 export function renderReceiptPdf(payment: PaymentDto, company: PdfCompany): Promise<Buffer> {

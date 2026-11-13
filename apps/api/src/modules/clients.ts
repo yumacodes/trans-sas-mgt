@@ -19,7 +19,7 @@ import { parse } from '../lib/validate';
 import { actorFrom, diff, recordAudit } from '../services/audit';
 import { assertBranchAccess, canAccessBranch, defaultBranchId, optionalBranchWhere } from '../services/branch-scope';
 import { nextDocumentNumber } from '../services/document-numbers';
-import { deleteRecord, onlyWhen } from '../services/delete-record';
+import { deleteRecord } from '../services/delete-record';
 
 export const clientsRouter = Router();
 

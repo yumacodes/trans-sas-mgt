@@ -38,7 +38,7 @@ export default function ClientsPage() {
     queryKey: qk.clients,
     noun: 'client',
     label: (c) => `${c.name} (${c.code})`,
-    allowed: (c) => can('clients.archive'),
+    allowed: () => can('clients.archive'),
   });
   const result = useListQuery<ClientDto>(qk.clients, '/clients', state.query);
   const branches = useBranchOptions();

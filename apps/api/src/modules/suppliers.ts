@@ -17,7 +17,7 @@ import { iso } from '../lib/serialize';
 import { parse } from '../lib/validate';
 import { actorFrom, recordAudit } from '../services/audit';
 import { nextDocumentNumber } from '../services/document-numbers';
-import { deleteRecord, onlyWhen } from '../services/delete-record';
+import { deleteRecord } from '../services/delete-record';
 
 /** Suppliers are shared by every branch and kept separate from clients. */
 export const suppliersRouter = Router();

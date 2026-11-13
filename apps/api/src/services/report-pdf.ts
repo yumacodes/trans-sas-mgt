@@ -3,7 +3,7 @@ import type { ReportCell, ReportColumn, ReportDto } from '@tsm/shared';
 import { amountFormat, collect, contactAndMeta, footers, headerBand, PDF_COLORS, quantityFormat, ruledHead } from './pdf-theme';
 import type { PdfCompany } from './proforma-pdf';
 
-const { NAVY, MUTED, RULE, SHADE, INK } = PDF_COLORS;
+const { MUTED, RULE, SHADE, INK } = PDF_COLORS;
 
 function cellText(column: ReportColumn, value: ReportCell): string {
   if (value === null || value === undefined || value === '') return '';

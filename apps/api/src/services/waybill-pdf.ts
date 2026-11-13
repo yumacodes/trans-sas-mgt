@@ -3,7 +3,7 @@ import { WAYBILL_STATUS_LABELS, type WaybillDto } from '@tsm/shared';
 import { collect, contactAndMeta, footers, headerBand, longDate, partyCard, PDF_COLORS, quantityFormat, signatureY, ruledHead } from './pdf-theme';
 import type { PdfCompany } from './proforma-pdf';
 
-const { NAVY, MUTED, RULE, SHADE, INK } = PDF_COLORS;
+const { MUTED, RULE, SHADE, INK } = PDF_COLORS;
 
 /** Delivery note listing what left the branch, with signature lines for both sides. */
 export function renderWaybillPdf(waybill: WaybillDto, company: PdfCompany): Promise<Buffer> {

@@ -39,7 +39,7 @@ import {
   thumbnailUrls,
 } from '../services/stock-images';
 import { balanceInclude, toBalanceDto } from './stock-balances';
-import { deleteRecord, onlyWhen } from '../services/delete-record';
+import { deleteRecord } from '../services/delete-record';
 
 export const stockItemsRouter = Router();
 

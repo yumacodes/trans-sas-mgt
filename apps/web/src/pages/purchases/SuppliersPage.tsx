@@ -35,7 +35,7 @@ export default function SuppliersPage() {
     queryKey: qk.suppliers,
     noun: 'supplier',
     label: (s) => s.name,
-    allowed: (s) => canManage,
+    allowed: () => canManage,
   });
   const result = useListQuery<SupplierDto>(qk.suppliers, '/suppliers', state.query);
   const [form, setForm] = useState<{ open: boolean; supplier: SupplierDto | null }>({ open: false, supplier: null });
