@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router';
-import { Copy, FileDown, Paperclip, Pencil, Printer, Send, ShoppingCart, X } from 'lucide-react';
+import { FileDown, Paperclip, Pencil, Printer, Send, ShoppingCart, X } from 'lucide-react';
 import {
   PROFORMA_EMAIL_MAX_FILES,
   PROFORMA_EMAIL_MAX_FILE_BYTES,
@@ -212,18 +212,6 @@ export function ProformaDetailModal({ proformaId, onOpenChange, onEdit, initialT
     }
   };
 
-  const duplicate = async () => {
-    if (!p) return;
-    try {
-      const copy = await run(() => api.post<ProformaDto>(`/proformas/${p.id}/duplicate`));
-      void queryClient.invalidateQueries({ queryKey: qk.proformas });
-      void navigate(`/proforma?open=${copy.id}`);
-      onOpenChange(false);
-    } catch {
-      // The error dialog already explained the failure.
-    }
-  };
-
   const makeSale = async () => {
     if (!p) return;
     try {
@@ -359,11 +347,6 @@ export function ProformaDetailModal({ proformaId, onOpenChange, onEdit, initialT
             {p.status === 'accepted' && can('sales.manage') && (
               <Button variant="secondary" onClick={() => void makeSale()}>
                 <ShoppingCart aria-hidden /> Create sale
-              </Button>
-            )}
-            {canManage && (
-              <Button variant="secondary" onClick={() => void duplicate()}>
-                <Copy aria-hidden /> Duplicate
               </Button>
             )}
             {canManage && onEdit && (p.status === 'draft' || p.status === 'issued') && (

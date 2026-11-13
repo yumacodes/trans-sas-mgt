@@ -225,6 +225,12 @@ export async function printFile(path: string): Promise<void> {
   document.body.append(frame);
 }
 
+/** Fetches a PDF with the signed-in user's session; the caller revokes the returned URL. */
+export async function fetchPdfUrl(path: string): Promise<string> {
+  const res = await fetchFile(path);
+  return URL.createObjectURL(new Blob([await res.blob()], { type: 'application/pdf' }));
+}
+
 /** Fetches a file with the signed-in user's session and saves it through the browser. */
 export async function downloadFile(path: string, fallbackName: string): Promise<void> {
   const res = await fetchFile(path);

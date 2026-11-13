@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Ban, Banknote, CheckCircle2, Copy, FileDown, Pencil, Printer, Truck } from 'lucide-react';
+import { Ban, Banknote, CheckCircle2, FileDown, Pencil, Printer, Truck } from 'lucide-react';
 import type { SaleDto, WaybillDto } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
 import { AttachmentsPanel } from '@/components/app/AttachmentsPanel';
@@ -69,18 +69,6 @@ export function SaleDetailModal({ saleId, onOpenChange, onEdit }: Props) {
         optimistic: () => patchRecord<SaleDto>(queryClient, qk.sales, s.id, { status: 'cancelled', cancelReason: reason }),
       });
       refresh();
-    } catch {
-      // The error dialog already explained the failure.
-    }
-  };
-
-  const duplicate = async () => {
-    if (!s) return;
-    try {
-      const copy = await run(() => api.post<SaleDto>(`/sales/${s.id}/duplicate`));
-      void queryClient.invalidateQueries({ queryKey: qk.sales });
-      onOpenChange(false);
-      void navigate(`/sales?open=${copy.id}`);
     } catch {
       // The error dialog already explained the failure.
     }
@@ -233,11 +221,6 @@ export function SaleDetailModal({ saleId, onOpenChange, onEdit }: Props) {
               {s.status === 'confirmed' && can('payments.record') && Number(s.balance) > 0 && (
                 <Button variant="secondary" onClick={() => setPaying(true)}>
                   <Banknote aria-hidden /> Record payment
-                </Button>
-              )}
-              {canManage && (
-                <Button variant="secondary" onClick={() => void duplicate()}>
-                  <Copy aria-hidden /> Duplicate
                 </Button>
               )}
               {s.status !== 'cancelled' && can('sales.cancel') && (

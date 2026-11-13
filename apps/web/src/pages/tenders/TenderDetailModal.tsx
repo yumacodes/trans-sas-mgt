@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router';
-import { Copy, FileDown, FileSignature, Pencil, Printer, ShoppingCart } from 'lucide-react';
+import { FileDown, FileSignature, Pencil, Printer, ShoppingCart } from 'lucide-react';
 import { TENDER_STATUSES, TENDER_STATUS_LABELS, type SaleDto, type TenderDto, type TenderStatus } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
 import { AttachmentsPanel } from '@/components/app/AttachmentsPanel';
@@ -203,11 +203,6 @@ export function TenderDetailModal({ tenderId, onOpenChange, onEdit }: Props) {
       actions={
         t && (
           <>
-            {canManage && (
-              <Button variant="secondary" onClick={() => void convert(`/tenders/${t.id}/duplicate`, '/tender-schedule')}>
-                <Copy aria-hidden /> Duplicate
-              </Button>
-            )}
             {t.status === 'awarded' && can('acceptance.manage') && (
               <Button variant="secondary" onClick={() => void convert(`/acceptance-letters/from-tender/${t.id}`, '/acceptance-letters')}>
                 <FileSignature aria-hidden /> Acceptance letter
