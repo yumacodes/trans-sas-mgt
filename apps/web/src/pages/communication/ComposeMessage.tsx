@@ -19,11 +19,10 @@ import {
 } from '@tsm/shared';
 import { applyServerErrors, Field, FormError, useIdempotencyKey } from '@/components/app/form';
 import { zodForm } from '@/lib/zodForm';
-import { ConfirmDialog } from '@/components/app/dialogs';
+import { ConfirmDialog, FormDialog } from '@/components/app/dialogs';
 import { useOperation } from '@/components/app/OperationFeedback';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
@@ -41,7 +40,6 @@ import { api, errorMessage } from '@/lib/api';
 import { formatCount } from '@/lib/format';
 import { useBranchOptions, useRoles } from '@/lib/queries';
 import { qk } from '@/lib/queryKeys';
-import { cn } from '@/lib/utils';
 
 type Output = z.output<typeof messageInputSchema>;
 
@@ -59,7 +57,15 @@ const DEFAULTS: MessageInput = {
  * figure shown on the Send button is the figure the server will act on. Individual
  * recipients can be unticked, which only ever narrows the list.
  */
-export function ComposeMessage({ onSent }: { onSent: (messageId: string) => void }) {
+export function ComposeMessage({
+  open,
+  onOpenChange,
+  onSent,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSent: (messageId: string) => void;
+}) {
   const queryClient = useQueryClient();
   const { run } = useOperation();
   const idem = useIdempotencyKey();
@@ -198,6 +204,7 @@ export function ComposeMessage({ onSent }: { onSent: (messageId: string) => void
         {
           pending: 'Sending message…',
           success: `Message queued for ${formatCount(recipientTotal)} recipient(s)`,
+          blocking: true,
         },
       );
       idem.reset();
@@ -205,6 +212,7 @@ export function ComposeMessage({ onSent }: { onSent: (messageId: string) => void
       void queryClient.invalidateQueries({ queryKey: qk.messages });
       form.reset(DEFAULTS);
       setSelection('all');
+      onOpenChange(false);
       onSent(message.id);
     } catch (error) {
       if (applyServerErrors(error, form.setError)) return;
@@ -217,53 +225,31 @@ export function ComposeMessage({ onSent }: { onSent: (messageId: string) => void
   const branchOptions = branches.data ?? [];
 
   return (
-    <Card>
-      <CardHeader>
-        <div>
-          <CardTitle>New message</CardTitle>
-          <CardDescription>
-            Write once and send it to everyone in the chosen audience, personalised with merge
-            fields.
-          </CardDescription>
-        </div>
-      </CardHeader>
-      <form onSubmit={onSubmit} noValidate>
-        <CardContent className="space-y-6">
+    <>
+      <FormDialog
+        open={open}
+        onOpenChange={onOpenChange}
+        isDirty={form.formState.isDirty}
+        size="xl"
+        title="Send message"
+        description="Write once and email everyone in the chosen group, personalised with merge fields."
+      >
+      <form onSubmit={onSubmit} noValidate className="flex min-h-0 flex-1 flex-col">
+        <DialogBody className="space-y-6">
           <FormError message={formError} />
 
-          <fieldset className="space-y-2">
-            <legend className="text-sm font-medium text-ink">Who should receive this?</legend>
-            <div className="grid gap-2 sm:grid-cols-3">
+          <Field label="Send to" required hint={MESSAGE_AUDIENCE_DESCRIPTIONS[audience]}>
+            <NativeSelect
+              value={audience}
+              onChange={(e) => form.setValue('audience', e.target.value as MessageAudience, { shouldDirty: true })}
+            >
               {MESSAGE_AUDIENCES.map((option) => (
-                <label
-                  key={option}
-                  className={cn(
-                    'cursor-pointer rounded-xl border p-3 transition-colors',
-                    audience === option
-                      ? 'border-accent/50 bg-accent-soft'
-                      : 'border-border hover:bg-surface-muted',
-                  )}
-                >
-                  <span className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      className="size-4 accent-current text-accent"
-                      name="audience"
-                      value={option}
-                      checked={audience === option}
-                      onChange={() => form.setValue('audience', option, { shouldDirty: true })}
-                    />
-                    <span className="text-sm font-medium text-ink">
-                      {MESSAGE_AUDIENCE_LABELS[option]}
-                    </span>
-                  </span>
-                  <span className="mt-1 block text-xs text-ink-muted">
-                    {MESSAGE_AUDIENCE_DESCRIPTIONS[option]}
-                  </span>
-                </label>
+                <option key={option} value={option}>
+                  {MESSAGE_AUDIENCE_LABELS[option]}
+                </option>
               ))}
-            </div>
-          </fieldset>
+            </NativeSelect>
+          </Field>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {audience === 'clients' && (
@@ -364,7 +350,8 @@ export function ComposeMessage({ onSent }: { onSent: (messageId: string) => void
             hint={`Plain text. ${MESSAGE_BODY_MAX.toLocaleString()} characters maximum.`}
           >
             <Textarea
-              rows={10}
+              rows={14}
+              className="min-h-[18rem]"
               maxLength={MESSAGE_BODY_MAX}
               {...bodyField}
               ref={(el) => {
@@ -399,17 +386,17 @@ export function ComposeMessage({ onSent }: { onSent: (messageId: string) => void
               {previewError}
             </p>
           )}
-
-          <div className="flex flex-wrap justify-end gap-2">
-            <Button type="button" variant="secondary" onClick={() => void openPreview()}>
-              <Eye aria-hidden /> Preview
-            </Button>
-            <Button type="submit">
-              <Send aria-hidden /> Send to {formatCount(recipientTotal)} recipient(s)
-            </Button>
-          </div>
-        </CardContent>
+        </DialogBody>
+        <DialogFooter>
+          <Button type="button" variant="secondary" onClick={() => void openPreview()}>
+            <Eye aria-hidden /> Preview
+          </Button>
+          <Button type="submit">
+            <Send aria-hidden /> Send to {formatCount(recipientTotal)} recipient(s)
+          </Button>
+        </DialogFooter>
       </form>
+      </FormDialog>
 
       <RecipientReviewDialog
         open={showRecipients}
@@ -461,7 +448,7 @@ export function ComposeMessage({ onSent }: { onSent: (messageId: string) => void
         confirmLabel="Send message"
         onConfirm={() => void send()}
       />
-    </Card>
+    </>
   );
 }
 

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
-import { MailWarning, PlugZap } from 'lucide-react';
+import { MailWarning, PlugZap, Send } from 'lucide-react';
 import {
   MESSAGE_AUDIENCE_LABELS,
   MESSAGE_AUDIENCES,
@@ -43,6 +43,7 @@ export default function CommunicationPage() {
     can('messages.read'),
   );
   const [viewId, setViewId] = useState<string | null>(null);
+  const [composeOpen, setComposeOpen] = useState(false);
 
   const config = useQuery({
     queryKey: qk.emailConfig,
@@ -107,15 +108,24 @@ export default function CommunicationPage() {
     <>
       <PageHeader
         title="Communication"
-        description="Send a tailored message to your clients, your staff or your branch managers, and keep a record of every send."
+        description="Send a tailored message to your clients, your employees or your branch admins, and keep a record of every send."
+        actions={
+          can('messages.send') && (
+            <Button
+              onClick={() => setComposeOpen(true)}
+              disabled={!config.data?.configured}
+              title={config.data && !config.data.configured ? 'Set up email first' : undefined}
+            >
+              <Send aria-hidden /> Send message
+            </Button>
+          )
+        }
       />
 
       {config.data && !config.data.configured && <EmailSetupNotice config={config.data} />}
 
       {can('messages.send') && config.data?.configured && (
-        <div className="mb-6">
-          <ComposeMessage onSent={(id) => setViewId(id)} />
-        </div>
+        <ComposeMessage open={composeOpen} onOpenChange={setComposeOpen} onSent={(id) => setViewId(id)} />
       )}
 
       {can('messages.read') && (
@@ -196,6 +206,21 @@ function EmailSetupNotice({ config }: { config: EmailConfigDto }) {
           in the API environment (see <code className="font-mono text-xs">.env.example</code>), then
           restart the API.
         </p>
+        <div className="rounded-xl bg-surface-muted p-4 text-xs">
+          <p className="font-medium text-ink">Using Gmail</p>
+          <ol className="mt-2 list-decimal space-y-1 pl-4">
+            <li>Turn on 2-Step Verification for the Gmail account, then create an App password (Google Account → Security → App passwords). Your normal Gmail password will not work.</li>
+            <li>
+              In the API environment set <code className="font-mono text-ink">SMTP_HOST=smtp.gmail.com</code>,{' '}
+              <code className="font-mono text-ink">SMTP_PORT=587</code>,{' '}
+              <code className="font-mono text-ink">SMTP_USER</code> and{' '}
+              <code className="font-mono text-ink">MAIL_FROM_EMAIL</code> (both the Gmail address) and{' '}
+              <code className="font-mono text-ink">SMTP_PASS</code> (the 16-character app password).
+            </li>
+            <li>Redeploy the API, then press Test the mail server.</li>
+          </ol>
+          <p className="mt-2">Gmail allows roughly 500 emails a day per account.</p>
+        </div>
         <p className="text-xs">
           Optional settings: <code className="font-mono">SMTP_PORT</code>,{' '}
           <code className="font-mono">SMTP_SECURE</code>,{' '}

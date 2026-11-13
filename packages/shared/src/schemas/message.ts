@@ -15,14 +15,14 @@ export type MessageAudience = (typeof MESSAGE_AUDIENCES)[number];
 
 export const MESSAGE_AUDIENCE_LABELS: Record<MessageAudience, string> = {
   clients: 'Clients',
-  users: 'Staff users',
-  branch_managers: 'Branch managers',
+  users: 'Employees',
+  branch_managers: 'Branch admins',
 };
 
 export const MESSAGE_AUDIENCE_DESCRIPTIONS: Record<MessageAudience, string> = {
   clients: 'Organizations in the client directory that have an email address.',
-  users: 'People with a user account in this application.',
-  branch_managers: 'The user assigned as manager of each branch.',
+  users: 'Employees: people with a user account in this application.',
+  branch_managers: 'Branch admins: the user assigned as manager of each branch.',
 };
 
 export const MESSAGE_STATUSES = ['queued', 'sending', 'sent', 'partially_sent', 'failed'] as const;
