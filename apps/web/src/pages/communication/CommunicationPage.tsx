@@ -1,13 +1,11 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
-import { MailWarning, PlugZap, Send } from 'lucide-react';
+import { Send } from 'lucide-react';
 import {
   MESSAGE_AUDIENCE_LABELS,
   MESSAGE_AUDIENCES,
   MESSAGE_STATUSES,
   MESSAGE_STATUS_LABELS,
-  type EmailConfigDto,
   type MessageDto,
 } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
@@ -17,8 +15,6 @@ import { MessageStatusBadge } from '@/components/app/StatusBadges';
 import { useTableState } from '@/components/app/useTableState';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { api, errorMessage } from '@/lib/api';
 import { formatCount, formatDateTime } from '@/lib/format';
 import { useListQuery } from '@/lib/queries';
 import { qk } from '@/lib/queryKeys';
@@ -44,12 +40,6 @@ export default function CommunicationPage() {
   );
   const [viewId, setViewId] = useState<string | null>(null);
   const [composeOpen, setComposeOpen] = useState(false);
-
-  const config = useQuery({
-    queryKey: qk.emailConfig,
-    queryFn: ({ signal }) => api.get<EmailConfigDto>('/messages/email-config', undefined, signal),
-    staleTime: 5 * 60_000,
-  });
 
   const columns: ColumnDef<MessageDto>[] = [
     {
@@ -111,20 +101,14 @@ export default function CommunicationPage() {
         description="Send a tailored message to your clients, your employees or your branch admins, and keep a record of every send."
         actions={
           can('messages.send') && (
-            <Button
-              onClick={() => setComposeOpen(true)}
-              disabled={!config.data?.configured}
-              title={config.data && !config.data.configured ? 'Set up email first' : undefined}
-            >
+            <Button onClick={() => setComposeOpen(true)}>
               <Send aria-hidden /> Send message
             </Button>
           )
         }
       />
 
-      {config.data && !config.data.configured && <EmailSetupNotice config={config.data} />}
-
-      {can('messages.send') && config.data?.configured && (
+      {can('messages.send') && (
         <ComposeMessage open={composeOpen} onOpenChange={setComposeOpen} onSent={(id) => setViewId(id)} />
       )}
 
@@ -170,95 +154,5 @@ export default function CommunicationPage() {
 
       <MessageDetailModal messageId={viewId} onOpenChange={(open) => !open && setViewId(null)} />
     </>
-  );
-}
-
-/** Plain explanation of what is missing, rather than a send button that cannot work. */
-function EmailSetupNotice({ config }: { config: EmailConfigDto }) {
-  const { can } = useAuth();
-  return (
-    <Card className="mb-6 border-warning/40">
-      <CardHeader>
-        <div className="flex items-start gap-3">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-warning-soft text-warning">
-            <MailWarning className="size-5" aria-hidden />
-          </span>
-          <div>
-            <CardTitle>Email has not been set up yet</CardTitle>
-            <CardDescription>
-              Messages cannot be sent until a mail server is configured on the API server. Nothing
-              is queued or silently dropped in the meantime.
-            </CardDescription>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3 text-sm text-ink-muted">
-        <p>
-          An administrator needs to set{' '}
-          {config.missing.map((name, i) => (
-            <span key={name}>
-              {i > 0 && ', '}
-              <code className="rounded bg-surface-muted px-1 py-0.5 font-mono text-xs text-ink">
-                {name}
-              </code>
-            </span>
-          ))}{' '}
-          in the API environment (see <code className="font-mono text-xs">.env.example</code>), then
-          restart the API.
-        </p>
-        <div className="rounded-xl bg-surface-muted p-4 text-xs">
-          <p className="font-medium text-ink">Using Gmail</p>
-          <ol className="mt-2 list-decimal space-y-1 pl-4">
-            <li>Turn on 2-Step Verification for the Gmail account, then create an App password (Google Account → Security → App passwords). Your normal Gmail password will not work.</li>
-            <li>
-              In the API environment set <code className="font-mono text-ink">SMTP_HOST=smtp.gmail.com</code>,{' '}
-              <code className="font-mono text-ink">SMTP_PORT=587</code>,{' '}
-              <code className="font-mono text-ink">SMTP_USER</code> and{' '}
-              <code className="font-mono text-ink">MAIL_FROM_EMAIL</code> (both the Gmail address) and{' '}
-              <code className="font-mono text-ink">SMTP_PASS</code> (the 16-character app password).
-            </li>
-            <li>Redeploy the API, then press Test the mail server.</li>
-          </ol>
-          <p className="mt-2">Gmail allows roughly 500 emails a day per account.</p>
-        </div>
-        <p className="text-xs">
-          Optional settings: <code className="font-mono">SMTP_PORT</code>,{' '}
-          <code className="font-mono">SMTP_SECURE</code>,{' '}
-          <code className="font-mono">SMTP_USER</code>, <code className="font-mono">SMTP_PASS</code>
-          , <code className="font-mono">MAIL_FROM_NAME</code>,{' '}
-          <code className="font-mono">MAIL_REPLY_TO</code>.
-        </p>
-        {can('messages.send') && <TestConnectionButton />}
-      </CardContent>
-    </Card>
-  );
-}
-
-function TestConnectionButton() {
-  const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
-  const test = async () => {
-    setBusy(true);
-    setResult(null);
-    try {
-      await api.post('/messages/email-config/test');
-      setResult({ ok: true, text: 'The mail server accepted the connection.' });
-    } catch (error) {
-      setResult({ ok: false, text: errorMessage(error) });
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <div className="flex flex-wrap items-center gap-3">
-      <Button variant="secondary" size="sm" disabled={busy} onClick={() => void test()}>
-        <PlugZap aria-hidden /> {busy ? 'Testing…' : 'Test the mail server'}
-      </Button>
-      {result && (
-        <p role="status" className={result.ok ? 'text-xs text-success' : 'text-xs text-danger'}>
-          {result.text}
-        </p>
-      )}
-    </div>
   );
 }
