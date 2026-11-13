@@ -1,5 +1,6 @@
 import { prisma } from '../lib/prisma';
 import type { PdfCompany } from './proforma-pdf';
+import { parseSettings } from './company-settings';
 
 /** Company letterhead for generated documents, built from the company profile. */
 export async function pdfCompany(fallbackName: string): Promise<PdfCompany> {
@@ -21,7 +22,8 @@ export async function pdfCompany(fallbackName: string): Promise<PdfCompany> {
   const name = company?.legalName || company?.name || fallbackName;
   return {
     name,
+    tagline: company ? parseSettings(company.settings).tagline || null : null,
     lines: [...address, ...contact, company?.taxId ? `Tax ID: ${company.taxId}` : ''].filter(Boolean),
-    footer: [name, ...address.slice(0, 2)].join('  |  '),
+    footer: [name, ...address.slice(0, 1)].join(' | '),
   };
 }

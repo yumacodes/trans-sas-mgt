@@ -132,6 +132,9 @@ export default function CompanyProfilePage() {
                 <Field label="Legal name" error={errors.legalName?.message}>
                   <Input {...form.register('legalName')} />
                 </Field>
+                <Field label="Tagline" error={errors.settings?.tagline?.message} hint="Printed under the company name on every PDF, e.g. what the company deals in.">
+                  <Input {...form.register('settings.tagline')} />
+                </Field>
                 <Field label="Email" error={errors.email?.message}>
                   <Input type="email" {...form.register('email')} />
                 </Field>

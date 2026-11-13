@@ -2,6 +2,7 @@
 
 ## 2026-11-13
 
+- **The letterhead now has the tagline and full contact details.** Company Profile has a new Tagline field. The company details were filled in from your preview PDF, so every PDF prints the name, tagline, P.O. Box, six phone numbers and email.
 - **Every PDF uses the original letterhead design again.** Proforma, price schedule, acceptance letter, waybill, receipt, expense invoice and reports now share the original deep-blue header band and colours, with the document type at the top right. Only the body tables differ. An earlier change had lightened the blue and shrunk the header on landscape documents.
 - **The charted dashboard is back, with real figures.** It keeps the original design: key figure cards with trend lines, the revenue chart, category cards, inventory health and the activity stream.
   - Every number comes from your records. Sales value, payments received, outstanding balances and stock availability are compared with the same days of the previous period.

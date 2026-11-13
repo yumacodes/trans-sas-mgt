@@ -66,6 +66,8 @@ export const companySettingsSchema = z.object({
     .string()
     .trim()
     .regex(/^(100(\.0{1,2})?|\d{1,2}(\.\d{1,2})?)$/, 'Enter a percentage between 0 and 100.'),
+  /** One line printed under the company name on every generated document. */
+  tagline: z.string().trim().max(160, 'Keep the tagline under 160 characters.').default(''),
   pricesIncludeTax: z.boolean(),
   allowNegativeStock: z.boolean(),
   proformaValidityDays: z.coerce.number().int().min(1).max(365),
@@ -81,6 +83,7 @@ export type CompanySettings = z.infer<typeof companySettingsSchema>;
 
 export const DEFAULT_COMPANY_SETTINGS: CompanySettings = {
   defaultTaxRate: '0',
+  tagline: '',
   pricesIncludeTax: false,
   allowNegativeStock: false,
   proformaValidityDays: 30,
