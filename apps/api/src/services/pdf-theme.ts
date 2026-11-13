@@ -106,13 +106,20 @@ export function partyCard(doc: Doc, y: number, label: string, name: string, deta
   return y + cardH;
 }
 
+/** Table heading: bold text between two dark rules, no fill. Callers print the labels in INK bold. */
+export function ruledHead(doc: Doc, left: number, y: number, width: number, h: number) {
+  doc.lineWidth(1.2).strokeColor(PDF_COLORS.INK);
+  doc.moveTo(left, y).lineTo(left + width, y).stroke();
+  doc.moveTo(left, y + h).lineTo(left + width, y + h).stroke();
+}
+
 /**
  * Where signature lines go: the foot of the page when the content leaves it free, otherwise
  * straight after the content, and only on a new page when neither fits.
  */
-export function signatureY(doc: Doc, contentBottom: number, height = 34) {
+export function signatureY(doc: Doc, contentBottom: number, height = 34, footOffset = 118) {
   const pageH = doc.page.height;
-  const foot = pageH - 118;
+  const foot = pageH - footOffset;
   if (contentBottom <= foot - 10) return foot;
   const inline = contentBottom + 26;
   if (inline + height <= pageH - 56) return inline;

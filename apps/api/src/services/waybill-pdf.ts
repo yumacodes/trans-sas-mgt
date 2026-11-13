@@ -1,6 +1,6 @@
 import PDFDocument from 'pdfkit';
 import { WAYBILL_STATUS_LABELS, type WaybillDto } from '@tsm/shared';
-import { collect, contactAndMeta, footers, headerBand, longDate, partyCard, PDF_COLORS, quantityFormat, signatureY } from './pdf-theme';
+import { collect, contactAndMeta, footers, headerBand, longDate, partyCard, PDF_COLORS, quantityFormat, signatureY, ruledHead } from './pdf-theme';
 import type { PdfCompany } from './proforma-pdf';
 
 const { NAVY, MUTED, RULE, SHADE, INK } = PDF_COLORS;
@@ -42,8 +42,8 @@ export function renderWaybillPdf(waybill: WaybillDto, company: PdfCompany): Prom
   const numW = 30;
   const nameW = width - qtyW - unitW - numW;
   const head = () => {
-    doc.rect(left, y, width, 24).fill(NAVY);
-    doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(8);
+    ruledHead(doc, left, y, width, 24);
+    doc.fillColor(INK).font('Helvetica-Bold').fontSize(8);
     doc.text('#', left + 8, y + 8.5, { width: numW - 8 });
     doc.text('ITEM', left + numW, y + 8.5, { width: nameW - 8 });
     doc.text('QTY', left + numW + nameW, y + 8.5, { width: qtyW - 8, align: 'right' });

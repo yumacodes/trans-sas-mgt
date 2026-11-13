@@ -12,8 +12,7 @@ import {
   partyCard,
   PDF_COLORS,
   quantityFormat,
-  signatureY,
-} from './pdf-theme';
+  signatureY, ruledHead } from './pdf-theme';
 
 const { NAVY, MUTED, RULE, SHADE, INK, ACCENT } = PDF_COLORS;
 
@@ -77,8 +76,8 @@ export function renderTenderPdf(tender: TenderDto, company: PdfCompany): Promise
   const header = (at: number) => {
     doc.font('Helvetica-Bold').fontSize(7);
     const h = Math.max(...cols.map((c) => doc.heightOfString(c.head, { width: c.w - 8 }))) + 12;
-    doc.rect(left, at, width, h).fill(NAVY);
-    doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(7);
+    ruledHead(doc, left, at, width, h);
+    doc.fillColor(INK).font('Helvetica-Bold').fontSize(7);
     cols.forEach((c, i) => doc.text(c.head, xs[i]! + 4, at + 6, { width: c.w - 8, align: c.right ? 'right' : 'left' }));
     return at + h;
   };
@@ -139,8 +138,8 @@ export function renderTenderPdf(tender: TenderDto, company: PdfCompany): Promise
   row('Subtotal', money(tender.subtotal, tender.currency));
   row(`${tender.taxLabel} (${Number(tender.taxRate)}%)`, money(tender.taxAmount, tender.currency));
   y += 3;
-  doc.roundedRect(boxX, y, boxW, 30, 4).fill(NAVY);
-  doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(9.5).text('GRAND TOTAL', boxX + 10, y + 10.5, { width: 100 });
+  doc.roundedRect(boxX, y, boxW, 30, 4).lineWidth(1.2).strokeColor(INK).stroke();
+  doc.fillColor(INK).font('Helvetica-Bold').fontSize(9.5).text('GRAND TOTAL', boxX + 10, y + 10.5, { width: 100 });
   doc.fontSize(12).text(money(tender.total, tender.currency), boxX + 100, y + 9, { width: boxW - 110, align: 'right' });
 
   doc.fillColor(ACCENT).font('Helvetica-Bold').fontSize(7.5).text('TOTAL AMOUNT IN WORDS', left, top, { characterSpacing: 1 });
@@ -151,7 +150,7 @@ export function renderTenderPdf(tender: TenderDto, company: PdfCompany): Promise
   }
   // Prepared by: bottom left, just above the footer margin.
   const totalsBottom = y + 30;
-  const sigY = signatureY(doc, Math.max(totalsBottom, doc.y));
+  const sigY = signatureY(doc, Math.max(totalsBottom, doc.y), 34, 92);
   doc.moveTo(left, sigY).lineTo(left + sigW, sigY).strokeColor(MUTED).lineWidth(0.75).stroke();
   doc.fillColor(MUTED).font('Helvetica').fontSize(8).text('PREPARED BY', left, sigY + 5, { width: sigW, characterSpacing: 0.8 });
   doc.fillColor(INK).font('Helvetica-Bold').fontSize(9.5).text(tender.preparedBy.toUpperCase(), left, sigY + 17, { width: sigW });

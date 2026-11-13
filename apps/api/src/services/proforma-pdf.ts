@@ -1,5 +1,5 @@
 import PDFDocument from 'pdfkit';
-import { PDF_COLORS, signatureY } from './pdf-theme';
+import { PDF_COLORS, signatureY, ruledHead } from './pdf-theme';
 import { PROFORMA_STATUS_LABELS, type ProformaDto } from '@tsm/shared';
 
 export interface PdfCompany {
@@ -116,8 +116,8 @@ export function renderProformaPdf(proforma: ProformaDto, company: PdfCompany, la
   const amountX = priceX + priceW;
 
   const header = (at: number) => {
-    doc.rect(left, at, width, 24).fill(NAVY);
-    doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(8);
+    ruledHead(doc, left, at, width, 24);
+    doc.fillColor(INK).font('Helvetica-Bold').fontSize(8);
     const t = at + 8.5;
     doc.text('NO', left + 8, t, { width: noW });
     doc.text('DESCRIPTION', descX, t, { width: descW });
@@ -170,8 +170,8 @@ export function renderProformaPdf(proforma: ProformaDto, company: PdfCompany, la
   row(`VAT (${Number(proforma.vatRate)}%)`, money(proforma.vatAmount, cur));
   if (Number(proforma.taxRate) > 0) row(`Tax (${Number(proforma.taxRate)}%)`, money(proforma.taxAmount, cur));
   y += 4;
-  doc.roundedRect(boxX, y, boxW, 30, 4).fill(NAVY);
-  doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(9.5).text('TOTAL DUE', boxX + 10, y + 10.5, { width: 80 });
+  doc.roundedRect(boxX, y, boxW, 30, 4).lineWidth(1.2).strokeColor(INK).stroke();
+  doc.fillColor(INK).font('Helvetica-Bold').fontSize(9.5).text('TOTAL DUE', boxX + 10, y + 10.5, { width: 80 });
   doc.fontSize(12).text(money(proforma.total, cur), boxX + 90, y + 9, { width: boxW - 100, align: 'right' });
   const totalsBottom = y + 30;
 

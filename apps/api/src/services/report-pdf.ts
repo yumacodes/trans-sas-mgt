@@ -1,6 +1,6 @@
 import PDFDocument from 'pdfkit';
 import type { ReportCell, ReportColumn, ReportDto } from '@tsm/shared';
-import { amountFormat, collect, contactAndMeta, footers, headerBand, PDF_COLORS, quantityFormat } from './pdf-theme';
+import { amountFormat, collect, contactAndMeta, footers, headerBand, PDF_COLORS, quantityFormat, ruledHead } from './pdf-theme';
 import type { PdfCompany } from './proforma-pdf';
 
 const { NAVY, MUTED, RULE, SHADE, INK } = PDF_COLORS;
@@ -42,8 +42,8 @@ export function renderReportPdf(report: ReportDto, company: PdfCompany): Promise
   widths.reduce((x, w) => (xs.push(x), x + w * unit), left);
 
   const head = () => {
-    doc.rect(left, y, width, 20).fill(NAVY);
-    doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(7.5);
+    ruledHead(doc, left, y, width, 20);
+    doc.fillColor(INK).font('Helvetica-Bold').fontSize(7.5);
     report.columns.forEach((c, i) =>
       doc.text(c.label.toUpperCase(), xs[i]! + 4, y + 7, { width: widths[i]! * unit - 8, align: RIGHT.has(c.format) ? 'right' : 'left', lineBreak: false }),
     );

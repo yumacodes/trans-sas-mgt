@@ -1,6 +1,6 @@
 import PDFDocument from 'pdfkit';
 import { PAYMENT_METHOD_LABELS, PAYMENT_STATUS_LABELS, amountInWords, type PaymentDto } from '@tsm/shared';
-import { collect, contactAndMeta, footers, headerBand, longDate, money, partyCard, PDF_COLORS, signatureY } from './pdf-theme';
+import { collect, contactAndMeta, footers, headerBand, longDate, money, partyCard, PDF_COLORS, signatureY, ruledHead } from './pdf-theme';
 import type { PdfCompany } from './proforma-pdf';
 
 const { NAVY, MUTED, RULE, SHADE, INK } = PDF_COLORS;
@@ -37,8 +37,8 @@ export function renderReceiptPdf(payment: PaymentDto, company: PdfCompany): Prom
       ? ([['Reversed because', payment.reverseReason]] as [string, string][])
       : []),
   ];
-  doc.rect(left, y, width, 24).fill(NAVY);
-  doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(8);
+  ruledHead(doc, left, y, width, 24);
+  doc.fillColor(INK).font('Helvetica-Bold').fontSize(8);
   doc.text('DETAIL', left + 10, y + 8.5, { width: 170 });
   doc.text('VALUE', left + 180, y + 8.5, { width: width - 190 });
   y += 24;
@@ -55,8 +55,8 @@ export function renderReceiptPdf(payment: PaymentDto, company: PdfCompany): Prom
 
   const boxW = 240;
   const boxX = right - boxW;
-  doc.roundedRect(boxX, y, boxW, 34, 4).fill(NAVY);
-  doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(9.5).text('AMOUNT PAID', boxX + 10, y + 12.5, { width: 90 });
+  doc.roundedRect(boxX, y, boxW, 34, 4).lineWidth(1.2).strokeColor(INK).stroke();
+  doc.fillColor(INK).font('Helvetica-Bold').fontSize(9.5).text('AMOUNT PAID', boxX + 10, y + 12.5, { width: 90 });
   doc.fontSize(12.5).text(money(payment.amount, payment.currency), boxX + 90, y + 11, { width: boxW - 100, align: 'right' });
   y += 44;
   doc.fillColor(MUTED).font('Helvetica').fontSize(9).text(amountInWords(payment.amount, payment.currency), left, y, { width });

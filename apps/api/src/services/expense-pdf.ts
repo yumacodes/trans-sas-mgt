@@ -1,5 +1,5 @@
 import PDFDocument from 'pdfkit';
-import { PDF_COLORS, signatureY } from './pdf-theme';
+import { PDF_COLORS, signatureY, ruledHead } from './pdf-theme';
 import {
   EXPENSE_KIND_LABELS,
   EXPENSE_STATUS_LABELS,
@@ -106,8 +106,8 @@ export function renderExpensePdf(expense: ExpenseDto, company: PdfCompany): Prom
     ['Recorded by', expense.recordedBy],
     ...(expense.approvedBy ? ([['Approved by', expense.approvedBy]] as [string, string][]) : []),
   ];
-  doc.rect(left, y, width, 24).fill(NAVY);
-  doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(8);
+  ruledHead(doc, left, y, width, 24);
+  doc.fillColor(INK).font('Helvetica-Bold').fontSize(8);
   doc.text('DETAIL', left + 10, y + 8.5, { width: 160 });
   doc.text('VALUE', left + 170, y + 8.5, { width: width - 180 });
   y += 24;
@@ -125,8 +125,8 @@ export function renderExpensePdf(expense: ExpenseDto, company: PdfCompany): Prom
   // Description (left) and total (right)
   const boxW = 230;
   const boxX = right - boxW;
-  doc.roundedRect(boxX, y, boxW, 34, 4).fill(NAVY);
-  doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(9.5).text('TOTAL', boxX + 10, y + 12.5, { width: 80 });
+  doc.roundedRect(boxX, y, boxW, 34, 4).lineWidth(1.2).strokeColor(INK).stroke();
+  doc.fillColor(INK).font('Helvetica-Bold').fontSize(9.5).text('TOTAL', boxX + 10, y + 12.5, { width: 80 });
   doc.fontSize(12.5).text(money(expense.amount, expense.currency), boxX + 70, y + 11, { width: boxW - 80, align: 'right' });
   let bottom = y + 34;
   if (expense.description) {
