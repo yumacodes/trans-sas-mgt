@@ -2,17 +2,21 @@ import { Link } from 'react-router';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { INVENTORY, categoryHealth, inventoryTotals } from '../data/dashboardMockData';
+import { EmptyState } from '@/components/app/States';
+import { categoryHealth, inventoryTotals, type InventoryCategory } from '../data/model';
 
-export function InventoryHealth({ canViewStock }: { canViewStock: boolean }) {
-  const totals = inventoryTotals();
+export function InventoryHealth({ categories, canViewStock }: { categories: InventoryCategory[]; canViewStock: boolean }) {
+  const totals = inventoryTotals(categories);
   return (
     <Card className="flex flex-col p-6">
       <h2 className="text-lg font-semibold tracking-tight text-ink">Inventory health</h2>
       <p className="mt-0.5 text-sm text-ink-muted">Stock levels across your equipment catalog</p>
 
+      {categories.length === 0 && (
+        <EmptyState title="No stock to show" description="Catalogue items appear here by category once they are added." />
+      )}
       <ul className="mt-5 flex-1 space-y-4">
-        {INVENTORY.map((c) => {
+        {categories.map((c) => {
           const { inStockPct, attention } = categoryHealth(c);
           return (
             <li key={c.id}>

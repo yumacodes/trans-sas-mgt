@@ -1,53 +1,39 @@
+import type { DashboardOverviewDto } from '@tsm/shared';
 import { downloadReportExcel, type ExportRow } from '@/lib/exportExcel';
-import {
-  DEMO_CURRENCY,
-  SEGMENTS,
-  getChartWindow,
-  getKpis,
-  summariseRevenue,
-  type RangeKey,
-} from './data/dashboardMockData';
+import type { KpiDef, MonthPoint } from './data/model';
 
 /**
- * Lays out the figures currently on the dashboard as spreadsheet rows. Pure, so the
- * numbers can be checked without writing a file. A row of one string is a section
- * heading and is emitted in bold; an empty row is a spacer.
+ * Lays out the figures currently on the dashboard as spreadsheet rows. A row of one string
+ * is a section heading; an empty row is a spacer.
  */
-export function buildDashboardSheet(range: RangeKey): ExportRow[] {
+export function buildDashboardSheet(o: DashboardOverviewDto, kpis: KpiDef[], monthly: MonthPoint[], scope: string): ExportRow[] {
   return [
-    ['Dashboard sample data - not an official financial report'],
-    [`Period: ${range}`, `Currency: ${DEMO_CURRENCY}`],
+    ['Dashboard - management figures from the records in the system'],
+    [`Period: ${o.period.from} to ${o.period.to}`, `Scope: ${scope}`, `Currency: ${o.currency}`],
     [],
     ['Key figures'],
     ['Measure', 'Value', 'Unit', 'Change vs previous period (%)', 'Note'],
-    ...getKpis(range).map((k) => [
+    ...kpis.map((k) => [
       k.label,
       k.unit === 'money' ? k.value : Number(k.value.toFixed(1)),
-      k.unit === 'money' ? DEMO_CURRENCY : '%',
-      k.change,
+      k.unit === 'money' ? o.currency : '%',
+      k.change === null ? null : Number(k.change.toFixed(1)),
       k.caption,
     ]),
     [],
-    ['Revenue vs forecast (thousands)'],
-    ['Period', 'Actual', 'Forecast'],
-    ...getChartWindow(range).points.map((p) => [p.full, p.actual, p.forecast]),
+    ['Last twelve months'],
+    ['Month', 'Revenue excl. tax', 'Payments received'],
+    ...monthly.map((m) => [m.full, Math.round(m.actual * 1000 * 100) / 100, Math.round(m.payments * 1000 * 100) / 100]),
     [],
-    ['Summary'],
-    ...Object.entries(summariseRevenue(range)).map(([k, v]) => [
-      k,
-      typeof v === 'object' && v !== null ? `${v.label} ${v.value}` : v === null ? null : Number(v.toFixed(2)),
-    ]),
-    [],
-    ['Segments (12 months, thousands)'],
-    ['Segment', 'Revenue', 'Change (%)'],
-    ...SEGMENTS.map((s) => [s.label, s.revenue, s.change]),
+    ['Revenue by category, last 12 months'],
+    ['Category', 'Revenue', 'Previous 12 months'],
+    ...(o.segments ?? []).map((s) => [s.label, Number(s.revenue), Number(s.previous)]),
   ];
 }
 
-/** Downloads those figures as an Excel workbook. */
-export function downloadDashboardReport(range: RangeKey) {
-  return downloadReportExcel(`dashboard-sample-${range}.xlsx`, buildDashboardSheet(range), {
+export function downloadDashboardReport(o: DashboardOverviewDto, kpis: KpiDef[], monthly: MonthPoint[], scope: string) {
+  return downloadReportExcel(`dashboard-${o.period.to}.xlsx`, buildDashboardSheet(o, kpis, monthly, scope), {
     sheet: 'Dashboard',
-    widths: [34, 16, 12, 28, 46],
+    widths: [34, 18, 18, 28, 40],
   });
 }

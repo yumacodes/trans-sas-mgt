@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-13
+
+- **The charted dashboard is back, with real figures.** It keeps the original design: key figure cards with trend lines, the revenue chart, category cards, inventory health and the activity stream.
+  - Every number comes from your records. Sales value, payments received, outstanding balances and stock availability are compared with the same days of the previous period.
+  - The chart plots revenue (confirmed sales, excluding tax) and payments received for the last 12 months.
+  - Admins choose All branches or one branch at the top; staff see their own branch.
+  - Month, Quarter and Year switch the period.
+  - Amounts are in the company's default currency; sales in other currencies are named, not added in.
+- **"Coming up" replaces the old sample schedule.** It lists tender deadlines, payments falling due and expected deliveries for the next 14 days, plus anything overdue.
+- The simpler number-card dashboard has been removed.
+
 ## 2026-11-11
 
 ### What you need to do

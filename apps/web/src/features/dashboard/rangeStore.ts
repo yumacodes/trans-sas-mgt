@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import type { RangeKey } from './data/dashboardMockData';
+import type { RangeKey } from './data/model';
 
 /** Reporting period shared by the topbar's selector and the dashboard it controls. */
 let current: RangeKey = 'quarter';

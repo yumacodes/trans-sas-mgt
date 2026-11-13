@@ -1,13 +1,11 @@
-import { DEMO_CURRENCY } from './data/dashboardMockData';
-
 const SYMBOLS: Record<string, string> = { GHS: 'GH₵', USD: '$', EUR: '€', GBP: '£' };
 
-export function currencySymbol(currency = DEMO_CURRENCY) {
+export function currencySymbol(currency = 'GHS') {
   return SYMBOLS[currency] ?? currency;
 }
 
 /** "GH₵ 4.28M", "GH₵ 684K", "GH₵ 920". Input is in whole currency units. */
-export function formatCompactMoney(value: number, currency = DEMO_CURRENCY) {
+export function formatCompactMoney(value: number, currency = 'GHS') {
   const abs = Math.abs(value);
   const sign = value < 0 ? '-' : '';
   const sym = currencySymbol(currency);
@@ -17,7 +15,7 @@ export function formatCompactMoney(value: number, currency = DEMO_CURRENCY) {
 }
 
 /** Same, for values held in thousands (the chart datasets). */
-export function formatThousands(valueK: number, currency = DEMO_CURRENCY) {
+export function formatThousands(valueK: number, currency = 'GHS') {
   return formatCompactMoney(valueK * 1000, currency);
 }
 

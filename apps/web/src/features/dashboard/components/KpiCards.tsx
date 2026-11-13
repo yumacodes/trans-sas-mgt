@@ -2,7 +2,7 @@ import { Link } from 'react-router';
 import { Area, AreaChart, ResponsiveContainer, YAxis } from 'recharts';
 import { ArrowDownRight, ArrowUpRight, Minus } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { KpiDef } from '../data/dashboardMockData';
+import type { KpiDef } from '../data/model';
 import { formatCompactMoney, formatPercent, formatSignedPercent } from '../format';
 
 function Sparkline({ values, color, id }: { values: number[]; color: string; id: string }) {
@@ -53,8 +53,8 @@ function Change({ kpi }: { kpi: KpiDef }) {
   );
 }
 
-function KpiCard({ kpi, index }: { kpi: KpiDef; index: number }) {
-  const value = kpi.unit === 'money' ? formatCompactMoney(kpi.value) : formatPercent(kpi.value);
+function KpiCard({ kpi, index, currency }: { kpi: KpiDef; index: number; currency: string }) {
+  const value = kpi.unit === 'money' ? formatCompactMoney(kpi.value, currency) : formatPercent(kpi.value);
   const body = (
     <>
       <p className="eyebrow">{kpi.label}</p>
@@ -66,7 +66,7 @@ function KpiCard({ kpi, index }: { kpi: KpiDef; index: number }) {
       </div>
       <div className="mt-4 flex items-end justify-between gap-2">
         <p className="min-w-0 text-xs text-ink-subtle">{kpi.caption}</p>
-        <Sparkline values={kpi.trend} color={kpi.tone} id={kpi.id} />
+        {kpi.trend.some((v) => v > 0) && <Sparkline values={kpi.trend} color={kpi.tone} id={kpi.id} />}
       </div>
     </>
   );
@@ -84,11 +84,11 @@ function KpiCard({ kpi, index }: { kpi: KpiDef; index: number }) {
   );
 }
 
-export function KpiCards({ kpis }: { kpis: KpiDef[] }) {
+export function KpiCards({ kpis, currency }: { kpis: KpiDef[]; currency: string }) {
   return (
     <section aria-label="Key figures" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {kpis.map((k, i) => (
-        <KpiCard key={k.id} kpi={k} index={i} />
+        <KpiCard key={k.id} kpi={k} index={i} currency={currency} />
       ))}
     </section>
   );

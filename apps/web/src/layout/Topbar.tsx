@@ -39,7 +39,7 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
   const user = me?.user;
   const { pathname } = useLocation();
   const [range, setRange] = useDashboardRange();
-  const showRange = pathname === '/' && import.meta.env.VITE_DASHBOARD_DEMO === 'true';
+  const showRange = pathname === '/';
 
   return (
     <header className="sticky top-0 z-30 flex h-24 shrink-0 items-center gap-3 border-b border-border bg-surface/95 px-4 backdrop-blur-md sm:px-6">

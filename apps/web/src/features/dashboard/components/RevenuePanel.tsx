@@ -13,16 +13,11 @@ import {
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/app/States';
 import { cn } from '@/lib/utils';
-import {
-  SEGMENTS,
-  getChartWindow,
-  summariseRevenue,
-  type MonthPoint,
-  type RangeKey,
-} from '../data/dashboardMockData';
+import type { DashboardOverviewDto } from '@tsm/shared';
+import { getChartWindow, summariseRevenue, type MonthPoint, type RangeKey } from '../data/model';
 import { formatPercent, formatSignedPercent, formatThousands } from '../format';
 
-function ChartTooltip({ active, payload }: TooltipProps<number, string>) {
+function ChartTooltip({ active, payload, currency }: TooltipProps<number, string> & { currency: string }) {
   const point = payload?.[0]?.payload as MonthPoint | undefined;
   if (!active || !point) return null;
   return (
@@ -31,19 +26,17 @@ function ChartTooltip({ active, payload }: TooltipProps<number, string>) {
       <dl className="mt-1.5 space-y-1">
         <div className="flex items-center justify-between gap-6">
           <dt className="flex items-center gap-1.5 text-ink-muted">
-            <span className="size-2 rounded-full bg-ink" aria-hidden /> Actual
+            <span className="size-2 rounded-full bg-ink" aria-hidden /> Revenue
           </dt>
           <dd className="font-semibold tabular text-ink">
-            {point.actual === null ? 'Not reported' : formatThousands(point.actual)}
+            {formatThousands(point.actual, currency)}
           </dd>
         </div>
         <div className="flex items-center justify-between gap-6">
           <dt className="flex items-center gap-1.5 text-ink-muted">
-            <span className="size-2 rounded-full bg-sage" aria-hidden /> Forecast
+            <span className="size-2 rounded-full bg-sage" aria-hidden /> Payments
           </dt>
-          <dd className="font-semibold tabular text-ink">
-            {point.forecast === null ? 'None set' : formatThousands(point.forecast)}
-          </dd>
+          <dd className="font-semibold tabular text-ink">{formatThousands(point.payments, currency)}</dd>
         </div>
       </dl>
     </div>
@@ -59,48 +52,57 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function RevenuePanel({ range }: { range: RangeKey }) {
-  const window_ = useMemo(() => getChartWindow(range), [range]);
-  const summary = useMemo(() => summariseRevenue(range), [range]);
-  const hasData = window_.points.some((p) => p.actual !== null);
-  const badge =
-    summary.yoyPct !== null
-      ? `${formatSignedPercent(summary.yoyPct)} YoY`
-      : summary.vsForecastPct !== null
-        ? `${formatSignedPercent(summary.vsForecastPct)} vs forecast`
-        : null;
+interface Props {
+  range: RangeKey;
+  data: MonthPoint[];
+  /** Revenue for the twelve months before, in thousands. */
+  priorYearK: number | null;
+  segments: NonNullable<DashboardOverviewDto['segments']>;
+  currency: string;
+}
+
+export function RevenuePanel({ range, data, priorYearK, segments, currency }: Props) {
+  const window_ = useMemo(() => getChartWindow(range, data), [range, data]);
+  const summary = useMemo(() => summariseRevenue(range, data, priorYearK), [range, data, priorYearK]);
+  const hasData = window_.points.some((p) => p.actual > 0 || p.payments > 0);
+  const badge = summary.yoyPct !== null ? `${formatSignedPercent(summary.yoyPct)} YoY` : null;
+  const SEGMENTS = segments.map((s) => {
+    const revenue = Number(s.revenue) / 1000;
+    const previous = Number(s.previous) / 1000;
+    return { id: s.label, label: s.label, revenue, change: previous > 0 ? ((revenue - previous) / previous) * 100 : null };
+  });
   const maxSegment = Math.max(1, ...SEGMENTS.map((s) => s.revenue));
 
   return (
     <Card className="flex min-w-0 flex-col p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold tracking-tight text-ink">Revenue vs. forecast</h2>
+          <h2 className="text-lg font-semibold tracking-tight text-ink">Revenue and payments</h2>
           <p className="mt-0.5 text-sm text-ink-muted">
-            Recognised revenue and forecast performance over the last{' '}
+            Confirmed sales excluding tax, and money received, over the last{' '}
             {range === 'month' ? '6 months' : '12 months'}
             {window_.grouped ? ', grouped by quarter' : ''}
           </p>
         </div>
         <ul className="flex items-center gap-4 text-xs text-ink-muted" aria-label="Chart legend">
           <li className="flex items-center gap-2">
-            <span className="h-0.5 w-5 rounded bg-ink" aria-hidden /> Actual
+            <span className="h-0.5 w-5 rounded bg-ink" aria-hidden /> Revenue
           </li>
           <li className="flex items-center gap-2">
             <span
               className="h-0 w-5 border-t-2 border-dashed border-sage"
               aria-hidden
             />{' '}
-            Forecast
+            Payments
           </li>
         </ul>
       </div>
 
       <div className="mt-5 grid flex-1 grid-cols-1 gap-6 lg:grid-cols-[13.5rem_minmax(0,1fr)]">
         <div>
-          <p className="eyebrow">Closed-won · {window_.span}</p>
+          <p className="eyebrow">Revenue · {window_.span}</p>
           <p className="mt-2 text-3xl font-semibold tracking-tight tabular text-ink">
-            {formatThousands(summary.actualTotal)}
+            {formatThousands(summary.actualTotal, currency)}
           </p>
           {badge && (
             <span className="mt-2 inline-flex rounded-full bg-highlight px-2.5 py-0.5 text-xs font-semibold text-highlight-ink">
@@ -108,19 +110,19 @@ export function RevenuePanel({ range }: { range: RangeKey }) {
             </span>
           )}
           <dl className="mt-5">
-            <SummaryRow label="Forecast" value={formatThousands(summary.forecastTotal)} />
+            <SummaryRow label="Payments received" value={formatThousands(summary.paymentsTotal, currency)} />
             <SummaryRow
-              label="Attainment"
-              value={summary.attainmentPct === null ? '—' : `${Math.round(summary.attainmentPct)}%`}
+              label="Collected"
+              value={summary.actualTotal > 0 ? `${Math.round((summary.paymentsTotal / summary.actualTotal) * 100)}%` : '—'}
             />
             <SummaryRow
               label="Best month"
-              value={summary.best ? `${summary.best.label} · ${formatThousands(summary.best.value)}` : '—'}
+              value={summary.best ? `${summary.best.label} · ${formatThousands(summary.best.value, currency)}` : '—'}
             />
           </dl>
         </div>
 
-        <div className="h-64 min-h-64 min-w-0 lg:h-full" role="img" aria-label="Line chart of actual revenue against forecast">
+        <div className="h-64 min-h-64 min-w-0 lg:h-full" role="img" aria-label="Line chart of revenue and payments received">
           {hasData ? (
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={window_.points} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
@@ -145,12 +147,9 @@ export function RevenuePanel({ range }: { range: RangeKey }) {
                   tickCount={4}
                   tick={{ fill: 'var(--color-ink-subtle)', fontSize: 12 }}
                   tickFormatter={(v: number) => (v >= 1000 ? `${v / 1000}M` : `${v}K`)}
-                  domain={[
-                    (min: number) => Math.max(0, Math.floor((min - 150) / 100) * 100),
-                    (max: number) => Math.ceil((max + 50) / 100) * 100,
-                  ]}
+                  domain={[0, 'auto']}
                 />
-                <Tooltip content={<ChartTooltip />} cursor={{ stroke: 'var(--color-border-strong)' }} />
+                <Tooltip content={<ChartTooltip currency={currency} />} cursor={{ stroke: 'var(--color-border-strong)' }} />
                 <Area
                   type="monotone"
                   dataKey="actual"
@@ -162,7 +161,7 @@ export function RevenuePanel({ range }: { range: RangeKey }) {
                 />
                 <Line
                   type="monotone"
-                  dataKey="forecast"
+                  dataKey="payments"
                   stroke="var(--color-sage)"
                   strokeWidth={2.25}
                   strokeDasharray="6 5"
@@ -184,12 +183,13 @@ export function RevenuePanel({ range }: { range: RangeKey }) {
               </ComposedChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyState title="No revenue yet" description="Recognised revenue will be plotted here." />
+            <EmptyState title="No revenue yet" description="Confirmed sales and payments will be plotted here." />
           )}
         </div>
       </div>
 
-      <ul className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Revenue by segment, last 12 months">
+      {SEGMENTS.length > 0 && (
+      <ul className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Revenue by category, last 12 months">
         {SEGMENTS.map((s, i) => {
           const last = i === SEGMENTS.length - 1;
           return (
@@ -208,14 +208,14 @@ export function RevenuePanel({ range }: { range: RangeKey }) {
                 {s.label}
               </p>
               <div className="mt-2 flex items-baseline justify-between gap-2">
-                <p className="text-xl font-semibold tabular">{formatThousands(s.revenue)}</p>
+                <p className="text-xl font-semibold tabular">{formatThousands(s.revenue, currency)}</p>
                 <p
                   className={cn(
                     'text-xs font-semibold tabular',
-                    last ? 'text-highlight' : s.change < 0 ? 'text-danger' : 'text-deep-green',
+                    last ? 'text-highlight' : (s.change ?? 0) < 0 ? 'text-danger' : 'text-deep-green',
                   )}
                 >
-                  {formatSignedPercent(s.change, 0)}
+                  {s.change === null ? 'New' : formatSignedPercent(s.change, 0)}
                 </p>
               </div>
               <div
@@ -227,11 +227,12 @@ export function RevenuePanel({ range }: { range: RangeKey }) {
                   style={{ width: `${(s.revenue / maxSegment) * 100}%` }}
                 />
               </div>
-              <span className="sr-only">{formatPercent(s.change, 0)} change</span>
+              <span className="sr-only">{s.change === null ? 'no earlier sales' : `${formatPercent(s.change, 0)} change`}</span>
             </li>
           );
         })}
       </ul>
+      )}
     </Card>
   );
 }

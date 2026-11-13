@@ -11,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/auth/AuthProvider';
 import { cn } from '@/lib/utils';
-import { RANGES, type RangeKey } from '../data/dashboardMockData';
+import { RANGES, type RangeKey } from '../data/model';
 
 export function RangeSelector({ value, onChange }: { value: RangeKey; onChange: (r: RangeKey) => void }) {
   return (
@@ -56,14 +56,18 @@ export function CreateMenu() {
           <Link to="/stock-items">Add stock item</Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        {['New proforma', 'Record sale', 'Record payment'].map((label) => (
-          <DropdownMenuItem key={label} disabled>
-            {label}
-            <span className="ml-auto text-[10px] font-semibold uppercase tracking-wide text-ink-subtle">
-              Planned
-            </span>
-          </DropdownMenuItem>
-        ))}
+        <DropdownMenuItem asChild disabled={!can('proformas.manage')}>
+          <Link to="/proforma">New proforma</Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild disabled={!can('sales.manage')}>
+          <Link to="/sales">Record sale</Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild disabled={!can('payments.record')}>
+          <Link to="/payments">Record payment</Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild disabled={!can('purchases.manage')}>
+          <Link to="/purchases">New purchase</Link>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
