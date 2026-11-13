@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
-import { Pencil, Plus } from 'lucide-react';
+import { Pencil, Plus, FileDown } from 'lucide-react';
 import { ACCEPTANCE_STATUSES, ACCEPTANCE_STATUS_LABELS, type AcceptanceDto } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
 import { useOpenParam } from '@/components/app/useOpenParam';
@@ -16,11 +16,13 @@ import { useListQuery } from '@/lib/queries';
 import { qk } from '@/lib/queryKeys';
 import { AcceptanceDetailModal } from './AcceptanceDetailModal';
 import { AcceptanceFormDialog } from './AcceptanceFormDialog';
+import { usePdfActions } from '@/components/app/usePdfActions';
 import { useDeleteRecord } from '@/components/app/useDeleteRecord';
 
 export default function AcceptancePage() {
   const { can } = useAuth();
   const state = useTableState(['status', 'branchId', 'dateFrom', 'dateTo'], { sort: 'letterDate:desc' });
+  const rowPdf = usePdfActions('/acceptance-letters');
   const del = useDeleteRecord<AcceptanceDto>({
     path: '/acceptance-letters',
     queryKey: qk.acceptanceLetters,
@@ -79,6 +81,7 @@ export default function AcceptancePage() {
             hidden: !canCreate || l.status !== 'draft',
             onSelect: () => setForm({ open: true, letter: l }),
           },
+          { label: 'Download PDF', icon: <FileDown />, onSelect: () => void rowPdf.download(l) },
           del.action(l),
         ]}
         caption="Acceptance letters"

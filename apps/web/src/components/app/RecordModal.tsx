@@ -1,6 +1,5 @@
 import { useState, type ReactNode } from 'react';
 import { Check, Copy, MoreHorizontal } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogBody,
@@ -154,9 +153,6 @@ export function RecordModal({
         {actions && !loading && !error && (
           <DialogFooter>
             {actions}
-            <Button variant="secondary" onClick={() => onOpenChange(false)}>
-              Close
-            </Button>
           </DialogFooter>
         )}
       </DialogContent>

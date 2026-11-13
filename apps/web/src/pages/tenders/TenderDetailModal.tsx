@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router';
-import { FileDown, FileSignature, Pencil, Printer, ShoppingCart } from 'lucide-react';
+import { FileSignature, Pencil, Printer, ShoppingCart } from 'lucide-react';
 import { TENDER_STATUSES, TENDER_STATUS_LABELS, type SaleDto, type TenderDto, type TenderStatus } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
 import { AttachmentsPanel } from '@/components/app/AttachmentsPanel';
@@ -218,11 +218,8 @@ export function TenderDetailModal({ tenderId, onOpenChange, onEdit }: Props) {
                 <Pencil aria-hidden /> Edit
               </Button>
             )}
-            <Button variant="secondary" onClick={() => void pdf.print(t)} loading={pdf.isBusy('print', t.id)}>
+            <Button onClick={() => void pdf.print(t)} loading={pdf.isBusy('print', t.id)}>
               <Printer aria-hidden /> Print
-            </Button>
-            <Button onClick={() => void pdf.download(t)} loading={pdf.isBusy('download', t.id)}>
-              <FileDown aria-hidden /> Download PDF
             </Button>
           </>
         )

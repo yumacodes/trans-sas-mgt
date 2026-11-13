@@ -15,14 +15,15 @@ import { Input } from '@/components/ui/input';
 import { formatDate, formatMoney } from '@/lib/format';
 import { useListQuery } from '@/lib/queries';
 import { qk } from '@/lib/queryKeys';
-import { GenerateInvoiceDialog } from './GenerateInvoiceDialog';
 import { ProformaDetailModal } from './ProformaDetailModal';
 import { ProformaFormDialog } from './ProformaFormDialog';
+import { usePdfActions } from '@/components/app/usePdfActions';
 import { useDeleteRecord } from '@/components/app/useDeleteRecord';
 
 export default function ProformaPage() {
   const { can } = useAuth();
   const state = useTableState(['status', 'branchId', 'dateFrom', 'dateTo'], { sort: 'issueDate:desc' });
+  const rowPdf = usePdfActions('/proformas');
   const del = useDeleteRecord<ProformaDto>({
     path: '/proformas',
     queryKey: qk.proformas,
@@ -34,7 +35,6 @@ export default function ProformaPage() {
   const [viewId, setViewId, closeView] = useOpenParam();
   const [viewTab, setViewTab] = useState<string | undefined>();
   const [form, setForm] = useState<{ open: boolean; proforma: ProformaDto | null }>({ open: false, proforma: null });
-  const [pickerOpen, setPickerOpen] = useState(false);
   const canCreate = can('proformas.manage');
 
   const right = { align: 'right' as const, headerClassName: 'text-right' };
@@ -111,9 +111,6 @@ export default function ProformaPage() {
         description="Quotations sent to customers. A proforma does not change stock or count as a sale."
         actions={
           <>
-            <Button variant="secondary" onClick={() => setPickerOpen(true)}>
-              <FileDown aria-hidden /> Generate Invoice
-            </Button>
             {canCreate && (
               <Button onClick={() => setForm({ open: true, proforma: null })}>
                 <Plus aria-hidden /> New Proforma
@@ -147,6 +144,7 @@ export default function ProformaPage() {
               setViewId(p.id);
             },
           },
+          { label: 'Download PDF', icon: <FileDown />, onSelect: () => void rowPdf.download(p) },
           del.action(p),
         ]}
         caption="Proformas"
@@ -195,7 +193,6 @@ export default function ProformaPage() {
         }
       />
       {del.dialog}
-      <GenerateInvoiceDialog open={pickerOpen} onOpenChange={setPickerOpen} />
       <ProformaDetailModal
         proformaId={viewId}
         initialTab={viewTab}

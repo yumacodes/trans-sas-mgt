@@ -26,7 +26,7 @@ import { useListQuery } from '@/lib/queries';
 import { qk } from '@/lib/queryKeys';
 import { ExpenseDetailModal } from './ExpenseDetailModal';
 import { COUNTERPARTY_LABEL, ExpenseFormDialog } from './ExpenseFormDialog';
-import { ExpenseInvoiceDialog } from './ExpenseInvoiceDialog';
+import { usePdfActions } from '@/components/app/usePdfActions';
 import { useDeleteRecord } from '@/components/app/useDeleteRecord';
 
 const DESCRIPTIONS: Record<ExpenseKind, string> = {
@@ -38,6 +38,7 @@ const DESCRIPTIONS: Record<ExpenseKind, string> = {
 export function ExpensesPage({ kind }: { kind: ExpenseKind }) {
   const { can } = useAuth();
   const state = useTableState(['status', 'dateFrom', 'dateTo'], { sort: 'transactionDate:desc' });
+  const rowPdf = usePdfActions('/expenses');
   const del = useDeleteRecord<ExpenseDto>({
     path: '/expenses',
     queryKey: qk.expenses,
@@ -48,7 +49,6 @@ export function ExpensesPage({ kind }: { kind: ExpenseKind }) {
   const result = useListQuery<ExpenseDto>([...qk.expenses, kind], '/expenses', { ...state.query, kind });
   const [viewId, setViewId, closeView] = useOpenParam();
   const [form, setForm] = useState<{ open: boolean; expense: ExpenseDto | null }>({ open: false, expense: null });
-  const [pickerOpen, setPickerOpen] = useState(false);
   const canCreate = can('expenses.manage');
   const queryClient = useQueryClient();
   const { run } = useOperation();
@@ -114,9 +114,6 @@ export function ExpensesPage({ kind }: { kind: ExpenseKind }) {
         description={DESCRIPTIONS[kind]}
         actions={
           <>
-            <Button variant="secondary" onClick={() => setPickerOpen(true)}>
-              <FileDown aria-hidden /> Generate Invoice
-            </Button>
             {canCreate && (
               <Button onClick={() => setForm({ open: true, expense: null })}>
                 <Plus aria-hidden /> {newLabel}
@@ -183,6 +180,7 @@ export function ExpensesPage({ kind }: { kind: ExpenseKind }) {
             hidden: !canCreate || e.status !== 'pending',
             onSelect: () => setForm({ open: true, expense: e }),
           },
+          { label: 'Download PDF', icon: <FileDown />, onSelect: () => void rowPdf.download(e) },
           del.action(e),
         ]}
         caption={label}
@@ -230,7 +228,6 @@ export function ExpensesPage({ kind }: { kind: ExpenseKind }) {
         }
       />
       {del.dialog}
-      <ExpenseInvoiceDialog kind={kind} open={pickerOpen} onOpenChange={setPickerOpen} />
       <ExpenseDetailModal
         expenseId={viewId}
         onOpenChange={(o) => !o && closeView()}

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router';
-import { FileDown, Paperclip, Pencil, Printer, Send, ShoppingCart, X } from 'lucide-react';
+import { Paperclip, Pencil, Printer, Send, ShoppingCart, X } from 'lucide-react';
 import {
   PROFORMA_EMAIL_MAX_FILES,
   PROFORMA_EMAIL_MAX_FILE_BYTES,
@@ -23,7 +23,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { NativeSelect } from '@/components/ui/native-select';
 import { Textarea } from '@/components/ui/textarea';
-import { api, downloadFile, errorMessage, printFile } from '@/lib/api';
+import { api, errorMessage, printFile } from '@/lib/api';
 import { formatDate, formatDateTime, formatMoney, formatQuantity } from '@/lib/format';
 import { patchRecord } from '@/lib/optimistic';
 import { qk } from '@/lib/queryKeys';
@@ -172,7 +172,6 @@ export function ProformaDetailModal({ proformaId, onOpenChange, onEdit, initialT
   const { can } = useAuth();
   const queryClient = useQueryClient();
   const { run } = useOperation();
-  const [downloading, setDownloading] = useState(false);
   const [printing, setPrinting] = useState(false);
   const canManage = can('proformas.manage');
   const navigate = useNavigate();
@@ -186,18 +185,6 @@ export function ProformaDetailModal({ proformaId, onOpenChange, onEdit, initialT
 
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: qk.proformas });
-  };
-
-  const generate = async () => {
-    if (!p) return;
-    setDownloading(true);
-    try {
-      await downloadFile(`/proformas/${p.id}/pdf`, `${p.number}.pdf`);
-    } catch (error) {
-      reportFailure(errorMessage(error));
-    } finally {
-      setDownloading(false);
-    }
   };
 
   const print = async () => {
@@ -354,11 +341,8 @@ export function ProformaDetailModal({ proformaId, onOpenChange, onEdit, initialT
                 <Pencil aria-hidden /> Edit
               </Button>
             )}
-            <Button variant="secondary" onClick={() => void print()} loading={printing}>
+            <Button onClick={() => void print()} loading={printing}>
               <Printer aria-hidden /> Print
-            </Button>
-            <Button onClick={() => void generate()} loading={downloading}>
-              <FileDown aria-hidden /> Generate Invoice
             </Button>
           </>
         )

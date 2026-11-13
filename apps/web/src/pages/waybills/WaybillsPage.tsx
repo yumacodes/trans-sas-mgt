@@ -46,6 +46,7 @@ export default function WaybillsPage() {
   const { can } = useAuth();
   const [params, setParams] = useSearchParams();
   const state = useTableState(['status', 'branchId'], { sort: 'deliveryDate:desc' });
+  const rowPdf = usePdfActions('/waybills');
   const del = useDeleteRecord<WaybillDto>({
     path: '/waybills',
     queryKey: qk.waybills,
@@ -114,6 +115,7 @@ export default function WaybillsPage() {
             hidden: !canManage || w.status !== 'draft',
             onSelect: () => setForm({ open: true, waybill: w }),
           },
+          { label: 'Download PDF', icon: <FileDown />, onSelect: () => void rowPdf.download(w) },
           del.action(w),
         ]}
         caption="Waybills"
@@ -319,11 +321,8 @@ function WaybillDetailModal({
                   <Ban aria-hidden /> Cancel waybill
                 </Button>
               )}
-              <Button variant="secondary" onClick={() => void pdf.print(w)} loading={pdf.isBusy('print', w.id)}>
+              <Button onClick={() => void pdf.print(w)} loading={pdf.isBusy('print', w.id)}>
                 <Printer aria-hidden /> Print
-              </Button>
-              <Button onClick={() => void pdf.download(w)} loading={pdf.isBusy('download', w.id)}>
-                <FileDown aria-hidden /> Download PDF
               </Button>
             </>
           )

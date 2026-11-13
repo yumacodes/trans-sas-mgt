@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Ban, FileDown, Pencil, Printer, Send } from 'lucide-react';
+import { Ban, Pencil, Printer, Send } from 'lucide-react';
 import { ACCEPTANCE_STATUS_LABELS, type AcceptanceDto, type AcceptanceStatus } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
 import { AttachmentsPanel } from '@/components/app/AttachmentsPanel';
@@ -145,11 +145,8 @@ export function AcceptanceDetailModal({ letterId, onOpenChange, onEdit }: Props)
                   <Ban aria-hidden /> Cancel letter
                 </Button>
               )}
-              <Button variant="secondary" onClick={() => void pdf.print(l)} loading={pdf.isBusy('print', l.id)}>
+              <Button onClick={() => void pdf.print(l)} loading={pdf.isBusy('print', l.id)}>
                 <Printer aria-hidden /> Print
-              </Button>
-              <Button onClick={() => void pdf.download(l)} loading={pdf.isBusy('download', l.id)}>
-                <FileDown aria-hidden /> Download PDF
               </Button>
             </>
           )

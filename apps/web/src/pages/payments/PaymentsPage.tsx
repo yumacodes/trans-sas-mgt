@@ -28,6 +28,7 @@ import { PaymentFormDialog } from './PaymentFormDialog';
 export default function PaymentsPage() {
   const { can } = useAuth();
   const state = useTableState(['status', 'branchId'], { sort: 'paymentDate:desc' });
+  const rowPdf = usePdfActions('/payments');
   const result = useListQuery<PaymentDto>(qk.payments, '/payments', state.query);
   const [viewId, setViewId, closeView] = useOpenParam();
   const [formOpen, setFormOpen] = useState(false);
@@ -79,6 +80,9 @@ export default function PaymentsPage() {
         state={state}
         getRowId={(p) => p.id}
         onRowClick={(p) => setViewId(p.id)}
+        rowActions={(p) => [
+          { label: 'Download receipt', icon: <FileDown />, onSelect: () => void rowPdf.download(p) },
+        ]}
         caption="Payments"
         searchPlaceholder="Search receipt, reference, sale or client"
         filters={
@@ -210,11 +214,8 @@ function PaymentDetailModal({
                   <Undo2 aria-hidden /> Reverse
                 </Button>
               )}
-              <Button variant="secondary" onClick={() => void pdf.print(p)} loading={pdf.isBusy('print', p.id)}>
+              <Button onClick={() => void pdf.print(p)} loading={pdf.isBusy('print', p.id)}>
                 <Printer aria-hidden /> Print
-              </Button>
-              <Button onClick={() => void pdf.download(p)} loading={pdf.isBusy('download', p.id)}>
-                <FileDown aria-hidden /> Download receipt
               </Button>
             </>
           )

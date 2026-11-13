@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Ban, Banknote, CheckCircle2, FileDown, Pencil, Printer, Truck } from 'lucide-react';
+import { Ban, Banknote, CheckCircle2, Pencil, Printer, Truck } from 'lucide-react';
 import type { SaleDto, WaybillDto } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
 import { AttachmentsPanel } from '@/components/app/AttachmentsPanel';
@@ -228,11 +228,8 @@ export function SaleDetailModal({ saleId, onOpenChange, onEdit }: Props) {
                   <Ban aria-hidden /> Cancel sale
                 </Button>
               )}
-              <Button variant="secondary" onClick={() => void pdf.print(s)} loading={pdf.isBusy('print', s.id)}>
+              <Button onClick={() => void pdf.print(s)} loading={pdf.isBusy('print', s.id)}>
                 <Printer aria-hidden /> Print
-              </Button>
-              <Button onClick={() => void pdf.download(s)} loading={pdf.isBusy('download', s.id)}>
-                <FileDown aria-hidden /> Download PDF
               </Button>
             </>
           )

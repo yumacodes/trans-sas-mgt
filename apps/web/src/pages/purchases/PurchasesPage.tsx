@@ -60,6 +60,7 @@ function useSuppliers(enabled: boolean) {
 export default function PurchasesPage() {
   const { can } = useAuth();
   const state = useTableState(['status', 'branchId'], { sort: 'purchaseDate:desc' });
+  const rowPdf = usePdfActions('/purchases');
   const del = useDeleteRecord<PurchaseDto>({
     path: '/purchases',
     queryKey: qk.purchases,
@@ -130,6 +131,7 @@ export default function PurchasesPage() {
             hidden: !canManage || p.status !== 'draft',
             onSelect: () => setForm({ open: true, purchase: p }),
           },
+          { label: 'Download PDF', icon: <FileDown />, onSelect: () => void rowPdf.download(p) },
           del.action(p),
         ]}
         caption="Purchases"
@@ -360,11 +362,8 @@ function PurchaseDetailModal({
                   <Ban aria-hidden /> Cancel
                 </Button>
               )}
-              <Button variant="secondary" onClick={() => void pdf.print(p)} loading={pdf.isBusy('print', p.id)}>
+              <Button onClick={() => void pdf.print(p)} loading={pdf.isBusy('print', p.id)}>
                 <Printer aria-hidden /> Print
-              </Button>
-              <Button onClick={() => void pdf.download(p)} loading={pdf.isBusy('download', p.id)}>
-                <FileDown aria-hidden /> Download PO
               </Button>
             </>
           )

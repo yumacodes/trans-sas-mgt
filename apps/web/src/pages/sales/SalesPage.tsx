@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router';
 import type { ColumnDef } from '@tanstack/react-table';
-import { Pencil, Plus } from 'lucide-react';
+import { Pencil, Plus, FileDown } from 'lucide-react';
 import { SALE_STATUSES, SALE_STATUS_LABELS, type SaleDto } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
 import { BranchFilter } from '@/components/app/BranchControls';
@@ -16,12 +16,14 @@ import { useListQuery } from '@/lib/queries';
 import { qk } from '@/lib/queryKeys';
 import { SaleDetailModal } from './SaleDetailModal';
 import { SaleFormDialog } from './SaleFormDialog';
+import { usePdfActions } from '@/components/app/usePdfActions';
 import { useDeleteRecord } from '@/components/app/useDeleteRecord';
 
 export default function SalesPage() {
   const { can } = useAuth();
   const [params, setParams] = useSearchParams();
   const state = useTableState(['status', 'branchId', 'dateFrom', 'dateTo'], { sort: 'saleDate:desc' });
+  const rowPdf = usePdfActions('/sales');
   const del = useDeleteRecord<SaleDto>({
     path: '/sales',
     queryKey: qk.sales,
@@ -104,6 +106,7 @@ export default function SalesPage() {
             hidden: !canCreate || s.status !== 'draft',
             onSelect: () => setForm({ open: true, sale: s }),
           },
+          { label: 'Download PDF', icon: <FileDown />, onSelect: () => void rowPdf.download(s) },
           del.action(s),
         ]}
         caption="Sales"

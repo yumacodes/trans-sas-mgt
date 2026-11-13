@@ -437,11 +437,6 @@ export function ComposeMessage({ onSent }: { onSent: (messageId: string) => void
               {preview?.body}
             </p>
           </DialogBody>
-          <DialogFooter>
-            <Button variant="secondary" onClick={() => setPreview(null)}>
-              Close
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 

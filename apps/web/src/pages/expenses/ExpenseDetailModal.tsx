@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Ban, Check, FileDown, Pencil, Printer, X } from 'lucide-react';
+import { Ban, Check, Pencil, Printer, X } from 'lucide-react';
 import { AttachmentsPanel } from '@/components/app/AttachmentsPanel';
 import { reportFailure } from '@/components/app/OperationFeedback';
 import {
@@ -165,11 +165,8 @@ export function ExpenseDetailModal({ expenseId, onOpenChange, onEdit }: Props) {
                   <Ban aria-hidden /> Void
                 </Button>
               )}
-              <Button variant="secondary" onClick={() => void pdf.print(e)} loading={pdf.isBusy('print', e.id)}>
+              <Button onClick={() => void pdf.print(e)} loading={pdf.isBusy('print', e.id)}>
                 <Printer aria-hidden /> Print
-              </Button>
-              <Button onClick={() => void pdf.download(e)} loading={pdf.isBusy('download', e.id)}>
-                <FileDown aria-hidden /> Generate Invoice
               </Button>
             </>
           )

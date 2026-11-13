@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
-import { Pencil, Plus } from 'lucide-react';
+import { Pencil, Plus, FileDown } from 'lucide-react';
 import { TENDER_STATUSES, TENDER_STATUS_LABELS, type TenderDto } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
 import { useOpenParam } from '@/components/app/useOpenParam';
@@ -16,11 +16,13 @@ import { useListQuery } from '@/lib/queries';
 import { qk } from '@/lib/queryKeys';
 import { TenderDetailModal } from './TenderDetailModal';
 import { TenderFormDialog } from './TenderFormDialog';
+import { usePdfActions } from '@/components/app/usePdfActions';
 import { useDeleteRecord } from '@/components/app/useDeleteRecord';
 
 export default function TendersPage() {
   const { can } = useAuth();
   const state = useTableState(['status', 'branchId', 'dateFrom', 'dateTo'], { sort: 'scheduleDate:desc' });
+  const rowPdf = usePdfActions('/tenders');
   const del = useDeleteRecord<TenderDto>({
     path: '/tenders',
     queryKey: qk.tenders,
@@ -91,6 +93,7 @@ export default function TendersPage() {
             hidden: !canCreate || t.status !== 'draft',
             onSelect: () => setForm({ open: true, tender: t }),
           },
+          { label: 'Download PDF', icon: <FileDown />, onSelect: () => void rowPdf.download(t) },
           del.action(t),
         ]}
         caption="Price schedules"
