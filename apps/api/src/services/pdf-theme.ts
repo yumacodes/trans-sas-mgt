@@ -4,13 +4,13 @@ import type { PdfCompany } from './proforma-pdf';
 /** Shared look for every generated document (proforma, expense, tender schedule, letter). */
 export const PDF_COLORS = {
   /** Header band, table heads and the total box. */
-  NAVY: '#3a44b3',
-  ACCENT: '#6470dc',
+  NAVY: '#27298f',
+  ACCENT: '#4a4dc4',
   /** Secondary text printed on the header band. */
-  ON_NAVY: '#dde0fb',
+  ON_NAVY: '#cfd1f5',
   MUTED: '#667085',
   RULE: '#e4e7ec',
-  SHADE: '#f2f3fc',
+  SHADE: '#f1f2fb',
   INK: '#1d2939',
 } as const;
 
@@ -36,22 +36,22 @@ export function collect(doc: Doc): Promise<Buffer> {
   });
 }
 
-/** Layout for landscape documents, which have less height to spare. */
+/** Landscape documents only tighten the spacing of the reference details; the header is identical. */
 export interface Compact {
   compact?: boolean;
 }
 
 /** Blue header band with the company name (left) and document title (right). */
-export function headerBand(doc: Doc, company: PdfCompany, title: string, subtitle?: string, { compact }: Compact = {}) {
+export function headerBand(doc: Doc, company: PdfCompany, title: string, subtitle?: string, _layout: Compact = {}) {
   const { NAVY, ACCENT, ON_NAVY } = PDF_COLORS;
   const pageW = doc.page.width;
   const left = 40;
   const width = pageW - 80;
-  const bandH = compact ? 76 : 104;
-  const titleY = compact ? 22 : 32;
+  const bandH = 104;
+  const titleY = 32;
   doc.rect(0, 0, pageW, bandH).fill(NAVY);
   doc.rect(0, bandH, pageW, 4).fill(ACCENT);
-  doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(compact ? 17 : 19).text(company.name.toUpperCase(), left, titleY - 2, { width: width * 0.62 });
+  doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(19).text(company.name.toUpperCase(), left, titleY - 2, { width: width * 0.62 });
   if (company.tagline) {
     doc.fillColor(ON_NAVY).font('Helvetica').fontSize(8.5).text(company.tagline, left, doc.y + 3, { width: width * 0.62 });
   }
@@ -70,7 +70,7 @@ export function contactAndMeta(doc: Doc, company: PdfCompany, meta: [string, str
   const left = 40;
   const right = doc.page.width - 40;
   const width = right - left;
-  const top = compact ? 96 : 128;
+  const top = 128;
   doc.fillColor(MUTED).font('Helvetica').fontSize(8.5);
   company.lines.forEach((line, i) => {
     doc.text(line, left, i === 0 ? top : doc.y, { width: width * 0.5, lineGap: 1 });

@@ -33,7 +33,7 @@ export function renderTenderPdf(tender: TenderDto, company: PdfCompany): Promise
   const width = right - left;
   const bottomLimit = pageH - 60;
 
-  headerBand(doc, company, 'PRICE SCHEDULE', tender.lot ? `LOT NO. ${tender.lot.toUpperCase()}` : undefined, { compact: true });
+  headerBand(doc, company, 'PRICE SCHEDULE', tender.lot ? `LOT NO. ${tender.lot.toUpperCase()}` : 'TENDER');
   const head = contactAndMeta(doc, company, [
     ['Schedule no.', tender.number],
     ['Date', longDate(tender.scheduleDate)],
