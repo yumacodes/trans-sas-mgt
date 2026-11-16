@@ -93,12 +93,13 @@ export function Sidebar({ mobileOpen, onMobileClose, rail, onExpandRail }: Sideb
       <aside
         className={cn(
           'fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border bg-surface transition-[transform,width] duration-200 lg:translate-x-0',
-          rail && 'lg:w-[4.5rem]',
+          !rail && 'lg:w-56 xl:w-60',
+          rail && 'lg:w-16',
           mobileOpen ? 'translate-x-0 shadow-overlay' : '-translate-x-[110%]',
         )}
         aria-label="Main navigation"
       >
-        <div className={cn('flex h-24 shrink-0 items-center gap-2 border-b border-border px-5', rail && 'lg:hidden')}>
+        <div className={cn('flex h-24 shrink-0 items-center gap-2 border-b border-border px-4', rail && 'lg:hidden')}>
           <Link to="/" className="block min-w-0 flex-1 rounded-lg" aria-label={`${company?.name ?? BRAND.fullName} home`}>
             <img
               src={company?.logoUrl ?? BRAND.logoSrc}
