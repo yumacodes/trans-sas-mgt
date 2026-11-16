@@ -164,7 +164,7 @@ function Report({ reportKey }: { reportKey: ReportKey }) {
           <EmptyState title="Nothing to report" description="No records match these criteria. Try a wider period or another branch." />
         ) : r ? (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-sm">
+            <table className="w-full text-sm">
               <caption className="sr-only">{r.title}</caption>
               <thead>
                 <tr className="border-b border-border/70">
@@ -172,7 +172,7 @@ function Report({ reportKey }: { reportKey: ReportKey }) {
                     <th
                       key={c.key}
                       scope="col"
-                      className={`whitespace-nowrap px-4 py-3 text-left text-[11px] font-medium uppercase tracking-[0.09em] text-ink-subtle ${RIGHT.has(c.format) ? 'text-right' : ''}`}
+                      className={`px-2.5 py-3 text-left xl:px-4 text-[11px] font-medium uppercase tracking-[0.09em] text-ink-subtle ${RIGHT.has(c.format) ? 'text-right' : ''}`}
                     >
                       {c.label}
                     </th>
@@ -183,7 +183,7 @@ function Report({ reportKey }: { reportKey: ReportKey }) {
                 {r.rows.map((row, i) => (
                   <tr key={i} className="border-b border-border/40 last:border-0">
                     {r.columns.map((c) => (
-                      <td key={c.key} className={`px-4 py-2.5 text-ink ${RIGHT.has(c.format) ? 'text-right tabular' : ''}`}>
+                      <td key={c.key} className={`px-2.5 py-2.5 text-ink [overflow-wrap:anywhere] xl:px-4 ${RIGHT.has(c.format) ? 'text-right tabular' : ''}`}>
                         {show(c, row)}
                       </td>
                     ))}
@@ -195,7 +195,7 @@ function Report({ reportKey }: { reportKey: ReportKey }) {
                   {r.totals.map((row, i) => (
                     <tr key={i} className="border-t border-border bg-surface-muted/60 font-semibold">
                       {r.columns.map((c) => (
-                        <td key={c.key} className={`px-4 py-2.5 text-ink ${RIGHT.has(c.format) ? 'text-right tabular' : ''}`}>
+                        <td key={c.key} className={`px-2.5 py-2.5 text-ink [overflow-wrap:anywhere] xl:px-4 ${RIGHT.has(c.format) ? 'text-right tabular' : ''}`}>
                           {show(c, row)}
                         </td>
                       ))}

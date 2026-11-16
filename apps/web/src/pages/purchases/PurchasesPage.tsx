@@ -773,13 +773,13 @@ function PurchaseFormDialog({
                 return (
                   <div
                     key={field.id}
-                    className="grid grid-cols-2 gap-3 rounded-2xl border border-border p-3 sm:grid-cols-[minmax(0,3fr)_90px_90px_110px_110px_auto]"
+                    className="grid grid-cols-2 gap-3 rounded-2xl border border-border p-3 lg:grid-cols-[minmax(0,3fr)_90px_90px_110px_110px_auto]"
                   >
                     <Field
                       label="Item"
                       error={e?.stockItemId ? 'Pick an item from the catalogue.' : e?.name?.message}
                       required
-                      className="col-span-2 sm:col-span-1"
+                      className="col-span-2 lg:col-span-1"
                     >
                       <Controller
                         control={form.control}

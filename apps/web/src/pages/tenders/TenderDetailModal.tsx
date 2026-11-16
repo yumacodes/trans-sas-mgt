@@ -91,7 +91,7 @@ export function TenderDetailModal({ tenderId, onOpenChange, onEdit }: Props) {
         ]}
       />
       <div className="overflow-x-auto rounded-2xl border border-border">
-        <table className="w-full min-w-[760px] text-sm">
+        <table className="w-full text-sm">
           <thead className="bg-surface-muted text-left text-xs text-ink-muted">
             <tr>
               <th className="px-3 py-2">Item</th>

@@ -1,5 +1,5 @@
 import { Link, useLocation, useMatches } from 'react-router';
-import { ChevronRight, LogOut, Menu, UserCog } from 'lucide-react';
+import { ChevronRight, LogOut, Menu, PanelLeftClose, PanelLeftOpen, UserCog } from 'lucide-react';
 import { useAuth } from '@/auth/AuthProvider';
 import { useSignOutConfirm } from '@/auth/useSignOutConfirm';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -32,7 +32,15 @@ export function useRouteTitle(): RouteHandle | undefined {
   return undefined;
 }
 
-export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
+export function Topbar({
+  onOpenNav,
+  rail,
+  onToggleRail,
+}: {
+  onOpenNav: () => void;
+  rail: boolean;
+  onToggleRail: () => void;
+}) {
   const { me } = useAuth();
   const { requestSignOut, signOutDialog } = useSignOutConfirm();
   const handle = useRouteTitle();
@@ -42,7 +50,7 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
   const showRange = pathname === '/';
 
   return (
-    <header className="sticky top-0 z-30 flex h-24 shrink-0 items-center gap-3 border-b border-border bg-surface/95 px-4 backdrop-blur-md sm:px-6">
+    <header className="sticky top-0 z-30 flex h-24 min-w-0 shrink-0 items-center gap-2 sm:gap-3 border-b border-border bg-surface/95 px-4 backdrop-blur-md sm:px-6">
       <button
         type="button"
         onClick={onOpenNav}
@@ -50,6 +58,16 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
         aria-label="Open navigation"
       >
         <Menu className="size-5" />
+      </button>
+      <button
+        type="button"
+        onClick={onToggleRail}
+        className="-ml-2 hidden rounded-full p-2.5 text-ink-muted hover:bg-surface-muted lg:block"
+        aria-label={rail ? 'Expand the sidebar' : 'Collapse the sidebar'}
+        aria-pressed={rail}
+        title={rail ? 'Expand the sidebar' : 'Collapse the sidebar'}
+      >
+        {rail ? <PanelLeftOpen className="size-5" /> : <PanelLeftClose className="size-5" />}
       </button>
 
       <nav aria-label="Breadcrumb" className="min-w-0 flex-1">

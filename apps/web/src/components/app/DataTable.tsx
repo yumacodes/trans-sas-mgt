@@ -176,7 +176,7 @@ export function DataTable<T>({
 
   const showSearch = searchPlaceholder !== undefined;
   const colCount = allColumns.length + (selectable ? 1 : 0);
-  const cellPad = compact ? 'px-3 py-2' : 'px-4 py-3.5';
+  const cellPad = compact ? 'px-2 py-2 xl:px-3' : 'px-2.5 py-3 xl:px-4 xl:py-3.5';
 
   return (
     <div className="overflow-hidden rounded-3xl border border-white/80 bg-surface shadow-raised">
@@ -206,7 +206,7 @@ export function DataTable<T>({
       )}
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[640px] border-collapse text-sm">
+        <table className="w-full border-collapse text-sm">
           {caption && <caption className="sr-only">{caption}</caption>}
           <thead>
             {table.getHeaderGroups().map((hg) => (
@@ -236,7 +236,7 @@ export function DataTable<T>({
                       }
                       className={cn(
                         cellPad,
-                        'whitespace-nowrap py-3 text-left text-[11px] font-medium uppercase tracking-[0.09em] text-ink-subtle',
+                        'py-3 text-left align-bottom text-[11px] font-medium uppercase tracking-[0.09em] text-ink-subtle',
                         m?.align === 'right' && 'text-right',
                         m?.align === 'center' && 'text-center',
                         m?.headerClassName,
@@ -349,7 +349,7 @@ export function DataTable<T>({
                         key={cell.id}
                         className={cn(
                           cellPad,
-                          'align-middle text-ink',
+                          'min-w-0 align-middle text-ink [overflow-wrap:anywhere]',
                           m?.align === 'right' && 'text-right tabular',
                           m?.align === 'center' && 'text-center',
                           m?.cellClassName,

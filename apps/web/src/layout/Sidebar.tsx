@@ -27,9 +27,12 @@ function containsPath(item: NavItem, path: string): boolean {
 interface SidebarProps {
   mobileOpen: boolean;
   onMobileClose: () => void;
+  /** Desktop only: show icons without labels. */
+  rail: boolean;
+  onExpandRail: () => void;
 }
 
-export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
+export function Sidebar({ mobileOpen, onMobileClose, rail, onExpandRail }: SidebarProps) {
   const { canAny, me } = useAuth();
   const location = useLocation();
   const items = useMemo(() => filterNav(NAV, canAny), [canAny]);
@@ -89,12 +92,13 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
       )}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border bg-surface transition-transform duration-200 lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border bg-surface transition-[transform,width] duration-200 lg:translate-x-0',
+          rail && 'lg:w-[4.5rem]',
           mobileOpen ? 'translate-x-0 shadow-overlay' : '-translate-x-[110%]',
         )}
         aria-label="Main navigation"
       >
-        <div className="flex h-24 shrink-0 items-center gap-2 border-b border-border px-5">
+        <div className={cn('flex h-24 shrink-0 items-center gap-2 border-b border-border px-5', rail && 'lg:hidden')}>
           <Link to="/" className="block min-w-0 flex-1 rounded-lg" aria-label={`${company?.name ?? BRAND.fullName} home`}>
             <img
               src={company?.logoUrl ?? BRAND.logoSrc}
@@ -112,9 +116,9 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
           </button>
         </div>
 
-        <nav className="scrollbar-slim mt-4 flex-1 overflow-y-auto px-3 pb-3">
+        <nav className={cn('scrollbar-slim mt-4 flex-1 overflow-y-auto overflow-x-hidden px-3 pb-3', rail && 'lg:mt-28')}>
           {sections.map(({ group, items: groupItems }) => (
-            <NavSection key={group ?? 'top'} group={group}>
+            <NavSection key={group ?? 'top'} group={group} rail={rail}>
               {groupItems.map((item) => (
                 <NavEntry
                   key={item.id}
@@ -123,6 +127,8 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
                   expanded={expanded}
                   onToggle={toggle}
                   pathname={location.pathname}
+                  rail={rail}
+                  onExpandRail={onExpandRail}
                 />
               ))}
             </NavSection>
@@ -134,14 +140,14 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   );
 }
 
-function NavSection({ group, children }: { group: NavGroup | null; children: ReactNode }) {
+function NavSection({ group, children, rail }: { group: NavGroup | null; children: ReactNode; rail: boolean }) {
   if (!group) {
     return <ul className="mt-3 space-y-0.5">{children}</ul>;
   }
   const id = `nav-group-${group.toLowerCase().replace(/[^a-z]+/g, '-')}`;
   return (
     <section aria-labelledby={id} className="mt-3 first:mt-1">
-      <h2 id={id} className="eyebrow px-3 pb-1.5 pt-1">
+      <h2 id={id} className={cn('eyebrow px-3 pb-1.5 pt-1', rail && 'lg:hidden')}>
         {group}
       </h2>
       <ul className="space-y-0.5">{children}</ul>
@@ -155,6 +161,8 @@ interface NavEntryProps {
   expanded: Set<string>;
   onToggle: (id: string) => void;
   pathname: string;
+  rail: boolean;
+  onExpandRail: () => void;
 }
 
 function PlannedBadge() {
@@ -175,7 +183,7 @@ function CountBadge({ count, label }: { count: number; label: string }) {
   );
 }
 
-function NavEntry({ item, depth, expanded, onToggle, pathname }: NavEntryProps) {
+function NavEntry({ item, depth, expanded, onToggle, pathname, rail, onExpandRail }: NavEntryProps) {
   const Icon = item.icon;
   const resetCount = useResetRequests().data?.length ?? 0;
   const pending = item.showsResetRequests ? resetCount : 0;
@@ -185,6 +193,7 @@ function NavEntry({ item, depth, expanded, onToggle, pathname }: NavEntryProps) 
     'flex w-full items-center gap-3 rounded-xl pr-3 text-[13.5px] transition-colors',
     depth === 0 ? 'h-10 lg:h-9' : 'h-9 lg:h-8',
     indent,
+    rail && 'lg:justify-center lg:gap-0 lg:px-0',
   );
 
   if (item.children) {
@@ -202,18 +211,26 @@ function NavEntry({ item, depth, expanded, onToggle, pathname }: NavEntryProps) 
           )}
           aria-expanded={open}
           aria-controls={panelId}
-          onClick={() => onToggle(item.id)}
+          title={rail ? item.label : undefined}
+          onClick={() => {
+            if (rail) onExpandRail();
+            onToggle(item.id);
+          }}
         >
           {Icon && <Icon className="size-[18px] shrink-0" aria-hidden />}
-          <span className="truncate">{item.label}</span>
-          {!open && <CountBadge count={parentPending} label="password reset requests" />}
+          <span className={cn('truncate', rail && 'lg:hidden')}>{item.label}</span>
+          {!open && (
+            <span className={cn('contents', rail && 'lg:hidden')}>
+              <CountBadge count={parentPending} label="password reset requests" />
+            </span>
+          )}
           <ChevronRight
-            className={cn(parentPending > 0 && !open ? 'ml-1' : 'ml-auto', 'size-3.5 shrink-0 transition-transform', open && 'rotate-90')}
+            className={cn(parentPending > 0 && !open ? 'ml-1' : 'ml-auto', 'size-3.5 shrink-0 transition-transform', open && 'rotate-90', rail && 'lg:hidden')}
             aria-hidden
           />
         </button>
         {open && (
-          <ul id={panelId} className="mt-0.5 space-y-0.5">
+          <ul id={panelId} className={cn('mt-0.5 space-y-0.5', rail && 'lg:hidden')}>
             {item.children.map((child) => (
               <NavEntry
                 key={child.id}
@@ -222,6 +239,8 @@ function NavEntry({ item, depth, expanded, onToggle, pathname }: NavEntryProps) 
                 expanded={expanded}
                 onToggle={onToggle}
                 pathname={pathname}
+                rail={rail}
+                onExpandRail={onExpandRail}
               />
             ))}
           </ul>
@@ -239,7 +258,7 @@ function NavEntry({ item, depth, expanded, onToggle, pathname }: NavEntryProps) 
           title="This module is planned for a later phase"
         >
           {Icon && <Icon className="size-[18px] shrink-0" aria-hidden />}
-          <span className="truncate" title={item.label}>
+          <span className={cn('truncate', rail && 'lg:hidden')} title={item.label}>
             {item.label}
           </span>
           <PlannedBadge />
@@ -254,6 +273,7 @@ function NavEntry({ item, depth, expanded, onToggle, pathname }: NavEntryProps) 
       <NavLink
         to={item.to}
         end={item.to === '/'}
+        title={rail ? item.label : undefined}
         className={({ isActive }) =>
           cn(
             base,
@@ -266,8 +286,10 @@ function NavEntry({ item, depth, expanded, onToggle, pathname }: NavEntryProps) 
         }
       >
         {Icon && <Icon className="size-[18px] shrink-0" aria-hidden />}
-        <span className="truncate">{item.label}</span>
-        <CountBadge count={pending} label="password reset requests" />
+        <span className={cn('truncate', rail && 'lg:hidden')}>{item.label}</span>
+        <span className={cn('contents', rail && 'lg:hidden')}>
+          <CountBadge count={pending} label="password reset requests" />
+        </span>
       </NavLink>
     </li>
   );

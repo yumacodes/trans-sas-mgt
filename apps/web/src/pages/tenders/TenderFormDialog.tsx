@@ -303,8 +303,8 @@ export function TenderFormDialog({ open, onOpenChange, tender, onSaved }: Props)
                 const e = errors.items?.[index];
                 return (
                   <div key={field.id} className="space-y-3 rounded-2xl border border-border p-3">
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-[minmax(0,3fr)_80px_90px_110px_130px_auto]">
-                      <Field label={`Item ${index + 1}`} error={e?.description?.message} required className="col-span-2 sm:col-span-1">
+                    <div className="grid grid-cols-2 gap-3 lg:grid-cols-[minmax(0,3fr)_80px_90px_110px_130px_auto]">
+                      <Field label={`Item ${index + 1}`} error={e?.description?.message} required className="col-span-2 lg:col-span-1">
                         <Controller
                           control={form.control}
                           name={`items.${index}.description`}

@@ -1,27 +1,35 @@
-import { Suspense, useCallback, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router';
 import { ErrorBoundary } from '@/components/app/ErrorBoundary';
 import { PageLoader } from '@/components/app/FullScreenLoader';
 import { Sidebar } from './Sidebar';
+import { cn, safeStorage } from '@/lib/utils';
 import { Topbar } from './Topbar';
+
+const RAIL_KEY = 'tsm.nav.rail';
 
 export function AppShell() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  // Desktop sidebar: full width, or a narrow rail showing icons only. Remembered per browser.
+  const [rail, setRail] = useState(() => safeStorage.get(RAIL_KEY) === '1');
+  useEffect(() => {
+    safeStorage.set(RAIL_KEY, rail ? '1' : '0');
+  }, [rail]);
   const location = useLocation();
   const closeNav = useCallback(() => setMobileOpen(false), []);
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen overflow-x-clip">
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-[70] focus:rounded-md focus:bg-surface focus:px-3 focus:py-2 focus:shadow-raised"
       >
         Skip to content
       </a>
-      <Sidebar mobileOpen={mobileOpen} onMobileClose={closeNav} />
-      <div className="flex min-h-screen flex-col lg:pl-64">
-        <Topbar onOpenNav={() => setMobileOpen(true)} />
-        <main id="main" className="w-full flex-1 animate-rise px-5 py-7 sm:px-8 lg:px-12">
+      <Sidebar mobileOpen={mobileOpen} onMobileClose={closeNav} rail={rail} onExpandRail={() => setRail(false)} />
+      <div className={cn('flex min-h-screen min-w-0 flex-col transition-[padding] duration-200', rail ? 'lg:pl-[4.5rem]' : 'lg:pl-64')}>
+        <Topbar onOpenNav={() => setMobileOpen(true)} rail={rail} onToggleRail={() => setRail((r) => !r)} />
+        <main id="main" className="w-full min-w-0 max-w-full flex-1 animate-rise px-4 py-6 sm:px-6 xl:px-10">
           <ErrorBoundary resetKey={location.pathname}>
             <Suspense fallback={<PageLoader />}>
               <Outlet />

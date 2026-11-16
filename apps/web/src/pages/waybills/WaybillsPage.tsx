@@ -555,9 +555,9 @@ function WaybillFormDialog({
                 return (
                   <div
                     key={field.id}
-                    className="grid grid-cols-2 gap-3 rounded-2xl border border-border p-3 sm:grid-cols-[minmax(0,3fr)_100px_100px_auto]"
+                    className="grid grid-cols-2 gap-3 rounded-2xl border border-border p-3 lg:grid-cols-[minmax(0,3fr)_100px_100px_auto]"
                   >
-                    <Field label="Item" error={e?.name?.message} required className="col-span-2 sm:col-span-1">
+                    <Field label="Item" error={e?.name?.message} required className="col-span-2 lg:col-span-1">
                       {linked ? (
                         <Input readOnly className="bg-surface-muted" {...form.register(`items.${index}.name`)} />
                       ) : (

@@ -15,7 +15,7 @@ function renderSidebar(permissions: Permission[], path = '/') {
   auth = fakeAuth({ permissions });
   return render(
     <MemoryRouter initialEntries={[path]}>
-      <Sidebar mobileOpen={false} onMobileClose={() => {}} />
+      <Sidebar mobileOpen={false} onMobileClose={() => {}} rail={false} onExpandRail={() => {}} />
     </MemoryRouter>,
   );
 }
