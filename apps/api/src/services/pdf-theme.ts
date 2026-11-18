@@ -56,37 +56,52 @@ function fitFontSize(doc: Doc, font: string, text: string, start: number, maxWid
 export function headerBand(doc: Doc, company: PdfCompany, title: string, subtitle?: string, _layout: Compact = {}) {
   const { NAVY, ACCENT, ON_NAVY } = PDF_COLORS;
   const pageW = doc.page.width;
-  const left = 40;
-  const width = pageW - 80;
   const bandH = 104;
   doc.rect(0, 0, pageW, bandH).fill(NAVY);
   doc.rect(0, bandH, pageW, 4).fill(ACCENT);
 
-  let textX = left;
+  // The header uses a narrower side margin than the body so the company name has room.
+  const hLeft = 26;
+  const hRight = pageW - 26;
+
+  // Document type on the right, kept small so the company name can be large.
+  const titleSize = 12;
+  doc.font('Helvetica-Bold').fontSize(titleSize);
+  const titleW = doc.widthOfString(title, { characterSpacing: 1 });
+  // Long subtitles (report names) shrink rather than squeeze the company name.
+  const maxTypeW = 150;
+  let subSize = 7.5;
+  doc.font('Helvetica');
+  while (subtitle && subSize > 5.5 && doc.fontSize(subSize).widthOfString(subtitle, { characterSpacing: 2 }) > maxTypeW) subSize -= 0.5;
+  const subW = subtitle ? Math.min(maxTypeW, doc.fontSize(subSize).widthOfString(subtitle, { characterSpacing: 2 })) : 0;
+  const typeW = Math.min(maxTypeW, Math.max(titleW, subW)) + 4;
+  const typeTop = subtitle ? 52 - (titleSize + 4 + subSize) / 2 : 52 - titleSize / 2;
+  doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(titleSize).text(title, hRight - typeW, typeTop, { width: typeW, align: 'right', characterSpacing: 1, lineBreak: false });
+  if (subtitle) {
+    doc.fillColor(ON_NAVY).font('Helvetica').fontSize(subSize).text(subtitle, hRight - typeW, typeTop + titleSize + 4, { width: typeW, align: 'right', characterSpacing: 2, lineBreak: false });
+  }
+
+  let textX = hLeft;
   if (company.logo) {
     try {
-      // The mark is dark on transparent, so it sits on a white tile beside the company name.
-      doc.roundedRect(left, 32, 66, 40, 5).fill('#ffffff');
-      doc.image(company.logo, left + 5, 36, { fit: [56, 32], align: 'center', valign: 'center' });
-      textX = left + 78;
+      // The mark is dark on transparent, so it sits on a small white tile beside the company name.
+      doc.roundedRect(hLeft, 36, 48, 32, 4).fill('#ffffff');
+      doc.image(company.logo, hLeft + 4, 39, { fit: [40, 26], align: 'center', valign: 'center' });
+      textX = hLeft + 58;
     } catch {
       /* an unreadable logo is left out rather than failing the document */
     }
   }
-  // Leave room for the document type on the right.
-  const textW = width - 170 - (textX - left);
+  // Everything between the logo and the document type belongs to the name, on one line.
+  const textW = hRight - typeW - 14 - textX;
   const name = company.name.toUpperCase();
-  const nameSize = fitFontSize(doc, 'Helvetica-Bold', name, 22, textW, 9);
-  const tagH = company.tagline ? 14 : 0;
+  const nameSize = fitFontSize(doc, 'Helvetica-Bold', name, 24, textW, 9);
+  const tagH = company.tagline ? 13 : 0;
   const nameY = 52 - (nameSize + tagH) / 2;
   doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(nameSize).text(name, textX, nameY, { width: textW + 1, lineBreak: false });
   if (company.tagline) {
-    const tagSize = fitFontSize(doc, 'Helvetica', company.tagline, 8.5, textW, 6);
-    doc.fillColor(ON_NAVY).font('Helvetica').fontSize(tagSize).text(company.tagline, textX, nameY + nameSize + 4, { width: textW + 1, lineBreak: false });
-  }
-  doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(17).text(title, left, 32, { width, align: 'right', characterSpacing: 1 });
-  if (subtitle) {
-    doc.fillColor(ON_NAVY).font('Helvetica').fontSize(10).text(subtitle, left, 54, { width, align: 'right', characterSpacing: 3 });
+    const tagSize = fitFontSize(doc, 'Helvetica', company.tagline, 9, textW, 6);
+    doc.fillColor(ON_NAVY).font('Helvetica').fontSize(tagSize).text(company.tagline, textX, nameY + nameSize + 3, { width: textW + 1, lineBreak: false });
   }
 }
 
