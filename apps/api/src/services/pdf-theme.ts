@@ -66,9 +66,9 @@ export function headerBand(doc: Doc, company: PdfCompany, title: string, subtitl
   if (company.logo) {
     try {
       // The mark is dark on transparent, so it sits on a white tile beside the company name.
-      doc.roundedRect(left, 26, 84, 52, 6).fill('#ffffff');
-      doc.image(company.logo, left + 6, 31, { fit: [72, 42], align: 'center', valign: 'center' });
-      textX = left + 98;
+      doc.roundedRect(left, 32, 66, 40, 5).fill('#ffffff');
+      doc.image(company.logo, left + 5, 36, { fit: [56, 32], align: 'center', valign: 'center' });
+      textX = left + 78;
     } catch {
       /* an unreadable logo is left out rather than failing the document */
     }
@@ -76,7 +76,7 @@ export function headerBand(doc: Doc, company: PdfCompany, title: string, subtitl
   // Leave room for the document type on the right.
   const textW = width - 170 - (textX - left);
   const name = company.name.toUpperCase();
-  const nameSize = fitFontSize(doc, 'Helvetica-Bold', name, 19, textW, 9);
+  const nameSize = fitFontSize(doc, 'Helvetica-Bold', name, 22, textW, 9);
   const tagH = company.tagline ? 14 : 0;
   const nameY = 52 - (nameSize + tagH) / 2;
   doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(nameSize).text(name, textX, nameY, { width: textW + 1, lineBreak: false });
@@ -96,7 +96,7 @@ export function watermark(doc: Doc, text = 'TRANS-SAS') {
   const cx = page.width / 2;
   const cy = page.height / 2;
   doc.save();
-  doc.opacity(0.045).fillColor(PDF_COLORS.NAVY).font('Helvetica-Bold');
+  doc.opacity(0.07).fillColor(PDF_COLORS.NAVY).font('Helvetica-Bold');
   const size = Math.min(page.width, page.height) * 0.14;
   doc.fontSize(size);
   const w = doc.widthOfString(text);
