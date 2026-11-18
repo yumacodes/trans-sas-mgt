@@ -2,6 +2,7 @@
 
 ## 2026-11-18
 
+- **PDF header shows the Trans-SAS mark (no wordmark) beside the company name**, on a white tile, with the name and tagline centred next to it. The watermark is smaller, lighter and centred. Saving now shows a centred "Saving..." spinner window.
 - **Every downloadable PDF carries a TRANS-SAS watermark** (faint, diagonal, behind the content) on every page.
 - **The company logo is in the PDF header** (the uploaded PNG or JPEG, otherwise the Trans-SAS logo), and the company name always stays on one line, shrinking the font slightly when it is long.
 - **Pounds added to the currencies** (British pounds, GBP) for proformas, price schedules and expenses, including amounts in words. Database change `20261118000000_gbp_currency` is applied.

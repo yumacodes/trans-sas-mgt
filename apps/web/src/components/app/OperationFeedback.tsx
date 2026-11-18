@@ -299,10 +299,12 @@ function BackgroundSpinner() {
     <div
       role="status"
       aria-label="Saving"
-      className="pointer-events-none fixed left-1/2 top-4 z-[60] flex -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-ink shadow-md"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-ink/20 backdrop-blur-[1px]"
     >
-      <DualArc className="size-4 border-2 text-accent" style={{ '--duration': '0.5s' } as React.CSSProperties} />
-      Saving…
+      <div className="flex flex-col items-center gap-3 rounded-2xl border border-border bg-surface px-10 py-7 shadow-xl">
+        <DualArc className="size-10 text-accent" style={{ '--duration': '0.5s' } as React.CSSProperties} />
+        <p className="text-sm font-medium text-ink">Saving…</p>
+      </div>
     </div>
   );
 }
