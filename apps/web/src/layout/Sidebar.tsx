@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, NavLink, useLocation } from 'react-router';
 import { ChevronRight, X } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/auth/AuthProvider';
+import { warmRoute } from '@/lib/prefetch';
 import { BRAND } from '@/lib/brand';
 import { useResetRequests } from '@/lib/queries';
 import { cn, safeStorage } from '@/lib/utils';
@@ -185,6 +187,8 @@ function CountBadge({ count, label }: { count: number; label: string }) {
 }
 
 function NavEntry({ item, depth, expanded, onToggle, pathname, rail, onExpandRail }: NavEntryProps) {
+  const queryClient = useQueryClient();
+  const { can } = useAuth();
   const Icon = item.icon;
   const resetCount = useResetRequests().data?.length ?? 0;
   const pending = item.showsResetRequests ? resetCount : 0;
@@ -274,6 +278,8 @@ function NavEntry({ item, depth, expanded, onToggle, pathname, rail, onExpandRai
       <NavLink
         to={item.to}
         end={item.to === '/'}
+        onPointerEnter={() => warmRoute(item.to!, queryClient, can)}
+        onFocus={() => warmRoute(item.to!, queryClient, can)}
         title={rail ? item.label : undefined}
         className={({ isActive }) =>
           cn(

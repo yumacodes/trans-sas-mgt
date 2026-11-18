@@ -2,6 +2,7 @@
 
 ## 2026-11-18
 
+- **Sidebar tabs open instantly.** After sign-in the app quietly downloads every page you can open and the first page of its table, one at a time while the browser is idle. Hovering or focusing a sidebar link refreshes that page's data before you click. The API now runs in Vercel's Paris region (`cdg1`), next to the Supabase database in `eu-west-3`, which cuts every request's round trip.
 - **PDF header shows the Trans-SAS mark (no wordmark) beside the company name**, on a white tile, with the name and tagline centred next to it. The watermark is smaller, lighter and centred. Saving now shows a centred "Saving..." spinner window.
 - **Every downloadable PDF carries a TRANS-SAS watermark** (faint, diagonal, behind the content) on every page.
 - **The company logo is in the PDF header** (the uploaded PNG or JPEG, otherwise the Trans-SAS logo), and the company name always stays on one line, shrinking the font slightly when it is long.

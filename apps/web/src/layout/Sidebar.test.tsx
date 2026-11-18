@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
@@ -14,9 +15,11 @@ const { Sidebar } = await import('./Sidebar');
 function renderSidebar(permissions: Permission[], path = '/') {
   auth = fakeAuth({ permissions });
   return render(
-    <MemoryRouter initialEntries={[path]}>
-      <Sidebar mobileOpen={false} onMobileClose={() => {}} rail={false} onExpandRail={() => {}} />
-    </MemoryRouter>,
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter initialEntries={[path]}>
+        <Sidebar mobileOpen={false} onMobileClose={() => {}} rail={false} onExpandRail={() => {}} />
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 
