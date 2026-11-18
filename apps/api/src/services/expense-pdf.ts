@@ -1,5 +1,5 @@
 import PDFDocument from 'pdfkit';
-import { PDF_COLORS, signatureY, ruledHead } from './pdf-theme';
+import { footers, headerBand, PDF_COLORS, signatureY, ruledHead } from './pdf-theme';
 import {
   EXPENSE_KIND_LABELS,
   EXPENSE_STATUS_LABELS,
@@ -8,7 +8,7 @@ import {
 } from '@tsm/shared';
 import type { PdfCompany } from './proforma-pdf';
 
-const { NAVY, ACCENT, ON_NAVY, MUTED, RULE, SHADE, INK } = PDF_COLORS;
+const { NAVY, ACCENT, MUTED, RULE, SHADE, INK } = PDF_COLORS;
 
 const amountFormat = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const money = (value: string, currency: string) => `${currency} ${amountFormat.format(Number(value))}`;
@@ -43,21 +43,11 @@ export function renderExpensePdf(expense: ExpenseDto, company: PdfCompany): Prom
   });
 
   const pageW = doc.page.width;
-  const pageH = doc.page.height;
   const left = 40;
   const right = pageW - 40;
   const width = right - left;
 
-  // Header band
-  doc.rect(0, 0, pageW, 104).fill(NAVY);
-  doc.rect(0, 104, pageW, 4).fill(ACCENT);
-  doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(19).text(company.name.toUpperCase(), left, 30, { width: width * 0.62 });
-  doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(17).text('INVOICE', left, 32, { width, align: 'right', characterSpacing: 1 });
-  doc
-    .fillColor(ON_NAVY)
-    .font('Helvetica')
-    .fontSize(10)
-    .text(EXPENSE_KIND_LABELS[expense.kind].toUpperCase(), left, 54, { width, align: 'right', characterSpacing: 2 });
+  headerBand(doc, company, 'INVOICE', EXPENSE_KIND_LABELS[expense.kind].toUpperCase());
 
   // Company contact (left) and document meta (right)
   const top = 128;
@@ -150,16 +140,7 @@ export function renderExpensePdf(expense: ExpenseDto, company: PdfCompany): Prom
   sig(left, 'Prepared by', expense.recordedBy);
   sig(right - sigW, 'Approved by', expense.approvedBy ?? '');
 
-  const range = doc.bufferedPageRange();
-  for (let i = range.start; i < range.start + range.count; i++) {
-    doc.switchToPage(i);
-    // The footer sits inside the bottom margin; without this PDFKit starts a new page for it.
-    doc.page.margins.bottom = 0;
-    doc.moveTo(left, pageH - 48).lineTo(right, pageH - 48).strokeColor(RULE).lineWidth(0.75).stroke();
-    doc.fillColor(MUTED).font('Helvetica').fontSize(7.5);
-    doc.text(company.footer ?? company.name, left, pageH - 40, { width: width - 70, lineBreak: false });
-    doc.text(`Page ${i + 1} of ${range.count}`, right - 60, pageH - 40, { width: 60, align: 'right', lineBreak: false });
-  }
+  footers(doc, company);
 
   doc.end();
   return done;

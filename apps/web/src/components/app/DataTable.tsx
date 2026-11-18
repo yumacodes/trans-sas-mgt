@@ -199,13 +199,18 @@ export function DataTable<T>({
               aria-label="Refresh"
               title="Refresh"
             >
-              <RefreshCw className={cn(result.isFetching && 'animate-spin')} aria-hidden />
+              <RefreshCw className={cn(result.isFetching && 'animate-[spin_0.5s_linear_infinite]')} aria-hidden />
             </Button>
           </div>
         </div>
       )}
 
-      <div className="overflow-x-auto">
+      <div className="relative overflow-x-auto">
+        {result.isFetching && !result.isLoading && (
+          <div className="absolute inset-x-0 top-0 z-10 h-0.5 overflow-hidden bg-accent/20" role="status" aria-label="Loading">
+            <div className="h-full w-1/3 animate-[table-sweep_0.6s_linear_infinite] bg-accent" />
+          </div>
+        )}
         <table className="w-full border-collapse text-sm">
           {caption && <caption className="sr-only">{caption}</caption>}
           <thead>

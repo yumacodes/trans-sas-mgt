@@ -39,6 +39,16 @@ export async function uploadObject(path: string, body: Buffer, contentType: stri
   return { bucket, path };
 }
 
+/** Reads an object's bytes (server side only), or null when it can't be fetched. */
+export async function downloadObject(bucket: string, path: string): Promise<Buffer | null> {
+  const { data, error } = await supabaseAdmin().storage.from(bucket).download(path);
+  if (error || !data) {
+    logger.warn({ err: error, path }, 'could not download storage object');
+    return null;
+  }
+  return Buffer.from(await data.arrayBuffer());
+}
+
 export async function signedUrl(bucket: string, path: string, expiresInSeconds = 3600) {
   const { data, error } = await supabaseAdmin()
     .storage.from(bucket)

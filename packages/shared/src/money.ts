@@ -85,6 +85,7 @@ export function integerInWords(value: bigint): string {
 const CURRENCY_WORDS: Record<string, [major: string, minor: string]> = {
   GHS: ['GHANA CEDIS', 'PESEWAS'],
   USD: ['US DOLLARS', 'CENTS'],
+  GBP: ['BRITISH POUNDS', 'PENCE'],
 };
 
 /** Amount in words for documents, e.g. "SEVEN THOUSAND TWO HUNDRED GHANA CEDIS ONLY". */

@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-18
+
+- **Every downloadable PDF carries a TRANS-SAS watermark** (faint, diagonal, behind the content) on every page.
+- **The company logo is in the PDF header** (the uploaded PNG or JPEG, otherwise the Trans-SAS logo), and the company name always stays on one line, shrinking the font slightly when it is long.
+- **Pounds added to the currencies** (British pounds, GBP) for proformas, price schedules and expenses, including amounts in words. Database change `20261118000000_gbp_currency` is applied.
+- **Fast spinners:** a small "Saving..." spinner shows at the top while any save is running in the background, and tables show a quick sweep bar and a faster refresh spinner whenever they reload.
+
 ## 2026-11-13
 
 - **The search bar is removed from the top bar.** Each table keeps its own search box.

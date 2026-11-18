@@ -23,12 +23,13 @@ export const PROFORMA_STATUS_LABELS: Record<ProformaStatus, string> = {
 };
 
 /** Currencies a proforma can be raised in. Amounts are never summed across currencies. */
-export const PROFORMA_CURRENCIES = ['USD', 'GHS'] as const;
+export const PROFORMA_CURRENCIES = ['USD', 'GHS', 'GBP'] as const;
 export type ProformaCurrency = (typeof PROFORMA_CURRENCIES)[number];
 
 export const PROFORMA_CURRENCY_LABELS: Record<ProformaCurrency, string> = {
   USD: 'US dollars (USD)',
   GHS: 'Ghana cedis (GHS)',
+  GBP: 'British pounds (GBP)',
 };
 
 const percentage = (label: string) =>

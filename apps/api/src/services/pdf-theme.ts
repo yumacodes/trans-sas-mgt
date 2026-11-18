@@ -41,24 +41,67 @@ export interface Compact {
   compact?: boolean;
 }
 
-/** Blue header band with the company name (left) and document title (right). */
+/** Shrinks `text` in 0.5pt steps from `start` until it fits on one line of `maxWidth`. */
+function fitFontSize(doc: Doc, font: string, text: string, start: number, maxWidth: number, min = 8) {
+  let size = start;
+  doc.font(font);
+  while (size > min && doc.fontSize(size).widthOfString(text) > maxWidth) size -= 0.5;
+  return size;
+}
+
+/**
+ * Header band: logo on a white tile, the company name on one line (the font shrinks to fit),
+ * its tagline, and the document type at the top right.
+ */
 export function headerBand(doc: Doc, company: PdfCompany, title: string, subtitle?: string, _layout: Compact = {}) {
   const { NAVY, ACCENT, ON_NAVY } = PDF_COLORS;
   const pageW = doc.page.width;
   const left = 40;
   const width = pageW - 80;
   const bandH = 104;
-  const titleY = 32;
   doc.rect(0, 0, pageW, bandH).fill(NAVY);
   doc.rect(0, bandH, pageW, 4).fill(ACCENT);
-  doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(19).text(company.name.toUpperCase(), left, titleY - 2, { width: width * 0.62 });
+
+  let nameY = 34;
+  if (company.logo) {
+    try {
+      const boxW = 150;
+      const boxH = 30;
+      doc.roundedRect(left, 12, boxW + 16, boxH + 12, 5).fill('#ffffff');
+      doc.image(company.logo, left + 8, 18, { fit: [boxW, boxH], align: 'center', valign: 'center' });
+      nameY = 62;
+    } catch {
+      /* an unreadable logo is left out rather than failing the document */
+    }
+  }
+  // Leave room for the document type on the right.
+  const textW = width - 170;
+  const name = company.name.toUpperCase();
+  const nameSize = fitFontSize(doc, 'Helvetica-Bold', name, 19, textW, 9);
+  doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(nameSize).text(name, left, nameY, { width: textW + 1, lineBreak: false });
   if (company.tagline) {
-    doc.fillColor(ON_NAVY).font('Helvetica').fontSize(8.5).text(company.tagline, left, doc.y + 3, { width: width * 0.62 });
+    const tagSize = fitFontSize(doc, 'Helvetica', company.tagline, 8.5, textW, 6);
+    doc.fillColor(ON_NAVY).font('Helvetica').fontSize(tagSize).text(company.tagline, left, nameY + nameSize + 4, { width: textW + 1, lineBreak: false });
   }
-  doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(17).text(title, left, titleY, { width, align: 'right', characterSpacing: 1 });
+  doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(17).text(title, left, 32, { width, align: 'right', characterSpacing: 1 });
   if (subtitle) {
-    doc.fillColor(ON_NAVY).font('Helvetica').fontSize(10).text(subtitle, left, titleY + 22, { width, align: 'right', characterSpacing: 2 });
+    doc.fillColor(ON_NAVY).font('Helvetica').fontSize(10).text(subtitle, left, 54, { width, align: 'right', characterSpacing: 3 });
   }
+}
+
+/** Large pale "TRANS-SAS" across the middle of a page, behind a reader's attention but visible in print. */
+export function watermark(doc: Doc, text = 'TRANS-SAS') {
+  const { page } = doc;
+  const cx = page.width / 2;
+  const cy = page.height / 2;
+  doc.save();
+  doc.opacity(0.07).fillColor(PDF_COLORS.NAVY).font('Helvetica-Bold');
+  const size = Math.min(page.width, page.height) * 0.2;
+  doc.fontSize(size);
+  const w = doc.widthOfString(text);
+  doc.rotate(-35, { origin: [cx, cy] });
+  doc.text(text, cx - w / 2, cy - size / 2, { lineBreak: false });
+  doc.restore();
 }
 
 /**
@@ -138,6 +181,7 @@ export function footers(doc: Doc, company: PdfCompany, note?: string) {
     doc.switchToPage(i);
     // The footer sits inside the bottom margin; without this PDFKit starts a new page for it.
     doc.page.margins.bottom = 0;
+    watermark(doc);
     const pageH = doc.page.height;
     doc.moveTo(left, pageH - 48).lineTo(right, pageH - 48).strokeColor(RULE).lineWidth(0.75).stroke();
     doc.fillColor(MUTED).font('Helvetica').fontSize(7.5);

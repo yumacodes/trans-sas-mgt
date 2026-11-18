@@ -1,5 +1,5 @@
 import PDFDocument from 'pdfkit';
-import { PDF_COLORS, signatureY, ruledHead } from './pdf-theme';
+import { footers, headerBand, PDF_COLORS, signatureY, ruledHead } from './pdf-theme';
 import { PROFORMA_STATUS_LABELS, type ProformaDto } from '@tsm/shared';
 
 export interface PdfCompany {
@@ -9,9 +9,11 @@ export interface PdfCompany {
   lines: string[];
   /** Single line printed in the page footer. */
   footer?: string;
+  /** PNG or JPEG bytes of the logo printed in the header. */
+  logo?: Buffer | null;
 }
 
-const { NAVY, ACCENT, ON_NAVY, MUTED, RULE, SHADE, INK } = PDF_COLORS;
+const { NAVY, ACCENT, MUTED, RULE, SHADE, INK } = PDF_COLORS;
 
 const amountFormat = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const quantityFormat = new Intl.NumberFormat('en-US', { maximumFractionDigits: 3 });
@@ -57,15 +59,7 @@ export function renderProformaPdf(proforma: ProformaDto, company: PdfCompany, la
   const width = right - left;
   const bottomLimit = pageH - 60;
 
-  // Header band
-  doc.rect(0, 0, pageW, 104).fill(NAVY);
-  doc.rect(0, 104, pageW, 4).fill(ACCENT);
-  doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(19).text(company.name.toUpperCase(), left, 30, { width: width * 0.62 });
-  if (company.tagline) {
-    doc.fillColor(ON_NAVY).font('Helvetica').fontSize(8.5).text(company.tagline, left, doc.y + 3, { width: width * 0.62 });
-  }
-  doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(17).text(labels?.heading ?? 'PROFORMA', left, 32, { width, align: 'right', characterSpacing: 1 });
-  doc.fillColor(ON_NAVY).font('Helvetica').fontSize(10).text(labels?.subheading ?? 'INVOICE', left, 54, { width, align: 'right', characterSpacing: 4 });
+  headerBand(doc, company, labels?.heading ?? 'PROFORMA', labels?.subheading ?? 'INVOICE');
 
   // Company contact (left) and invoice meta (right)
   const top = 128;
@@ -191,18 +185,7 @@ export function renderProformaPdf(proforma: ProformaDto, company: PdfCompany, la
   sig(left, 'Prepared by', proforma.preparedByName);
   sig(right - sigW, 'Approved by', 'Manager');
 
-  // Footer and page numbers on every page
-  const range = doc.bufferedPageRange();
-  for (let i = range.start; i < range.start + range.count; i++) {
-    doc.switchToPage(i);
-    // The footer sits inside the bottom margin; without this PDFKit starts a new page for it.
-    doc.page.margins.bottom = 0;
-    doc.moveTo(left, pageH - 48).lineTo(right, pageH - 48).strokeColor(RULE).lineWidth(0.75).stroke();
-    doc.fillColor(MUTED).font('Helvetica').fontSize(7.5);
-    doc.text(company.footer ?? company.name, left, pageH - 40, { width: width - 70, lineBreak: false });
-    doc.text(`Page ${i + 1} of ${range.count}`, right - 60, pageH - 40, { width: 60, align: 'right', lineBreak: false });
-    doc.text('This is a proforma invoice and not a demand for payment.', left, pageH - 29, { width, lineBreak: false });
-  }
+  footers(doc, company, 'This is a proforma invoice and not a demand for payment.');
 
   doc.end();
   return done;

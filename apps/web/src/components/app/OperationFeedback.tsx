@@ -125,6 +125,7 @@ export function OperationFeedbackProvider({ children }: { children: ReactNode })
   return (
     <OperationContext.Provider value={{ run, busy: open }}>
       {children}
+      <BackgroundSpinner />
       {!open && <FailureDialog />}
       <DialogPrimitive.Root open={open}>
         <DialogPrimitive.Portal>
@@ -279,13 +280,44 @@ function FailureDialog() {
  * key). The returned promise settles with the server's answer; on failure it rejects, and
  * the optimistic change is undone, only once the user closes the error without retrying.
  */
+const pendingListeners = new Set<() => void>();
+let pendingCount = 0;
+function bumpPending(delta: number) {
+  pendingCount += delta;
+  pendingListeners.forEach((l) => l());
+}
+function subscribePending(l: () => void) {
+  pendingListeners.add(l);
+  return () => void pendingListeners.delete(l);
+}
+
+/** Small fast spinner shown at the top while background saves are in flight. */
+function BackgroundSpinner() {
+  const count = useSyncExternalStore(subscribePending, () => pendingCount, () => 0);
+  if (count === 0) return null;
+  return (
+    <div
+      role="status"
+      aria-label="Saving"
+      className="pointer-events-none fixed left-1/2 top-4 z-[60] flex -translate-x-1/2 items-center gap-2 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-ink shadow-md"
+    >
+      <DualArc className="size-4 border-2 text-accent" style={{ '--duration': '0.5s' } as React.CSSProperties} />
+      Saving…
+    </div>
+  );
+}
+
 function runInBackground<T>(fn: () => Promise<T>, opts: RunOptions): Promise<T> {
   const undo = opts.optimistic?.();
   return new Promise<T>((resolve, reject) => {
     const attempt = async () => {
+      bumpPending(1);
       try {
-        resolve(await fn());
+        const value = await fn();
+        bumpPending(-1);
+        resolve(value);
       } catch (error) {
+        bumpPending(-1);
         const canRetry =
           error instanceof ApiError ? error.retryable || error.code === 'INTERNAL' : true;
         pushFailure({
