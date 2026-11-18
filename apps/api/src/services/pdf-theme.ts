@@ -95,7 +95,8 @@ export function headerBand(doc: Doc, company: PdfCompany, title: string, subtitl
   // Everything between the logo and the document type belongs to the name, on one line.
   const textW = hRight - typeW - 14 - textX;
   const name = company.name.toUpperCase();
-  const nameSize = fitFontSize(doc, 'Helvetica-Bold', name, 24, textW, 9);
+  // A little under the widest that fits, so the name doesn't crowd the band.
+  const nameSize = Math.max(9, Math.round(fitFontSize(doc, 'Helvetica-Bold', name, 24, textW, 9) * 0.9 * 2) / 2);
   const tagH = company.tagline ? 13 : 0;
   const nameY = 52 - (nameSize + tagH) / 2;
   doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(nameSize).text(name, textX, nameY, { width: textW + 1, lineBreak: false });
