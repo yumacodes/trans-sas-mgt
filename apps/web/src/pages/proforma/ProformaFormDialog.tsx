@@ -182,6 +182,7 @@ export function ProformaFormDialog({ open, onOpenChange, onSaved, proforma }: Pr
                   number: nextNumber.data?.number ?? '…',
                   branch: null,
                   status: 'draft',
+                  source: 'staff',
                   emailedAt: null,
                   preparedBy: fullName.split(/\s+/)[0] ?? '',
                   preparedByName: fullName,

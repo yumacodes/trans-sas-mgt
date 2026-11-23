@@ -1,0 +1,316 @@
+[
+  {
+    "sku": "MOBILE-MEDICAL-COUCH",
+    "name": "Mobile Medical Couch",
+    "category": "Medical",
+    "summary": "Examination couch with a backrest that locks in eight positions.",
+    "description": "A sturdy mobile examination couch for consulting rooms and wards. The backrest adjusts and locks in eight positions, and the frame is built for years of daily use.",
+    "features": [
+      "Backrest lockable in 8 positions",
+      "Mobile frame for easy repositioning",
+      "Built for heavy daily use"
+    ],
+    "imageUrl": "https://www.trans-sas.com/assets/img/products/Mobile%20Medical%20Couch.png"
+  },
+  {
+    "sku": "SELF-PROPELLED-WHEELCHAIR",
+    "name": "Self Propelled Wheelchair",
+    "category": "Medical",
+    "summary": "Folding aluminium wheelchair with flip-up arms and swing-away footrests.",
+    "description": "A lightweight folding aluminium wheelchair in metallic burgundy. Flip-up desk-length arms let the user get close to tables, and the footrests swing away and lift off for transfers.",
+    "features": [
+      "Folding aluminium frame",
+      "Flip-up, under-desk arms",
+      "Swing-away removable footrests"
+    ],
+    "imageUrl": "https://www.trans-sas.com/assets/img/products/Self%20Propelled%20Wheelchair.png"
+  },
+  {
+    "sku": "TRANSIT-WHEELCHAIR",
+    "name": "Transit Wheelchair",
+    "category": "Medical",
+    "summary": "Attendant-pushed folding wheelchair with removable arms.",
+    "description": "A folding transit chair for moving patients around a facility or between appointments. Removable armrests and swing-away footrests make transfers easier, and the inner liners are heavy duty.",
+    "features": [
+      "Full or desk arms, removable",
+      "Swing-away footrests",
+      "Heavy-duty inner liners",
+      "Folds for transport"
+    ],
+    "imageUrl": "https://www.trans-sas.com/assets/img/products/Transit%20Wheelchair.png"
+  },
+  {
+    "sku": "LIGHTWEIGHT-SAFETY-WALKER",
+    "name": "Lightweight Safety Walker",
+    "category": "Medical",
+    "summary": "Folding walker with a padded seat, backrest and storage bag.",
+    "description": "A folding safety walker that gives support on the move and a place to rest. Handles adjust in height, and it folds flat for storage or the car boot.",
+    "features": [
+      "Folds flat",
+      "Height-adjustable handles",
+      "Padded seat and backrest",
+      "Storage bag included"
+    ],
+    "imageUrl": "https://www.trans-sas.com/assets/img/products/Lightweight%20Safety%20Walkers.png"
+  },
+  {
+    "sku": "MINOR-SURGERY-COUCH",
+    "name": "Minor Surgery Couch",
+    "category": "Surgical",
+    "summary": "Manually adjustable couch with head-down tilt for minor procedures.",
+    "description": "A couch for minor surgical procedures. The backrest and foot section adjust manually and lock themselves in place, and the couch tilts head-down when needed.",
+    "features": [
+      "Self-locking backrest and foot section",
+      "Head-down tilt",
+      "Manual adjustment, no power needed"
+    ],
+    "imageUrl": "https://www.trans-sas.com/assets/img/products/Minor%20Surgery%20Couch.png"
+  },
+  {
+    "sku": "MOBILE-COMMODE-CHAIR",
+    "name": "Mobile Commode Chair",
+    "category": "Medical",
+    "summary": "Wheeled commode and shower chair for safe patient transfer.",
+    "description": "A mobile commode chair that doubles as a shower chair, for moving patients safely to and from the bathroom.",
+    "features": [
+      "Castors for safe transfer",
+      "Suitable for shower use"
+    ],
+    "imageUrl": "https://www.trans-sas.com/assets/img/products/Mobile%20Commode%20Chair.png"
+  },
+  {
+    "sku": "COOLVIEW-C35-EXAMINATION-LIGHT",
+    "name": "Coolview C35 Examination Light",
+    "category": "Medical",
+    "summary": "Examination light with a 20,000 lux spot and a 5,000 lux flood.",
+    "description": "An examination light with two modes: an intense 20,000 lux spot for detailed work and a gentle 5,000 lux flood for general examination, from a 35 W source.",
+    "features": [
+      "20,000 lux spot",
+      "5,000 lux floodlight",
+      "35 W light source"
+    ],
+    "imageUrl": "https://www.trans-sas.com/assets/img/products/Brand%20Coolview%20C35.png"
+  },
+  {
+    "sku": "ZENITH-ULTRA-500LA-MICROSCOPE",
+    "name": "Zenith ULTRA-500LA Binocular Microscope",
+    "category": "Scientific",
+    "summary": "Laboratory microscope, ×40 to ×1000 (×1600 with optional eyepieces).",
+    "description": "A binocular laboratory microscope with paired ×10 DIN widefield eyepieces and parfocal DIN-standard objectives. Magnification runs from ×40 to ×1000, or ×1600 with optional ×16 flatfield eyepieces.",
+    "features": [
+      "×40 – ×1000 magnification",
+      "×10 DIN widefield eyepieces, 18 mm field",
+      "DIN-standard parfocal objectives",
+      "Optional ×16 eyepieces for ×1600"
+    ],
+    "imageUrl": "https://www.trans-sas.com/assets/img/products/Zenith%20ULTRA-500LA%20Binocular%20Laboratory%20Microscope.png"
+  },
+  {
+    "sku": "AUTOCLAVES-DECONTAMINATION",
+    "name": "Autoclaves & Decontamination",
+    "category": "Medical",
+    "summary": "Sterilisation and decontamination supplies for clinical settings.",
+    "description": "Sterilisation and decontamination supplies, including antimicrobial hospital concentrate for general antiseptic use. Ask our team for the full range.",
+    "features": [
+      "Hospital-grade antiseptic concentrate",
+      "Range available on request"
+    ],
+    "imageUrl": "https://www.trans-sas.com/assets/img/products/Autoclaves_Decontamination.png"
+  },
+  {
+    "sku": "3M-LITTMANN-ELECTRONIC-STETHOSCOPE",
+    "name": "3M Littmann Electronic Stethoscope",
+    "category": "Medical",
+    "summary": "Amplifies body sounds up to 18 times.",
+    "description": "An electronic stethoscope that amplifies sound up to 18 times, made for heart and body sounds that are hard to hear with an acoustic chest piece.",
+    "features": [
+      "Up to 18× amplification",
+      "For difficult-to-hear heart and body sounds"
+    ],
+    "imageUrl": "https://www.trans-sas.com/assets/img/products/3M%20Littmann%20Electronic%20Stethoscope.png"
+  },
+  {
+    "sku": "ACCOSON-FREESTYLE-SPHYGMOMANOMETER",
+    "name": "Accoson Freestyle Sphygmomanometer",
+    "category": "Medical",
+    "summary": "Manometer with mercury isolation valve and latex-free bulb.",
+    "description": "A blood pressure monitor with a plastic manometer tube and a mercury isolation valve, supplied with an adult velcro cuff, a latex-free bulb and coiled tubing.",
+    "features": [
+      "Mercury isolation valve",
+      "Adult velcro cuff",
+      "Latex-free bulb",
+      "Coiled tubing"
+    ],
+    "imageUrl": "https://www.trans-sas.com/assets/img/products/Accoson%20Freestyle%20Sphygmomanometer.png"
+  },
+  {
+    "sku": "MICROLAB-MK6-SPIROMETER",
+    "name": "Microlab MK6 Spirometer",
+    "category": "Medical",
+    "summary": "Portable spirometer with rechargeable batteries.",
+    "description": "A portable, lightweight spirometer in a high-impact ABS body, powered by rechargeable internal batteries for use away from the desk.",
+    "features": [
+      "Portable and lightweight",
+      "Rechargeable internal batteries",
+      "High-impact ABS body"
+    ],
+    "imageUrl": "https://www.trans-sas.com/assets/img/products/Microlab%20MK6%20Spirometer.png"
+  },
+  {
+    "sku": "ELEMENTAL-MAINS-CAUTERY-UNIT",
+    "name": "Elemental Mains Cautery Unit",
+    "category": "Medical",
+    "summary": "Mains cautery with variable output up to 20 A.",
+    "description": "A mains-powered cautery unit with variable output up to 20 amperes, robust cables and handles, and non-slip feet.",
+    "features": [
+      "Variable output up to 20 A",
+      "Robust cables and handles",
+      "Non-slip feet"
+    ],
+    "imageUrl": "https://www.trans-sas.com/assets/img/products/Elemental%20Mains%20Cautery%20Unit.png"
+  },
+  {
+    "sku": "ACCU-CHEK-ADVANTAGE-METER",
+    "name": "Accu-Chek Advantage Meter",
+    "category": "Medical",
+    "summary": "Blood glucose kit with finger pricker, strips and lancets.",
+    "description": "A complete blood glucose kit: the Accu-Chek Advantage meter with a Softclix finger pricker, 10 test strips, 10 lancets, and high and low control solutions.",
+    "features": [
+      "Softclix finger pricker",
+      "10 test strips, 10 lancets",
+      "High and low control solutions"
+    ],
+    "imageUrl": "https://www.trans-sas.com/assets/img/products/Accu-Chek%20Advantage%20Meter.png"
+  },
+  {
+    "sku": "KAMPLEX-KT20-IMPEDANCE-AUDIOMETER",
+    "name": "Kamplex KT 20 Impedance Audiometer",
+    "category": "Medical",
+    "summary": "Hand-held tympanometer for middle-ear testing in children.",
+    "description": "A hand-held tympanometer for testing middle-ear function, designed for use with young children.",
+    "features": [
+      "Hand-held",
+      "Middle-ear testing",
+      "Suited to paediatric use"
+    ],
+    "imageUrl": "https://www.trans-sas.com/assets/img/products/Kamplex%20KT%2020%20Impedance%20Audiometer.png"
+  },
+  {
+    "sku": "A-UB401-DIGITAL-WRIST-MONITOR",
+    "name": "A-UB401 Digital Wrist Monitor",
+    "category": "Medical",
+    "summary": "Compact wrist BP monitor showing systolic, diastolic and pulse at once.",
+    "description": "An ultra-compact wrist blood pressure monitor. Its three-line display shows systolic, diastolic and pulse readings together.",
+    "features": [
+      "Ultra-compact and light",
+      "3-line display",
+      "Systolic, diastolic and pulse together"
+    ],
+    "imageUrl": "https://www.trans-sas.com/assets/img/products/A-UB401%20-%20Stylish%20Digital%20Wrist%20Monitor.png"
+  },
+  {
+    "sku": "POLAROID-HEALTHCAM-KIT",
+    "name": "Polaroid HealthCam Kit",
+    "category": "Medical",
+    "summary": "Instant photographic records with a measuring grid overlay.",
+    "description": "Instant clinical photographs with a grid overlay for recording wounds and conditions. The kit includes the camera, twin-pack grid film, a shoulder bag, a light lock and a non-contact close-up lens.",
+    "features": [
+      "Grid overlay on every print",
+      "Non-contact close-up lens",
+      "Shoulder bag and light lock included"
+    ],
+    "imageUrl": "https://www.trans-sas.com/assets/img/products/Polaroid%20HealthCam%20Kit.png"
+  },
+  {
+    "sku": "POLAROID-MACRO-5-SLR",
+    "name": "Polaroid Macro 5 SLR",
+    "category": "Medical",
+    "summary": "Instant close-up camera for clinical documentation.",
+    "description": "An instant camera for close-up clinical documentation. Contact our team for the current specification.",
+    "features": [
+      "Instant prints",
+      "Close-up clinical documentation"
+    ],
+    "imageUrl": null
+  },
+  {
+    "sku": "UNIVERSAL-CERVICAL-COLLAR",
+    "name": "Universal Cervical Collar",
+    "category": "Medical",
+    "summary": "Comfortable, easy-to-fit collar for a range of cervical injuries.",
+    "description": "An economical cervical collar that is comfortable to wear and quick to apply, for a variety of cervical injuries.",
+    "features": [
+      "Quick to apply",
+      "Comfortable fit",
+      "Economical"
+    ],
+    "imageUrl": "https://www.trans-sas.com/assets/img/products/Universal%20Cervical%20Collar.png"
+  },
+  {
+    "sku": "DRIVE-HEAVY-DUTY-SUCTION-MACHINE",
+    "name": "Drive Medical Heavy Duty Suction Machine",
+    "category": "Medical",
+    "summary": "Oil-less suction unit built for continuous operation.",
+    "description": "A heavy-duty suction machine built for continuous use. It has an anti-bacterial filter, a vacuum regulator, an anti-vibration gauge, and a collection bottle with overflow protection.",
+    "features": [
+      "Continuous operation",
+      "Oil-less pump",
+      "Anti-bacterial filter",
+      "Overflow-protected collection bottle"
+    ],
+    "imageUrl": "https://www.trans-sas.com/assets/img/products/Drive%20Medical%20Heavy%20Duty%20Suction%20Machine.png"
+  },
+  {
+    "sku": "CLOSED-INFANT-INCUBATOR",
+    "name": "Closed Infant Incubator",
+    "category": "Medical",
+    "summary": "Stationary incubator for standard and intermediate infant care.",
+    "description": "A stationary closed incubator for standard and intermediate infant care, with simple controls and easy access to the patient.",
+    "features": [
+      "Standard and intermediate care",
+      "Simple operation",
+      "Easy patient access"
+    ],
+    "imageUrl": "https://www.trans-sas.com/assets/img/products/Closed%20infant%20incubator.png"
+  },
+  {
+    "sku": "MICROCOMPUTER-ANESTHESIA-MACHINE",
+    "name": "Microcomputer Anesthesia Machine",
+    "category": "Medical",
+    "summary": "Anaesthesia delivery with integrated monitoring and records.",
+    "description": "An anaesthesia workstation that brings monitoring, anaesthesia delivery and care-process records into one system, with the option to connect to a hospital server.",
+    "features": [
+      "Integrated monitoring",
+      "Care-process records",
+      "Server connectivity"
+    ],
+    "imageUrl": "https://www.trans-sas.com/assets/img/products/Microcomputer%20Anesthesia%20Machine.png"
+  },
+  {
+    "sku": "INFRARED-FOOT-MASSAGER",
+    "name": "Infrared Circulation Foot Massager",
+    "category": "Medical",
+    "summary": "High-frequency foot massage with adjustable infrared heat.",
+    "description": "A therapeutic foot massager that combines high-frequency massage with adjustable infrared heat and eight natural magnets to support blood circulation.",
+    "features": [
+      "High-frequency massage",
+      "Adjustable infrared heat",
+      "8 natural magnets"
+    ],
+    "imageUrl": "https://www.trans-sas.com/assets/img/products/Infrared%20Therapeutic%20Blood%20Circulation%20Foot%20Massager.png"
+  },
+  {
+    "sku": "MASSAGE-CHAIR",
+    "name": "Massage Chair",
+    "category": "Medical",
+    "summary": "3D massage mechanism with air massage and heated heads.",
+    "description": "A full massage chair with a 3D mechanism, air massage, three massage and stretching techniques, and heated massage heads.",
+    "features": [
+      "3D massage mechanism",
+      "Air massage",
+      "3 massage and stretch techniques",
+      "Heated massage heads"
+    ],
+    "imageUrl": "https://www.trans-sas.com/assets/img/products/Massage%20Chair.png"
+  }
+]

@@ -241,3 +241,24 @@ export async function makeImagePrimary(req: Request, itemId: string, imageId: st
   });
   return listImages(itemId);
 }
+
+/**
+ * Every image URL per item, first image first, in one storage call. For the public website
+ * catalogue: pass the items with all their images (ordered by position) included.
+ */
+export async function allImageUrls(
+  items: { id: string; images: { file: Pick<FileRecord, 'bucket' | 'path' | 'deletedAt'> }[] }[],
+) {
+  const urls = await urlsFor(items.flatMap((item) => item.images.map((i) => i.file as FileRecord)));
+  const byItem = new Map<string, string[]>();
+  for (const item of items) {
+    byItem.set(
+      item.id,
+      item.images.flatMap(({ file }) => {
+        const url = file.deletedAt ? undefined : urls.get(`${file.bucket}:${file.path}`);
+        return url ? [url] : [];
+      }),
+    );
+  }
+  return byItem;
+}

@@ -54,6 +54,7 @@ function toFormValues(item?: StockItemDto | null): StockItemInput {
     trackingMode: item?.trackingMode ?? 'none',
     warrantyMonths: item?.warrantyMonths ?? '',
     tracksExpiry: item?.tracksExpiry ?? false,
+    showOnWebsite: item?.showOnWebsite ?? false,
   };
 }
 
@@ -109,6 +110,7 @@ export function StockItemFormDialog({ open, onOpenChange, item }: Props) {
       trackingMode: values.trackingMode,
       warrantyMonths: values.warrantyMonths ?? null,
       tracksExpiry: values.tracksExpiry ?? false,
+      showOnWebsite: values.showOnWebsite ?? false,
     };
     const preview = stagedImages[0] ? URL.createObjectURL(stagedImages[0]) : null;
     if (preview) setTimeout(() => URL.revokeObjectURL(preview), 60_000);
@@ -321,6 +323,28 @@ export function StockItemFormDialog({ open, onOpenChange, item }: Props) {
                         onCheckedChange={(v) => field.onChange(v === true)}
                       />
                       Track expiry dates
+                    </label>
+                  )}
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <Controller
+                  control={form.control}
+                  name="showOnWebsite"
+                  render={({ field }) => (
+                    <label className="flex items-start gap-2 text-sm text-ink">
+                      <Checkbox
+                        className="mt-0.5"
+                        checked={Boolean(field.value)}
+                        onCheckedChange={(v) => field.onChange(v === true)}
+                      />
+                      <span>
+                        Show on the website
+                        <span className="block text-xs text-ink-muted">
+                          Customers can see this item and request it. Prices are never shown; requests arrive as draft
+                          proformas.
+                        </span>
+                      </span>
                     </label>
                   )}
                 />

@@ -82,6 +82,8 @@ export const stockItemInputSchema = z.object({
     .union([z.coerce.number().int().min(0).max(240), z.literal('').transform(() => null), z.null()])
     .optional(),
   tracksExpiry: z.boolean().default(false),
+  /** List the item on the public website. Omitted on update = leave unchanged. */
+  showOnWebsite: z.boolean().optional(),
 });
 export type StockItemInput = z.input<typeof stockItemInputSchema>;
 
@@ -121,6 +123,8 @@ export interface StockItemDto {
   warrantyMonths: number | null;
   tracksExpiry: boolean;
   isActive: boolean;
+  /** Listed on the public website (shown there only while active and approved). */
+  showOnWebsite: boolean;
   approvalStatus: StockApprovalStatus;
   rejectionReason: string | null;
   /** Sum of on-hand quantity across the branches visible to the requester. */

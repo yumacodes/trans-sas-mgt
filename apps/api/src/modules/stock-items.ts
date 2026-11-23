@@ -81,6 +81,7 @@ function toDto(
     warrantyMonths: item.warrantyMonths,
     tracksExpiry: item.tracksExpiry,
     isActive: item.isActive,
+    showOnWebsite: item.showOnWebsite,
     approvalStatus: item.approvalStatus,
     rejectionReason: item.rejectionReason,
     quantityOnHand: qty.toFixed(3),
@@ -351,6 +352,7 @@ const AUDITED = [
   'trackingMode',
   'warrantyMonths',
   'tracksExpiry',
+  'showOnWebsite',
 ] as const;
 
 stockItemsRouter.put('/:id', requirePermission('stock_items.update'), async (req, res) => {

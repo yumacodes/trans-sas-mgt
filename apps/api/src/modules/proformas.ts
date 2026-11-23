@@ -66,6 +66,7 @@ function toDto(p: ProformaRow): ProformaDto {
     total: decimalString(p.total),
     notes: p.notes,
     status: p.status,
+    source: p.source,
     emailedAt: p.emailedAt ? iso(p.emailedAt) : null,
     itemCount: p.items.length,
     items: p.items.map((i) => ({
@@ -77,8 +78,9 @@ function toDto(p: ProformaRow): ProformaDto {
       unitPrice: decimalString(i.unitPrice),
       amount: decimalString(i.amount),
     })),
-    preparedBy: p.createdBy.fullName.trim().split(/\s+/)[0] ?? '',
-    preparedByName: p.createdBy.fullName.trim(),
+    // A website request has no staff author until someone edits and issues it.
+    preparedBy: p.createdBy ? (p.createdBy.fullName.trim().split(/\s+/)[0] ?? '') : 'Website',
+    preparedByName: p.createdBy ? p.createdBy.fullName.trim() : 'Website request',
     createdAt: iso(p.createdAt),
     updatedAt: iso(p.updatedAt),
   };
@@ -125,6 +127,7 @@ proformasRouter.get('/', async (req, res) => {
   const and: Prisma.ProformaWhereInput[] = [optionalBranchWhere(ctx)];
   if (query.branchId) and.push({ branchId: query.branchId });
   if (query.status) and.push({ status: query.status });
+  if (query.source) and.push({ source: query.source });
   if (query.dateFrom) and.push({ issueDate: { gte: dateFromIso(query.dateFrom) } });
   if (query.dateTo) and.push({ issueDate: { lte: dateFromIso(query.dateTo) } });
   if (query.q) {
@@ -337,6 +340,8 @@ proformasRouter.put('/:id', requirePermission('proformas.manage'), async (req, r
         taxAmount: totals.taxAmount,
         total: totals.total,
         notes: input.notes ?? null,
+        // The first person to review a website request becomes the one who prepared it.
+        ...(before.createdById ? {} : { createdById: ctx.profileId }),
       },
     });
     if (claimed.count === 0) {

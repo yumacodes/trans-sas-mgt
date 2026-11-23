@@ -209,6 +209,7 @@ async function purchasePdf(row: PurchaseRow) {
     number: p.number,
     issueDate: p.purchaseDate,
     currency: p.currency,
+    source: 'staff',
     clientId: null,
     customerName: row.supplier.name,
     customerAddress: row.supplier.address,

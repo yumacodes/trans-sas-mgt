@@ -38,6 +38,7 @@ import { stockBalancesRouter } from './modules/stock-balances';
 import { stockCategoriesRouter } from './modules/stock-categories';
 import { stockItemsRouter } from './modules/stock-items';
 import { usersRouter } from './modules/users';
+import { websiteRouter } from './modules/website';
 
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9_-]{8,64}$/;
 
@@ -63,16 +64,29 @@ export function createApp() {
   );
   // The API serves JSON only, so a strict CSP and no framing are safe.
   app.use(helmet({ contentSecurityPolicy: { directives: { defaultSrc: ["'none'"] } } }));
+  // The dashboard may call everything. The public website may call only /api/v1/public,
+  // and never with credentials.
+  const publicPath = '/api/v1/public/';
   app.use(
-    cors({
-      origin: config.corsOrigins,
-      allowedHeaders: ['Authorization', 'Content-Type', 'Idempotency-Key', 'X-Request-Id'],
-      exposedHeaders: ['X-Request-Id', 'Idempotent-Replayed', 'Content-Disposition'],
-      maxAge: 600,
+    cors((req, callback) => {
+      const origin = req.header('Origin');
+      const isPublic = req.url.startsWith(publicPath);
+      const allowed =
+        !origin || config.corsOrigins.includes(origin) || (isPublic && config.websiteOrigins.includes(origin));
+      callback(null, {
+        origin: allowed,
+        allowedHeaders: isPublic
+          ? ['Content-Type', 'X-Request-Id']
+          : ['Authorization', 'Content-Type', 'Idempotency-Key', 'X-Request-Id'],
+        exposedHeaders: ['X-Request-Id', 'Idempotent-Replayed', 'Content-Disposition'],
+        maxAge: 600,
+      });
     }),
   );
-  // Spreadsheet imports send up to 1,000 rows at once.
-  app.use(express.json({ limit: '5mb' }));
+  // Spreadsheet imports send up to 1,000 rows at once; the public website's requests are small.
+  const largeJson = express.json({ limit: '5mb' });
+  const smallJson = express.json({ limit: '32kb' });
+  app.use((req, res, next) => (req.url.startsWith(publicPath) ? smallJson : largeJson)(req, res, next));
 
   app.get('/health', (_req, res) => {
     res.json({ status: 'ok' });
@@ -92,6 +106,8 @@ export function createApp() {
   // Public sign-in routes; everything after `authenticate` requires a valid session.
   api.use('/auth', authRouter);
   api.use('/jobs', jobsRouter);
+  // The public website: catalogue and product requests, no session.
+  api.use('/public', websiteRouter);
   api.use(authenticate);
   api.use('/me', meRouter);
   // Accounts still on the default password can reach nothing else until they choose their own.

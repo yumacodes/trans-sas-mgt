@@ -30,6 +30,17 @@ Trust boundaries:
 
 Users holding `branches.all_access` see every branch. Everyone else sees only the branches they are assigned to.
 
+### Public website
+
+The company website ([trans-sas-main](../trans-sas-main)) talks to the API through `/api/v1/public` only, with no session:
+
+| Route | What it does |
+| --- | --- |
+| `GET /public/products`, `GET /public/products/:sku` | Stock items marked **Show on website** that are active and approved. No prices, costs or stock. |
+| `POST /public/requests` | A customer's product request. Becomes a draft proforma (`source = website`, no staff author) priced from Stock Items, and notifies `proformas.manage` holders. |
+
+Only origins listed in `WEBSITE_ORIGINS` may call these routes from a browser, and they may call nothing else. A request carries a one-time `submissionKey`, so a resend returns the original reference instead of a second proforma.
+
 ## Requirements
 
 - Node.js 22 or newer

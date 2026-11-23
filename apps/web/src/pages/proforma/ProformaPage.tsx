@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { FileDown, Mail, Pencil, Plus } from 'lucide-react';
-import { PROFORMA_STATUSES, PROFORMA_STATUS_LABELS, type ProformaDto } from '@tsm/shared';
+import { PROFORMA_SOURCES, PROFORMA_SOURCE_LABELS, PROFORMA_STATUSES, PROFORMA_STATUS_LABELS, type ProformaDto } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
 import { useOpenParam } from '@/components/app/useOpenParam';
 import { BranchFilter } from '@/components/app/BranchControls';
@@ -22,7 +22,7 @@ import { useDeleteRecord } from '@/components/app/useDeleteRecord';
 
 export default function ProformaPage() {
   const { can } = useAuth();
-  const state = useTableState(['status', 'branchId', 'dateFrom', 'dateTo'], { sort: 'issueDate:desc' });
+  const state = useTableState(['status', 'source', 'branchId', 'dateFrom', 'dateTo'], { sort: 'issueDate:desc' });
   const rowPdf = usePdfActions('/proformas');
   const del = useDeleteRecord<ProformaDto>({
     path: '/proformas',
@@ -44,7 +44,16 @@ export default function ProformaPage() {
       id: 'number',
       header: 'Invoice No.',
       meta: { sortKey: 'number' },
-      cell: ({ row }) => <CellLink onClick={() => setViewId(row.original.id)}>{row.original.number}</CellLink>,
+      cell: ({ row }) => (
+        <span className="inline-flex flex-wrap items-center gap-2">
+          <CellLink onClick={() => setViewId(row.original.id)}>{row.original.number}</CellLink>
+          {row.original.source === 'website' && (
+            <Badge tone="info" title="Sent by a customer from the website">
+              Website
+            </Badge>
+          )}
+        </span>
+      ),
     },
     {
       id: 'issueDate',
@@ -157,6 +166,12 @@ export default function ProformaPage() {
               value={state.filters.status}
               onChange={(v) => state.setFilter('status', v)}
               options={PROFORMA_STATUSES.map((s) => ({ value: s, label: PROFORMA_STATUS_LABELS[s] }))}
+            />
+            <FilterSelect
+              label="Source"
+              value={state.filters.source}
+              onChange={(v) => state.setFilter('source', v)}
+              options={PROFORMA_SOURCES.map((s) => ({ value: s, label: PROFORMA_SOURCE_LABELS[s] }))}
             />
             <label className="flex items-center gap-2 text-xs text-ink-muted">
               From

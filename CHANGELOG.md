@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-11-19
+
+### What you need to do
+
+1. **Set prices on the website products.** The 24 products from the website (item codes like `CLOSED-INFANT-INCUBATOR`) are in Stock Items with a selling price of 0, because the old website listed none. A website request's proforma uses these prices, so set them in Stock Items.
+2. **Choose which branch gets website requests.** For now they go to the oldest active branch, which is "[DEMO] Kumasi Branch". Renaming the branches is enough if that branch is the right one.
+3. **Deploy the API with `WEBSITE_ORIGINS`.** In the `trans-sas-mgt-api` Vercel project, add `WEBSITE_ORIGINS` (Production) with the website's address, for example `https://www.trans-sas.com`, then redeploy. Until then the live website can't reach the system.
+4. **Delete the test request.** Proforma PF-2026-00005 ("[TEST] Website connection check") was sent while testing. It is a draft, so Delete in its three-dots menu removes it.
+
+### What changed
+
+- **The public website is connected.** It lists the stock items marked **Show on website** (only while active and approved), with their photos. It never shows prices, costs or stock levels.
+- **A customer's request from the website becomes a draft proforma**, priced from Stock Items' selling prices on the server, with the customer's details, delivery choice and note. Everyone who can manage proformas (in that branch, or across all branches) gets a notification that opens it. The proforma is marked **Website** in the Proforma list, and a new Source filter shows only website requests. "Prepared by" reads "Website" until someone edits it; the first person to save it becomes its preparer.
+- **Stock items have a "Show on the website" switch** in the item form, and a Website badge in the list. Existing items stay hidden until switched on.
+- **Resending a request can't duplicate it**: each form carries a one-time key and a resend returns the same reference. Requests are limited to 10 an hour from one address and 50 products each.
+- **New command:** `pnpm --filter api website:import` adds the website's product list (`apps/api/scripts/data/website-catalogue.json`) to Stock Items with photos. It skips item codes that already exist, so it is safe to run again.
+- Database change `20261119000000_website_requests` is applied.
+
 ## 2026-11-18
 
 - **Sidebar tabs open instantly.** After sign-in the app quietly downloads every page you can open and the first page of its table, one at a time while the browser is idle. Hovering or focusing a sidebar link refreshes that page's data before you click. The API now runs in Vercel's Paris region (`cdg1`), next to the Supabase database in `eu-west-3`, which cuts every request's round trip.

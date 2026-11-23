@@ -15,7 +15,8 @@
     "bootstrap:admin": "dotenv -e ../../.env -- tsx scripts/bootstrap-admin.ts",
     "stock:reconcile": "dotenv -e ../../.env -- tsx scripts/reconcile-stock.ts",
     "jobs:daily": "dotenv -e ../../.env -- tsx scripts/run-daily-jobs.ts",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "website:import": "dotenv -e ../../.env -- tsx scripts/import-website-catalogue.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.2.1",

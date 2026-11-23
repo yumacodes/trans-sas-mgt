@@ -22,6 +22,14 @@ export const PROFORMA_STATUS_LABELS: Record<ProformaStatus, string> = {
   expired: 'Expired',
 };
 
+/** Where a proforma came from: made by staff, or a customer's request from the website. */
+export const PROFORMA_SOURCES = ['staff', 'website'] as const;
+export type ProformaSource = (typeof PROFORMA_SOURCES)[number];
+export const PROFORMA_SOURCE_LABELS: Record<ProformaSource, string> = {
+  staff: 'Staff',
+  website: 'Website request',
+};
+
 /** Currencies a proforma can be raised in. Amounts are never summed across currencies. */
 export const PROFORMA_CURRENCIES = ['USD', 'GHS', 'GBP'] as const;
 export type ProformaCurrency = (typeof PROFORMA_CURRENCIES)[number];
@@ -74,6 +82,7 @@ export const proformaStatusSchema = z.object({ status: z.enum(PROFORMA_STATUSES)
 export const proformaListQuerySchema = listQuerySchema.extend({
   branchId: uuid.optional(),
   status: z.enum(PROFORMA_STATUSES).optional(),
+  source: z.enum(PROFORMA_SOURCES).optional(),
   dateFrom: isoDate.optional(),
   dateTo: isoDate.optional(),
 });
@@ -155,10 +164,11 @@ export interface ProformaDto {
   total: string;
   notes: string | null;
   status: ProformaStatus;
+  source: ProformaSource;
   emailedAt: string | null;
   itemCount: number;
   items: ProformaItemDto[];
-  /** First name of the person who prepared it. */
+  /** First name of the person who prepared it ("Website" for a website request). */
   preparedBy: string;
   /** Full name of the person who prepared it, printed on the PDF. */
   preparedByName: string;

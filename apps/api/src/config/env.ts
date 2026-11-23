@@ -36,6 +36,11 @@ const envSchema = z
 
     /** Comma-separated list of browser origins allowed to call the API. */
     CORS_ORIGINS: z.string().default('http://localhost:5173'),
+    /**
+     * Comma-separated origins of the public website (trans-sas-main). They may call the
+     * /public routes only: the catalogue and product requests. Empty = website disabled.
+     */
+    WEBSITE_ORIGINS: z.string().default(''),
     /** Public URL of the web app, used for password-reset redirects. */
     APP_URL: z.string().url().default('http://localhost:5173'),
     /** Number of reverse proxies in front of the API (for rate limiting by client IP). */
@@ -65,6 +70,9 @@ const envSchema = z
     SUPABASE_URL: new URL(env.SUPABASE_URL).origin,
     corsOrigins: env.CORS_ORIGINS.split(',')
       .map((o) => o.trim())
+      .filter(Boolean),
+    websiteOrigins: env.WEBSITE_ORIGINS.split(',')
+      .map((o) => o.trim().replace(/\/$/, ''))
       .filter(Boolean),
     jwtIssuer: `${new URL(env.SUPABASE_URL).origin}/auth/v1`,
     smtpSecure: env.SMTP_SECURE ? env.SMTP_SECURE === 'true' : env.SMTP_PORT === 465,

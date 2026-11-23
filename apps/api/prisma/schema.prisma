@@ -425,6 +425,8 @@ model StockItem {
   warrantyMonths Int?
   tracksExpiry   Boolean      @default(false)
   isActive       Boolean      @default(true)
+  /// Listed in the public website catalogue (only while active and approved). Off by default.
+  showOnWebsite  Boolean      @default(false)
   /// A new item from someone who can't approve stays pending and can't go on documents.
   approvalStatus StockApproval @default(approved)
   approvedById   String?      @db.Uuid
@@ -449,6 +451,7 @@ model StockItem {
   @@index([categoryId])
   @@index([isActive])
   @@index([approvalStatus])
+  @@index([showOnWebsite])
   @@index([name])
   @@index([name(ops: raw("gin_trgm_ops"))], map: "stock_items_name_trgm", type: Gin)
   @@index([sku(ops: raw("gin_trgm_ops"))], map: "stock_items_sku_trgm", type: Gin)
@@ -619,6 +622,12 @@ model MessageRecipient {
 
 // ───────────────────────────── Proformas ─────────────────────────────
 
+/// Who raised a proforma: a staff member in the app, or a customer's request from the website.
+enum ProformaSource {
+  staff
+  website
+}
+
 enum ProformaStatus {
   draft
   issued
@@ -632,6 +641,9 @@ enum ProformaStatus {
 /// record is edited later; `clientId` links it back to the directory when one was chosen.
 /// Totals are stored (calculated server-side with decimal arithmetic) so reports and the
 /// PDF always agree with what was issued.
+/// A website request arrives as a draft with `source = website` and no `createdById`: no staff
+/// member prepared it. `submissionKey` is the browser's one-time key, so a resent form can't
+/// create a second proforma.
 model Proforma {
   id              String         @id @default(uuid()) @db.Uuid
   number          String         @unique
@@ -651,13 +663,15 @@ model Proforma {
   notes           String?
   status          ProformaStatus @default(draft)
   emailedAt       DateTime?      @db.Timestamptz(6)
+  source          ProformaSource @default(staff)
+  submissionKey   String?        @unique
   branchId        String?        @db.Uuid
-  createdById     String         @db.Uuid
+  createdById     String?        @db.Uuid
   createdAt       DateTime       @default(now()) @db.Timestamptz(6)
   updatedAt       DateTime       @updatedAt @db.Timestamptz(6)
 
   client    Client?        @relation(fields: [clientId], references: [id], onDelete: Restrict)
-  createdBy UserProfile    @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  createdBy UserProfile?   @relation(fields: [createdById], references: [id], onDelete: Restrict)
   items     ProformaItem[]
   branch    Branch?        @relation(fields: [branchId], references: [id], onDelete: Restrict)
   sales     Sale[]
@@ -665,6 +679,7 @@ model Proforma {
   @@index([branchId])
   @@index([issueDate])
   @@index([status])
+  @@index([source])
   @@index([clientId])
   @@index([customerName(ops: raw("gin_trgm_ops"))], map: "proformas_customer_trgm", type: Gin)
   @@index([number(ops: raw("gin_trgm_ops"))], map: "proformas_number_trgm", type: Gin)

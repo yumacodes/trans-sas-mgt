@@ -206,6 +206,7 @@ async function salePdf(sale: SaleDto) {
     vatRate: '0',
     vatAmount: '0.00',
     status: 'issued',
+    source: 'staff',
     emailedAt: null,
     preparedByName: sale.preparedBy,
   };

@@ -133,7 +133,14 @@ export default function StockItemsPage() {
       meta: { sortKey: 'name' },
       cell: ({ row }) => (
         <div className="min-w-0">
-          <div className="font-medium">{row.original.name}</div>
+          <div className="flex items-center gap-2 font-medium">
+            {row.original.name}
+            {row.original.showOnWebsite && (
+              <Badge tone="info" title="Listed on the website">
+                Website
+              </Badge>
+            )}
+          </div>
           <div className="truncate text-xs text-ink-subtle">
             {[row.original.brand, row.original.model].filter(Boolean).join(' · ') || '—'}
           </div>
