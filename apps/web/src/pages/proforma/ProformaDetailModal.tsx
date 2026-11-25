@@ -23,7 +23,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { NativeSelect } from '@/components/ui/native-select';
 import { Textarea } from '@/components/ui/textarea';
-import { api, errorMessage, printFile } from '@/lib/api';
+import { api, errorMessage } from '@/lib/api';
+import { printDocument } from '@/components/app/printDocument';
 import { formatDate, formatDateTime, formatMoney, formatQuantity } from '@/lib/format';
 import { patchRecord } from '@/lib/optimistic';
 import { qk } from '@/lib/queryKeys';
@@ -191,7 +192,7 @@ export function ProformaDetailModal({ proformaId, onOpenChange, onEdit, initialT
     if (!p) return;
     setPrinting(true);
     try {
-      await printFile(`/proformas/${p.id}/pdf`);
+      await printDocument({ path: `/proformas/${p.id}/pdf`, ownerType: 'proforma', ownerId: p.id, label: p.number });
     } catch (error) {
       reportFailure(errorMessage(error));
     } finally {

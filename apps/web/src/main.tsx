@@ -5,6 +5,7 @@ import { RouterProvider } from 'react-router';
 import { AuthProvider } from '@/auth/AuthProvider';
 import { FullScreenLoader } from '@/components/app/FullScreenLoader';
 import { OperationFeedbackProvider } from '@/components/app/OperationFeedback';
+import { PrintChoiceHost } from '@/components/app/printDocument';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { ApiError } from '@/lib/api';
 import { supabaseConfigured } from '@/lib/supabase';
@@ -37,6 +38,7 @@ createRoot(document.getElementById('root')!).render(
               <Suspense fallback={<FullScreenLoader />}>
                 <RouterProvider router={router} />
               </Suspense>
+              <PrintChoiceHost />
             </OperationFeedbackProvider>
           </TooltipProvider>
         </AuthProvider>

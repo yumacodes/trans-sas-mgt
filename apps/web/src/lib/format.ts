@@ -96,3 +96,7 @@ export function formatLongDate(date = new Date()) {
   const rest = date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
   return `${weekday} · ${rest}`;
 }
+
+/** File size for people: "240 KB", "3.4 MB". */
+export const formatBytes = (b: number) =>
+  b >= 1024 * 1024 ? `${(b / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`;

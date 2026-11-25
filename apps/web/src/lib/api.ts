@@ -202,8 +202,18 @@ async function fetchFile(path: string): Promise<Response> {
  * framed PDF get it in a new tab instead, where it can be printed from the viewer.
  */
 export async function printFile(path: string): Promise<void> {
+  printBlob(await fetchPdfBlob(path));
+}
+
+/** Fetches a record's PDF with the signed-in user's session. */
+export async function fetchPdfBlob(path: string): Promise<Blob> {
   const res = await fetchFile(path);
-  const url = URL.createObjectURL(new Blob([await res.blob()], { type: 'application/pdf' }));
+  return new Blob([await res.blob()], { type: 'application/pdf' });
+}
+
+/** Opens the browser's print dialog for a PDF, from a hidden frame. */
+export function printBlob(blob: Blob): void {
+  const url = URL.createObjectURL(blob);
   document.querySelector('iframe[data-print-frame]')?.remove();
   const frame = document.createElement('iframe');
   frame.dataset.printFrame = '';

@@ -8,11 +8,11 @@ import { useOperation } from '@/components/app/OperationFeedback';
 import { EmptyState, ErrorState } from '@/components/app/States';
 import { Button } from '@/components/ui/button';
 import { api, errorMessage } from '@/lib/api';
-import { formatDateTime } from '@/lib/format';
+import { formatDateTime, formatBytes } from '@/lib/format';
 import { optimisticUpdate, pendingId, isPendingId } from '@/lib/optimistic';
 
 const ACCEPT = 'application/pdf,image/png,image/jpeg,image/webp';
-const size = (b: number) => (b >= 1024 * 1024 ? `${(b / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`);
+const size = formatBytes;
 
 /** Supporting files on a record: award letters, supplier invoices, proof of delivery. */
 export function AttachmentsPanel({ ownerType, ownerId, canManage }: { ownerType: AttachmentOwnerType; ownerId: string; canManage: boolean }) {
