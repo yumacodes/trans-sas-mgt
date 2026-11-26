@@ -39,6 +39,7 @@ import { stockCategoriesRouter } from './modules/stock-categories';
 import { stockItemsRouter } from './modules/stock-items';
 import { usersRouter } from './modules/users';
 import { websiteRouter } from './modules/website';
+import { socialRouter } from './modules/social';
 
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9_-]{8,64}$/;
 
@@ -133,6 +134,7 @@ export function createApp() {
   api.use('/waybills', waybillsRouter);
   api.use('/payments', paymentsRouter);
   api.use('/messages', messagesRouter);
+  api.use('/social', socialRouter);
   api.use('/registrations', registrationsRouter);
   api.use('/stock-categories', stockCategoriesRouter);
   api.use('/stock-items', stockItemsRouter);

@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-11-26
+
+### What you need to do
+
+1. **Give your social media workers the Social Media role** under Admin > Users. It shows only the Social Media tab: no sales, clients or finance.
+2. **Connect YouTube and Meta** if you want figures pulled automatically: add `YOUTUBE_API_KEY` and `META_ACCESS_TOKEN` to the `trans-sas-mgt-api` project in Vercel and redeploy. The README's "Social media" section explains how to get each one for free. Until then, figures can be recorded by hand.
+3. **Add your accounts** in Social Media > Add account.
+
+### What changed
+
+- **New Social Media tab** (under Communication).
+  - **Overview:** followers across all accounts and their change, posts published, likes and views for the last 7, 30 or 90 days or 12 months; a followers-over-time chart with one line per account; the most liked recent posts.
+  - **Accounts:** each account's followers, change over 7 and 30 days, posts tracked and when the figures are from. Record figures, Sync now, History, Edit, Archive.
+  - **Posts & videos:** every tracked post with its views, likes, comments and shares, sortable and filterable by platform and account. Open one to see its figures charted day by day.
+- **Automatic pulls** for YouTube, Facebook Pages and Instagram every morning (with the other daily jobs) and on **Sync now**, including each account's 50 newest posts. A failed pull says why (for example "the Meta access token has expired") on the account.
+- **By hand** for TikTok, X and LinkedIn, or any account: record the figures for a day; recording the same day again replaces it, and filling in an old day never overwrites today's.
+- New permissions `social.read` and `social.manage`, and a **Social Media** role holding only those. Admins have both.
+- Database change `20261126000000_social_media` adds the social media tables.
+
 ## 2026-11-19
 
 ### What you need to do

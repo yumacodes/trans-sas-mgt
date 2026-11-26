@@ -61,6 +61,16 @@ const envSchema = z
     MAIL_FROM_NAME: optionalEnv,
     MAIL_REPLY_TO: optionalEmailEnv,
 
+    /**
+     * Social media figures. Both optional: without a key the platform's accounts stay on
+     * manual entry and the page explains what to set up.
+     * YOUTUBE_API_KEY: a Google Cloud API key with the YouTube Data API v3 enabled.
+     * META_ACCESS_TOKEN: a long-lived Page or system-user token that can read the Facebook
+     * Page and its linked Instagram business account.
+     */
+    YOUTUBE_API_KEY: optionalEnv,
+    META_ACCESS_TOKEN: optionalEnv,
+
     /** Shared secret the scheduler sends to run the daily jobs. Without it they can't be triggered. */
     CRON_SECRET: optionalEnv,
   })

@@ -20,3 +20,4 @@ export * from './schemas/notification';
 export * from './schemas/purchase';
 export * from './schemas/report';
 export * from './schemas/website';
+export * from './schemas/social';

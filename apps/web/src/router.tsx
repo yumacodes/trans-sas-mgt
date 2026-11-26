@@ -35,6 +35,7 @@ const AuditLogPage = lazy(() => import('@/pages/admin/AuditLogPage'));
 const AccountPage = lazy(() => import('@/pages/account/AccountPage'));
 
 const ReportPage = lazy(() => import('@/pages/reports/ReportPage'));
+const SocialPage = lazy(() => import('@/pages/social/SocialPage'));
 
 const h = (title: string, section?: string): RouteHandle => ({ title, section });
 
@@ -44,6 +45,7 @@ function HomeRoute() {
   if (can('dashboard.view')) return <DashboardPage />;
   if (can('clients.read')) return <Navigate to="/clients" replace />;
   if (can('stock_items.read')) return <Navigate to="/stock-items" replace />;
+  if (can('social.read')) return <Navigate to="/social" replace />;
   return <Navigate to="/account" replace />;
 }
 
@@ -125,6 +127,11 @@ export const routes: RouteObject[] = [
             handle: h('Communication', 'Communication'),
           },
         ],
+      },
+      {
+        path: 'social',
+        element: <RequirePermission anyOf={['social.read']} />,
+        children: [{ index: true, element: <SocialPage />, handle: h('Social Media', 'Communication') }],
       },
       {
         path: 'stock-items',

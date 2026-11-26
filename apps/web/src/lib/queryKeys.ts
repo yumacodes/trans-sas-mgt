@@ -30,4 +30,9 @@ export const qk = {
   messages: ['messages'] as const,
   messageAudience: ['messages', 'audience'] as const,
   emailConfig: ['messages', 'email-config'] as const,
+  social: ['social'] as const,
+  socialAccounts: ['social', 'accounts'] as const,
+  socialPosts: ['social', 'posts'] as const,
+  socialOverview: ['social', 'overview'] as const,
+  socialIntegrations: ['social', 'integrations'] as const,
 };

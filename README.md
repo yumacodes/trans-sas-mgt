@@ -41,6 +41,22 @@ The company website ([trans-sas-main](../trans-sas-main)) talks to the API throu
 
 Only origins listed in `WEBSITE_ORIGINS` may call these routes from a browser, and they may call nothing else. A request carries a one-time `submissionKey`, so a resend returns the original reference instead of a second proforma.
 
+### Social media
+
+The Social Media tab tracks the company's accounts, their posts and videos, and their figures over time (one snapshot per account and per post per day). Staff with the **Social Media** role see only this tab.
+
+| Platform | How figures arrive |
+| --- | --- |
+| YouTube | Pulled every morning and on **Sync now**, with `YOUTUBE_API_KEY` |
+| Facebook Page, Instagram (business or creator) | Pulled the same way, with `META_ACCESS_TOKEN` |
+| TikTok, X, LinkedIn | Recorded by hand (no free API for these figures) |
+
+**YouTube key (free):** Google Cloud console → create a project → APIs & Services → Library → enable *YouTube Data API v3* → Credentials → Create API key → restrict it to that API. Its free quota (10,000 units a day) is far more than a daily pull uses.
+
+**Meta token (free):** the Instagram account must be a Business or Creator account linked to the Facebook Page. At developers.facebook.com create a *Business* app, add your Page, and in Business Settings → System users create a system user with access to the Page, then generate a token with `pages_show_list`, `pages_read_engagement`, `instagram_basic` and `instagram_manage_insights`. System-user tokens don't expire; a normal user token lasts 60 days and must be renewed.
+
+Set both on the `trans-sas-mgt-api` project in Vercel (and in `.env` locally), then redeploy. Without them, those accounts show a clear "not connected" message and can still be recorded by hand.
+
 ## Requirements
 
 - Node.js 22 or newer

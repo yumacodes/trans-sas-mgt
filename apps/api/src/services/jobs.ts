@@ -8,6 +8,7 @@ import { purgeExpiredIdempotencyRecords } from '../middleware/idempotency';
 import { reconcileBalances } from './inventory';
 import { notifyLowStock, notifyPermission, usersWithPermission } from './notifications';
 import { saleBalance } from '../modules/sales';
+import { syncAllAccounts } from './social/figures';
 
 /**
  * Daily housekeeping, run by the scheduler once a day. Each job is independent: one
@@ -200,6 +201,7 @@ export async function runDailyJobs(now = new Date()) {
     ['stockMismatches', () => stockReconciliation(today)],
     ['cleanedUp', () => cleanup(today)],
     ['weeklySummaryEmails', () => weeklySummary(today)],
+    ['socialMediaAccountsPulled', () => syncAllAccounts()],
   ];
   const results: Record<string, number | string> = {};
   for (const [name, job] of jobs) {

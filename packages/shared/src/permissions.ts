@@ -16,6 +16,7 @@ export const PERMISSION_GROUPS = {
   finance: { label: 'Finance' },
   reports: { label: 'Reports' },
   communication: { label: 'Communication' },
+  social: { label: 'Social Media' },
   admin: { label: 'Administration' },
 } as const;
 
@@ -76,6 +77,12 @@ export const PERMISSION_DEFINITIONS = {
   'messages.read': { group: 'communication', description: 'View messages sent to clients and staff' },
   'messages.send': { group: 'communication', description: 'Send messages to clients and staff' },
 
+  'social.read': { group: 'social', description: 'View social media accounts, posts and figures' },
+  'social.manage': {
+    group: 'social',
+    description: 'Add social media accounts and posts, record figures and pull them from the platforms',
+  },
+
   'reports.view': { group: 'reports', description: 'View operational reports' },
   'reports.financial': { group: 'reports', description: 'View financial reports' },
 
@@ -103,6 +110,7 @@ export const SYSTEM_ROLES = {
   admin: 'admin',
   accountant: 'accountant',
   support: 'support',
+  socialMedia: 'social_media',
 } as const;
 
 export type SystemRole = (typeof SYSTEM_ROLES)[keyof typeof SYSTEM_ROLES];
@@ -165,6 +173,11 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<
       'acceptance.manage',
       'branches.read',
     ],
+  },
+  social_media: {
+    name: 'Social Media',
+    description: 'Tracks the company social media accounts, posts and their figures. No business records.',
+    permissions: ['social.read', 'social.manage'],
   },
 };
 

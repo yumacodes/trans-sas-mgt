@@ -25,48 +25,52 @@ datasource db {
 /// Application profile for a Supabase Auth user. Supabase Auth is the source of identity
 /// and credentials; no passwords are stored here.
 model UserProfile {
-  id            String    @id @default(uuid()) @db.Uuid
-  authUserId    String    @unique @db.Uuid
-  email         String    @unique
+  id                 String    @id @default(uuid()) @db.Uuid
+  authUserId         String    @unique @db.Uuid
+  email              String    @unique
   /// Sign-in name, stored lower-case. Resolved to the email by POST /auth/login.
-  username      String    @unique
-  fullName      String
-  phone         String?
-  isActive      Boolean   @default(true)
+  username           String    @unique
+  fullName           String
+  phone              String?
+  isActive           Boolean   @default(true)
   /// True until the user replaces the default password they were given.
-  mustChangePassword Boolean @default(false)
-  deactivatedAt DateTime? @db.Timestamptz(6)
-  createdAt     DateTime  @default(now()) @db.Timestamptz(6)
-  updatedAt     DateTime  @updatedAt @db.Timestamptz(6)
+  mustChangePassword Boolean   @default(false)
+  deactivatedAt      DateTime? @db.Timestamptz(6)
+  createdAt          DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt          DateTime  @updatedAt @db.Timestamptz(6)
 
   roles    UserRole[]
   branches UserBranchAssignment[]
 
   auditEntries          AuditLog[]
-  ownedClients          Client[]               @relation("ClientAccountOwner")
-  createdClients        Client[]               @relation("ClientCreatedBy")
+  ownedClients          Client[]                @relation("ClientAccountOwner")
+  createdClients        Client[]                @relation("ClientCreatedBy")
   createdRegistrations  ClientRegistration[]
   createdStockItems     StockItem[]
   stockMovements        StockMovement[]
   uploadedFiles         FileRecord[]
   idempotencyRecords    IdempotencyRecord[]
-  passwordResetRequests PasswordResetRequest[] @relation("ResetRequestUser")
-  resolvedResetRequests PasswordResetRequest[] @relation("ResetRequestResolver")
-  managedBranches       Branch[]               @relation("BranchManager")
+  passwordResetRequests PasswordResetRequest[]  @relation("ResetRequestUser")
+  resolvedResetRequests PasswordResetRequest[]  @relation("ResetRequestResolver")
+  managedBranches       Branch[]                @relation("BranchManager")
   sentMessages          Message[]
   proformas             Proforma[]
-  recordedExpenses      Expense[]              @relation("ExpenseRecordedBy")
-  approvedExpenses      Expense[]              @relation("ExpenseApprovedBy")
+  recordedExpenses      Expense[]               @relation("ExpenseRecordedBy")
+  approvedExpenses      Expense[]               @relation("ExpenseApprovedBy")
   tenders               Tender[]
   acceptanceLetters     AcceptanceLetter[]
   sales                 Sale[]
   waybills              Waybill[]
   payments              Payment[]
-  approvedStockItems    StockItem[]            @relation("StockItemApprovedBy")
+  approvedStockItems    StockItem[]             @relation("StockItemApprovedBy")
   notifications         Notification[]
   suppliers             Supplier[]
   purchases             Purchase[]
   goodsReceipts         GoodsReceipt[]
+  socialAccounts        SocialAccount[]
+  socialPosts           SocialPost[]
+  socialAccountFigures  SocialAccountSnapshot[]
+  socialPostFigures     SocialPostSnapshot[]
 
   @@index([isActive])
   @@map("user_profiles")
@@ -237,20 +241,20 @@ model Branch {
   createdAt     DateTime @default(now()) @db.Timestamptz(6)
   updatedAt     DateTime @updatedAt @db.Timestamptz(6)
 
-  manager         UserProfile?           @relation("BranchManager", fields: [managerUserId], references: [id], onDelete: SetNull)
-  userAssignments UserBranchAssignment[]
-  clients         Client[]
-  stockBalances   StockBalance[]
-  stockMovements  StockMovement[]
-  expenses        Expense[]
-  proformas       Proforma[]
-  tenders         Tender[]
+  manager           UserProfile?           @relation("BranchManager", fields: [managerUserId], references: [id], onDelete: SetNull)
+  userAssignments   UserBranchAssignment[]
+  clients           Client[]
+  stockBalances     StockBalance[]
+  stockMovements    StockMovement[]
+  expenses          Expense[]
+  proformas         Proforma[]
+  tenders           Tender[]
   acceptanceLetters AcceptanceLetter[]
-  sales           Sale[]
-  waybills        Waybill[]
-  payments        Payment[]
-  purchases       Purchase[]
-  goodsReceipts   GoodsReceipt[]
+  sales             Sale[]
+  waybills          Waybill[]
+  payments          Payment[]
+  purchases         Purchase[]
+  goodsReceipts     GoodsReceipt[]
 
   @@index([managerUserId])
   @@map("branches")
@@ -409,32 +413,32 @@ model StockCategory {
 }
 
 model StockItem {
-  id             String       @id @default(uuid()) @db.Uuid
+  id              String        @id @default(uuid()) @db.Uuid
   /// Stored upper-cased; unique.
-  sku            String       @unique
-  name           String
-  description    String?
-  categoryId     String?      @db.Uuid
-  brand          String?
-  model          String?
-  unit           String
-  purchaseCost   Decimal?     @db.Decimal(18, 4)
-  sellingPrice   Decimal      @db.Decimal(18, 2)
-  reorderLevel   Int          @default(0)
-  trackingMode   TrackingMode @default(none)
-  warrantyMonths Int?
-  tracksExpiry   Boolean      @default(false)
-  isActive       Boolean      @default(true)
+  sku             String        @unique
+  name            String
+  description     String?
+  categoryId      String?       @db.Uuid
+  brand           String?
+  model           String?
+  unit            String
+  purchaseCost    Decimal?      @db.Decimal(18, 4)
+  sellingPrice    Decimal       @db.Decimal(18, 2)
+  reorderLevel    Int           @default(0)
+  trackingMode    TrackingMode  @default(none)
+  warrantyMonths  Int?
+  tracksExpiry    Boolean       @default(false)
+  isActive        Boolean       @default(true)
   /// Listed in the public website catalogue (only while active and approved). Off by default.
-  showOnWebsite  Boolean      @default(false)
+  showOnWebsite   Boolean       @default(false)
   /// A new item from someone who can't approve stays pending and can't go on documents.
-  approvalStatus StockApproval @default(approved)
-  approvedById   String?      @db.Uuid
-  approvedAt     DateTime?    @db.Timestamptz(6)
+  approvalStatus  StockApproval @default(approved)
+  approvedById    String?       @db.Uuid
+  approvedAt      DateTime?     @db.Timestamptz(6)
   rejectionReason String?
-  createdById    String       @db.Uuid
-  createdAt      DateTime     @default(now()) @db.Timestamptz(6)
-  updatedAt      DateTime     @updatedAt @db.Timestamptz(6)
+  createdById     String        @db.Uuid
+  createdAt       DateTime      @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime      @updatedAt @db.Timestamptz(6)
 
   category      StockCategory?   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   createdBy     UserProfile      @relation(fields: [createdById], references: [id], onDelete: Restrict)
@@ -1187,4 +1191,137 @@ model GoodsReceiptLine {
   @@index([receiptId])
   @@index([purchaseItemId])
   @@map("goods_receipt_lines")
+}
+
+// ───────────────────────────── Social media ─────────────────────────────
+
+enum SocialPlatform {
+  instagram
+  facebook
+  youtube
+  tiktok
+  x
+  linkedin
+}
+
+/// automatic: figures are pulled from the platform's API every day (and on "Sync now").
+/// manual: staff record the figures themselves.
+enum SocialSyncMode {
+  manual
+  automatic
+}
+
+enum SocialFigureSource {
+  manual
+  automatic
+}
+
+/// One of the company's social media accounts. The latest figures are copied onto the
+/// account from its newest snapshot, in the same transaction, so lists can sort by them;
+/// the snapshots are the history and the source of truth.
+model SocialAccount {
+  id            String         @id @default(uuid()) @db.Uuid
+  platform      SocialPlatform
+  /// Name on the platform, without the @, stored lower-case.
+  handle        String
+  displayName   String?
+  url           String?
+  /// The platform's own id: YouTube channel id, Instagram business account id, Facebook Page id.
+  externalId    String?
+  syncMode      SocialSyncMode @default(manual)
+  isActive      Boolean        @default(true)
+  followers     Int?
+  following     Int?
+  postCount     Int?
+  totalViews    Int?
+  figuresDay    DateTime?      @db.Date
+  lastSyncedAt  DateTime?      @db.Timestamptz(6)
+  /// Why the last automatic pull failed, in words a business user can act on. Null after a success.
+  lastSyncError String?
+  createdById   String         @db.Uuid
+  createdAt     DateTime       @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime       @updatedAt @db.Timestamptz(6)
+
+  createdBy UserProfile             @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  snapshots SocialAccountSnapshot[]
+  posts     SocialPost[]
+
+  @@unique([platform, handle])
+  @@index([isActive])
+  @@map("social_accounts")
+}
+
+/// An account's figures on one day. Recording the same day again replaces it.
+model SocialAccountSnapshot {
+  id           String             @id @default(uuid()) @db.Uuid
+  accountId    String             @db.Uuid
+  day          DateTime           @db.Date
+  followers    Int?
+  following    Int?
+  postCount    Int?
+  totalViews   Int?
+  source       SocialFigureSource
+  recordedById String?            @db.Uuid
+  createdAt    DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt    DateTime           @updatedAt @db.Timestamptz(6)
+
+  account    SocialAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  recordedBy UserProfile?  @relation(fields: [recordedById], references: [id], onDelete: SetNull)
+
+  @@unique([accountId, day])
+  @@index([day])
+  @@map("social_account_snapshots")
+}
+
+/// A post, video, reel or short on one account. Pulled ones carry the platform's id;
+/// manually added ones are tracked from their link. Latest figures are cached as on accounts.
+model SocialPost {
+  id           String    @id @default(uuid()) @db.Uuid
+  accountId    String    @db.Uuid
+  externalId   String?
+  url          String?
+  title        String
+  kind         String?
+  publishedAt  DateTime? @db.Timestamptz(6)
+  thumbnailUrl String?
+  views        Int?
+  likes        Int?
+  comments     Int?
+  shares       Int?
+  saves        Int?
+  figuresDay   DateTime? @db.Date
+  /// Null when the post was pulled from the platform.
+  createdById  String?   @db.Uuid
+  createdAt    DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt    DateTime  @updatedAt @db.Timestamptz(6)
+
+  account   SocialAccount        @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  createdBy UserProfile?         @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  snapshots SocialPostSnapshot[]
+
+  @@unique([accountId, externalId])
+  @@index([accountId, publishedAt])
+  @@index([likes])
+  @@map("social_posts")
+}
+
+model SocialPostSnapshot {
+  id           String             @id @default(uuid()) @db.Uuid
+  postId       String             @db.Uuid
+  day          DateTime           @db.Date
+  views        Int?
+  likes        Int?
+  comments     Int?
+  shares       Int?
+  saves        Int?
+  source       SocialFigureSource
+  recordedById String?            @db.Uuid
+  createdAt    DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt    DateTime           @updatedAt @db.Timestamptz(6)
+
+  post       SocialPost   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  recordedBy UserProfile? @relation(fields: [recordedById], references: [id], onDelete: SetNull)
+
+  @@unique([postId, day])
+  @@map("social_post_snapshots")
 }
