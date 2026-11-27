@@ -114,8 +114,8 @@ export function AccountFormDialog({
         },
       );
       idem.reset();
-    } catch {
-      recovery.keepNextOpen();
+    } catch (error) {
+      recovery.keepNextOpen(error, form.setError);
       onOpenChange(true);
     } finally {
       void refreshAll(queryClient);
@@ -423,8 +423,8 @@ export function PostFormDialog({
         { pending: 'Saving post…', success: post ? 'Post updated' : 'Post added' },
       );
       idem.reset();
-    } catch {
-      recovery.keepNextOpen();
+    } catch (error) {
+      recovery.keepNextOpen(error, form.setError);
       onOpenChange(true);
     } finally {
       void refreshAll(queryClient);

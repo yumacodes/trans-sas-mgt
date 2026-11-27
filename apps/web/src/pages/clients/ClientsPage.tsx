@@ -148,6 +148,7 @@ export default function ClientsPage() {
         ]}
       />
       <DataTable
+        exportAll={{ filename: 'clients', path: '/clients', query: state.query }}
         columns={columns}
         result={result}
         state={state}

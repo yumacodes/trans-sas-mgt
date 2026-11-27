@@ -54,6 +54,7 @@ export function SaleDetailModal({ saleId, onOpenChange, onEdit }: Props) {
     if (!s) return;
     try {
       await run(() => api.post<SaleDto>(`/sales/${s.id}/confirm`), {
+        success: (sale) => `Sale ${sale.number} confirmed`,
         optimistic: () => patchRecord<SaleDto>(queryClient, qk.sales, s.id, { status: 'confirmed' }),
       });
       refresh();

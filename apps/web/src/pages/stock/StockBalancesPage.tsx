@@ -4,7 +4,7 @@ import type { StockBalanceDto, StockItemDto } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
 import { ImportDialog } from '@/components/app/ImportDialog';
 import { CellLink, DataTable, FilterSelect } from '@/components/app/DataTable';
-import { Upload } from 'lucide-react';
+import { ArrowLeftRight, SlidersHorizontal, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/app/PageHeader';
 import { LowStockBadge } from '@/components/app/StatusBadges';
@@ -14,6 +14,16 @@ import { useBranchOptions, useListQuery, useStockCategories } from '@/lib/querie
 import { qk } from '@/lib/queryKeys';
 import { StockItemDetailModal } from './StockItemDetailModal';
 import { StockItemFormDialog } from './StockItemFormDialog';
+import { StockAdjustDialog } from './StockAdjustDialog';
+import { StockTransferDialog } from './StockTransferDialog';
+import type { StockTarget } from './stockOperations';
+
+const targetOf = (b: StockBalanceDto): StockTarget => ({
+  itemId: b.item.id,
+  itemName: b.item.name,
+  unit: b.item.unit,
+  branchId: b.branch.id,
+});
 
 export default function StockBalancesPage() {
   const { can } = useAuth();
@@ -24,11 +34,23 @@ export default function StockBalancesPage() {
   const categories = useStockCategories();
   const [viewItemId, setViewItemId] = useState<string | null>(null);
   const [editItem, setEditItem] = useState<StockItemDto | null>(null);
+  // Open state is kept apart from the target so a failed save can reopen the same form.
+  const [adjust, setAdjust] = useState<{ open: boolean; target: StockTarget | null }>({
+    open: false,
+    target: null,
+  });
+  const [transfer, setTransfer] = useState<{ open: boolean; target: StockTarget | null }>({
+    open: false,
+    target: null,
+  });
+  const canAdjust = can('inventory.adjust');
+  const canTransfer = can('inventory.transfer');
 
   const columns: ColumnDef<StockBalanceDto>[] = [
     {
       id: 'item',
       header: 'Item',
+      meta: { sortKey: 'item' },
       cell: ({ row }) =>
         can('stock_items.read') ? (
           <CellLink onClick={() => setViewItemId(row.original.item.id)} sub={row.original.item.sku}>
@@ -44,12 +66,13 @@ export default function StockBalancesPage() {
     {
       id: 'branch',
       header: 'Branch',
+      meta: { sortKey: 'branch' },
       cell: ({ row }) => `${row.original.branch.code} — ${row.original.branch.name}`,
     },
     {
       id: 'onHand',
       header: 'On hand',
-      meta: { align: 'right' },
+      meta: { align: 'right', sortKey: 'quantityOnHand' },
       cell: ({ row }) => formatQuantity(row.original.quantityOnHand),
     },
     {
@@ -61,7 +84,7 @@ export default function StockBalancesPage() {
     {
       id: 'available',
       header: 'Available',
-      meta: { align: 'right' },
+      meta: { align: 'right', sortKey: 'available' },
       cell: ({ row }) => (
         <span className="font-medium">
           {formatQuantity(row.original.quantityAvailable)}{' '}
@@ -72,18 +95,20 @@ export default function StockBalancesPage() {
     {
       id: 'reorder',
       header: 'Reorder level',
-      meta: { align: 'right' },
+      meta: { align: 'right', exportValue: (b) => b.item.reorderLevel },
       cell: ({ row }) => formatQuantity(row.original.item.reorderLevel),
     },
     {
       id: 'status',
       header: 'Status',
+      meta: { exportValue: (b) => (b.isLowStock ? 'Low stock' : 'OK') },
       cell: ({ row }) =>
         row.original.isLowStock ? <LowStockBadge /> : <span className="text-ink-subtle">OK</span>,
     },
     {
       id: 'updatedAt',
       header: 'Last movement',
+      meta: { sortKey: 'updatedAt' },
       cell: ({ row }) => (
         <span className="whitespace-nowrap text-ink-muted">
           {formatDateTime(row.original.updatedAt)}
@@ -98,10 +123,27 @@ export default function StockBalancesPage() {
         title="Stock"
         description="On-hand quantities by item and branch, calculated from the stock movement ledger."
         actions={
-          can('inventory.adjust') && (
-            <Button variant="secondary" onClick={() => setImportOpen(true)}>
-              <Upload aria-hidden /> Import opening stock
-            </Button>
+          (canAdjust || canTransfer) && (
+            <>
+              {canAdjust && (
+                <Button variant="secondary" onClick={() => setImportOpen(true)}>
+                  <Upload aria-hidden /> Import opening stock
+                </Button>
+              )}
+              {canTransfer && (
+                <Button
+                  variant="secondary"
+                  onClick={() => setTransfer({ open: true, target: null })}
+                >
+                  <ArrowLeftRight aria-hidden /> Transfer
+                </Button>
+              )}
+              {canAdjust && (
+                <Button onClick={() => setAdjust({ open: true, target: null })}>
+                  <SlidersHorizontal aria-hidden /> Adjust stock
+                </Button>
+              )}
+            </>
           )
         }
       />
@@ -121,11 +163,30 @@ export default function StockBalancesPage() {
         ]}
       />
       <DataTable
+        exportAll={{ filename: 'stock-balances', path: '/stock-balances', query: state.query }}
         columns={columns}
         result={result}
         state={state}
         getRowId={(b) => b.id}
         onRowClick={can('stock_items.read') ? (b) => setViewItemId(b.item.id) : undefined}
+        rowActions={
+          canAdjust || canTransfer
+            ? (b) => [
+                {
+                  label: 'Adjust stock',
+                  icon: <SlidersHorizontal aria-hidden />,
+                  onSelect: () => setAdjust({ open: true, target: targetOf(b) }),
+                  hidden: !canAdjust,
+                },
+                {
+                  label: 'Transfer to another branch',
+                  icon: <ArrowLeftRight aria-hidden />,
+                  onSelect: () => setTransfer({ open: true, target: targetOf(b) }),
+                  hidden: !canTransfer,
+                },
+              ]
+            : undefined
+        }
         caption="Stock balances"
         searchPlaceholder="Search item code or name"
         filters={
@@ -154,7 +215,17 @@ export default function StockBalancesPage() {
           </>
         }
         emptyTitle="No stock on record"
-        emptyDescription="Balances appear once goods are received into a branch. Purchasing and stock adjustments are added in the next phase."
+        emptyDescription="Balances appear once goods are received from a purchase, opening stock is imported, or stock is adjusted or transferred into a branch."
+      />
+      <StockAdjustDialog
+        open={adjust.open}
+        target={adjust.target}
+        onOpenChange={(open) => setAdjust((s) => ({ ...s, open }))}
+      />
+      <StockTransferDialog
+        open={transfer.open}
+        target={transfer.target}
+        onOpenChange={(open) => setTransfer((s) => ({ ...s, open }))}
       />
       <StockItemDetailModal
         itemId={viewItemId}

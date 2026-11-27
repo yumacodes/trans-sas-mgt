@@ -78,6 +78,7 @@ export function PaymentFormDialog({ open, onOpenChange, sale }: Props) {
     onOpenChange(false);
     try {
       const saved = await run(() => api.post<PaymentDto>('/payments', values, idem.keyFor(values)), {
+        success: (p) => `Payment ${p.number} recorded against ${p.sale.number}`,
         optimistic: () => {
           if (!target) return;
           const balance = toMoneyString(toDecimal(target.balance).minus(values.amount));

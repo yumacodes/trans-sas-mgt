@@ -1,5 +1,6 @@
 import type { ColumnDef } from '@tanstack/react-table';
 import type { AuditEntryDto } from '@tsm/shared';
+import { DateRangeFilter } from '@/components/app/DateRangeFilter';
 import { DataTable, FilterSelect } from '@/components/app/DataTable';
 import { PageHeader } from '@/components/app/PageHeader';
 import { useTableState } from '@/components/app/useTableState';
@@ -47,7 +48,7 @@ const columns: ColumnDef<AuditEntryDto>[] = [
 ];
 
 export default function AuditLogPage() {
-  const state = useTableState(['entityType', 'entityId', 'actorId']);
+  const state = useTableState(['entityType', 'entityId', 'actorId', 'dateFrom', 'dateTo']);
   const result = useListQuery<AuditEntryDto>(qk.auditLogs, '/audit-logs', state.query);
   return (
     <>
@@ -56,6 +57,7 @@ export default function AuditLogPage() {
         description="A read-only record of significant changes, who made them and when."
       />
       <DataTable
+        exportAll={{ filename: 'audit-log', path: '/audit-logs', query: state.query }}
         columns={columns}
         result={result}
         state={state}
@@ -63,12 +65,22 @@ export default function AuditLogPage() {
         caption="Audit log"
         searchPlaceholder="Search summaries"
         filters={
-          <FilterSelect
-            label="Record type"
-            value={state.filters.entityType}
-            onChange={(v) => state.setFilter('entityType', v)}
-            options={ENTITY_TYPES}
-          />
+          <>
+            <FilterSelect
+              label="Record type"
+              value={state.filters.entityType}
+              onChange={(v) => state.setFilter('entityType', v)}
+              options={ENTITY_TYPES}
+            />
+            <DateRangeFilter
+              from={state.filters.dateFrom}
+              to={state.filters.dateTo}
+              onChange={(from, to) => {
+                state.setFilter('dateFrom', from);
+                state.setFilter('dateTo', to);
+              }}
+            />
+          </>
         }
         emptyTitle="No audit entries yet"
         emptyDescription="Changes to records and settings are recorded here automatically."

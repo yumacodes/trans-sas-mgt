@@ -144,7 +144,7 @@ export function ProformaFormDialog({ open, onOpenChange, onSaved, proforma }: Pr
             : api.post<ProformaDto>('/proformas', values, idem.keyFor(values)),
         {
           pending: isEdit ? 'Saving proforma…' : 'Creating proforma…',
-          success: isEdit ? 'Proforma updated' : 'Proforma created',
+          success: (p) => `Proforma ${p.number} ${isEdit ? 'updated' : 'created'}`,
           optimistic: () => {
             const sums = calculateProformaTotals(values.items, 0, values.taxRate);
             const shown = {
@@ -196,8 +196,8 @@ export function ProformaFormDialog({ open, onOpenChange, onSaved, proforma }: Pr
       void queryClient.invalidateQueries({ queryKey: qk.proformas });
       void queryClient.invalidateQueries({ queryKey: qk.clients });
       onSaved?.(saved);
-    } catch {
-      recovery.keepNextOpen();
+    } catch (error) {
+      recovery.keepNextOpen(error, form.setError);
       onOpenChange(true);
       // The error dialog already explained the failure.
     }
@@ -318,13 +318,13 @@ export function ProformaFormDialog({ open, onOpenChange, onSaved, proforma }: Pr
                       />
                     </Field>
                     <Field label="Quantity" error={e?.quantity?.message} required>
-                      <Input inputMode="decimal" {...form.register(`items.${index}.quantity`)} />
+                      <Input inputMode="decimal" className="text-right tabular" {...form.register(`items.${index}.quantity`)} />
                     </Field>
                     <Field label="Unit" error={e?.unit?.message} required>
                       <Input placeholder="pcs" {...form.register(`items.${index}.unit`)} />
                     </Field>
                     <Field label="Unit price" error={e?.unitPrice?.message} required hint={priceHint(lines[index]?.stockItemId)}>
-                      <Input inputMode="decimal" {...form.register(`items.${index}.unitPrice`)} />
+                      <Input inputMode="decimal" className="text-right tabular" {...form.register(`items.${index}.unitPrice`)} />
                     </Field>
                     <Field label="Amount">
                       <Input readOnly value={formatMoney(amount, currency)} className="bg-surface-muted text-right" />

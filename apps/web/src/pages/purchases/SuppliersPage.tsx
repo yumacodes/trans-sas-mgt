@@ -86,6 +86,7 @@ export default function SuppliersPage() {
         actions={newButton()}
       />
       <DataTable
+        exportAll={{ filename: 'suppliers', path: '/suppliers', query: state.query }}
         columns={columns}
         result={result}
         state={state}
@@ -196,8 +197,8 @@ function SupplierFormDialog({
       );
       idem.reset();
       void queryClient.invalidateQueries({ queryKey: qk.suppliers });
-    } catch {
-      recovery.keepNextOpen();
+    } catch (error) {
+      recovery.keepNextOpen(error, form.setError);
       onOpenChange(true);
       // The error dialog already explained the failure.
     }

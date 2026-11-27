@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
   AlertDialog,
@@ -37,6 +37,11 @@ export function ConfirmDialog({
   destructive,
   onConfirm,
 }: ConfirmDialogProps) {
+  // One answer per opening: a fast double click must not run the action twice.
+  const answered = useRef(false);
+  useEffect(() => {
+    if (open) answered.current = false;
+  }, [open]);
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
@@ -51,6 +56,8 @@ export function ConfirmDialog({
           <Button
             variant={destructive ? 'destructive' : 'primary'}
             onClick={() => {
+              if (answered.current) return;
+              answered.current = true;
               onOpenChange(false);
               void onConfirm();
             }}

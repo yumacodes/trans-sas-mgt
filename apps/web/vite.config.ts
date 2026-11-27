@@ -56,6 +56,12 @@ const config: UserConfig = {
           if (id.includes('@radix-ui')) return 'radix';
           if (/[\\/](zod|decimal\.js|react-hook-form|@hookform)[\\/]/.test(id)) return 'forms';
           if (id.includes('@tanstack')) return 'tanstack';
+          // Heavy libraries only some pages use get chunks of their own, so they are not
+          // part of `vendor`, which every page (the sign-in page included) loads up front.
+          // They depend on react/vendor, never the other way round, so no cycle forms.
+          if (/[\\/]node_modules[\\/](recharts|recharts-scale|react-smooth|victory-vendor|d3-[a-z-]+|internmap|decimal\.js-light)[\\/]/.test(id)) return 'charts';
+          if (/[\\/]node_modules[\\/](pdf-lib|@pdf-lib[\\/][a-z-]+|pako)[\\/]/.test(id)) return 'pdf';
+          if (/[\\/]node_modules[\\/](write-excel-file|read-excel-file|fflate|jszip|xlsx)[\\/]/.test(id)) return 'excel';
           return 'vendor';
         },
       },

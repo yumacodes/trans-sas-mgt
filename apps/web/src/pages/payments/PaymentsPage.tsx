@@ -4,6 +4,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { FileDown, Plus, Printer, Undo2 } from 'lucide-react';
 import { PAYMENT_METHOD_LABELS, PAYMENT_STATUSES, PAYMENT_STATUS_LABELS, type PaymentDto } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
+import { DateRangeFilter } from '@/components/app/DateRangeFilter';
 import { AttachmentsPanel } from '@/components/app/AttachmentsPanel';
 import { useOpenParam } from '@/components/app/useOpenParam';
 import { DocumentEmailComposer } from '@/components/app/DocumentEmailComposer';
@@ -27,7 +28,7 @@ import { PaymentFormDialog } from './PaymentFormDialog';
 
 export default function PaymentsPage() {
   const { can } = useAuth();
-  const state = useTableState(['status', 'branchId'], { sort: 'paymentDate:desc' });
+  const state = useTableState(['status', 'branchId', 'dateFrom', 'dateTo'], { sort: 'paymentDate:desc' });
   const rowPdf = usePdfActions('/payments');
   const result = useListQuery<PaymentDto>(qk.payments, '/payments', state.query);
   const [viewId, setViewId, closeView] = useOpenParam();
@@ -75,6 +76,7 @@ export default function PaymentsPage() {
         actions={newButton()}
       />
       <DataTable
+        exportAll={{ filename: 'payments', path: '/payments', query: state.query }}
         columns={columns}
         result={result}
         state={state}
@@ -87,6 +89,14 @@ export default function PaymentsPage() {
         searchPlaceholder="Search receipt, reference, sale or client"
         filters={
           <>
+            <DateRangeFilter
+              from={state.filters.dateFrom}
+              to={state.filters.dateTo}
+              onChange={(from, to) => {
+                state.setFilter('dateFrom', from);
+                state.setFilter('dateTo', to);
+              }}
+            />
             <BranchFilter state={state} />
             <FilterSelect
               label="Status"

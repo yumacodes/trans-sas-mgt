@@ -202,8 +202,8 @@ export function TenderFormDialog({ open, onOpenChange, tender, onSaved }: Props)
       void queryClient.invalidateQueries({ queryKey: qk.tenders });
       void queryClient.invalidateQueries({ queryKey: qk.clients });
       onSaved?.(saved);
-    } catch {
-      recovery.keepNextOpen();
+    } catch (error) {
+      recovery.keepNextOpen(error, form.setError);
       onOpenChange(true);
       // The error dialog already explained the failure.
     }
@@ -331,13 +331,13 @@ export function TenderFormDialog({ open, onOpenChange, tender, onSaved }: Props)
                         />
                       </Field>
                       <Field label="Qty" error={e?.quantity?.message} required>
-                        <Input inputMode="decimal" {...form.register(`items.${index}.quantity`)} />
+                        <Input inputMode="decimal" className="text-right tabular" {...form.register(`items.${index}.quantity`)} />
                       </Field>
                       <Field label="Unit" error={e?.unit?.message} required>
                         <Input placeholder="pcs" {...form.register(`items.${index}.unit`)} />
                       </Field>
                       <Field label="Unit price" error={e?.unitPrice?.message} required>
-                        <Input inputMode="decimal" {...form.register(`items.${index}.unitPrice`)} />
+                        <Input inputMode="decimal" className="text-right tabular" {...form.register(`items.${index}.unitPrice`)} />
                       </Field>
                       <Field label={`Total incl. ${taxName}`}>
                         <Input

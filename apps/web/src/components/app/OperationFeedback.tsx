@@ -22,9 +22,13 @@ type OpState =
   | { kind: 'success'; message: string }
   | { kind: 'error'; message: string; canRetry: boolean };
 
-export interface RunOptions {
+export interface RunOptions<T = unknown> {
   pending?: string;
-  success?: string;
+  /**
+   * Confirmation shown once the server has answered. Background saves show it as a small
+   * toast (never before the answer); a function can name the saved record, e.g. its number.
+   */
+  success?: string | ((result: T) => string);
   /** How long the success state stays visible before closing. */
   successDelayMs?: number;
   /**
@@ -40,13 +44,30 @@ export interface RunOptions {
   optimistic?: () => (() => void) | void;
 }
 
-type Runner = <T>(fn: () => Promise<T>, opts?: RunOptions) => Promise<T>;
+type Runner = <T>(fn: () => Promise<T>, opts?: RunOptions<T>) => Promise<T>;
 
 const OperationContext = createContext<{ run: Runner; busy: boolean } | null>(null);
 
 export const SUCCESS_DELAY_MS = 1100;
 
-function isFieldError(error: unknown) {
+/** Field errors a form has taken over (shown on its fields), so no dialog repeats them. */
+const claimedErrors = new WeakSet<object>();
+export function claimFieldError(error: unknown) {
+  if (error && typeof error === 'object') claimedErrors.add(error);
+}
+
+function successText<T>(success: RunOptions<T>['success'], result: T, fallback?: string) {
+  if (typeof success === 'function') {
+    try {
+      return success(result);
+    } catch {
+      return fallback;
+    }
+  }
+  return success ?? fallback;
+}
+
+export function isFieldError(error: unknown) {
   return (
     error instanceof ApiError &&
     (error.code === 'VALIDATION_FAILED' || error.code === 'DUPLICATE') &&
@@ -58,7 +79,7 @@ export function OperationFeedbackProvider({ children }: { children: ReactNode })
   const [state, setState] = useState<OpState>({ kind: 'idle' });
   const pendingRef = useRef<{
     fn: () => Promise<unknown>;
-    opts: RunOptions;
+    opts: RunOptions<unknown>;
     resolve: (v: unknown) => void;
     reject: (e: unknown) => void;
     lastError?: unknown;
@@ -75,7 +96,7 @@ export function OperationFeedbackProvider({ children }: { children: ReactNode })
     setState({ kind: 'pending', message: current.opts.pending ?? 'Saving…' });
     try {
       const result = await current.fn();
-      setState({ kind: 'success', message: current.opts.success ?? 'Saved successfully' });
+      setState({ kind: 'success', message: successText(current.opts.success, result, 'Saved successfully')! });
       timer.current = setTimeout(() => {
         setState({ kind: 'idle' });
         pendingRef.current = null;
@@ -103,7 +124,7 @@ export function OperationFeedbackProvider({ children }: { children: ReactNode })
       return new Promise((resolve, reject) => {
         pendingRef.current = {
           fn,
-          opts,
+          opts: opts as RunOptions<unknown>,
           resolve: resolve as (v: unknown) => void,
           reject,
         };
@@ -126,6 +147,7 @@ export function OperationFeedbackProvider({ children }: { children: ReactNode })
     <OperationContext.Provider value={{ run, busy: open }}>
       {children}
       <BackgroundSpinner />
+      <SuccessToasts />
       {!open && <FailureDialog />}
       <DialogPrimitive.Root open={open}>
         <DialogPrimitive.Portal>
@@ -309,7 +331,7 @@ function BackgroundSpinner() {
   );
 }
 
-function runInBackground<T>(fn: () => Promise<T>, opts: RunOptions): Promise<T> {
+function runInBackground<T>(fn: () => Promise<T>, opts: RunOptions<T>): Promise<T> {
   const undo = opts.optimistic?.();
   return new Promise<T>((resolve, reject) => {
     const attempt = async () => {
@@ -317,9 +339,21 @@ function runInBackground<T>(fn: () => Promise<T>, opts: RunOptions): Promise<T> 
       try {
         const value = await fn();
         bumpPending(-1);
+        const message = successText(opts.success, value);
+        if (message) pushToast(message);
         resolve(value);
       } catch (error) {
         bumpPending(-1);
+        if (isFieldError(error)) {
+          // The form that sent it reopens and marks the fields (see useKeepInput). If no
+          // form takes the error over, explain it in the dialog as usual.
+          undo?.();
+          reject(error);
+          setTimeout(() => {
+            if (!claimedErrors.has(error as object)) pushFailure({ title: "This wasn't completed", message: errorMessage(error) });
+          }, 0);
+          return;
+        }
         const canRetry =
           error instanceof ApiError ? error.retryable || error.code === 'INTERNAL' : true;
         pushFailure({
@@ -335,6 +369,65 @@ function runInBackground<T>(fn: () => Promise<T>, opts: RunOptions): Promise<T> 
     };
     void attempt();
   });
+}
+
+/* ---------- Success toasts ---------- */
+
+interface Toast {
+  id: number;
+  message: string;
+}
+let toasts: Toast[] = [];
+let nextToastId = 1;
+const toastListeners = new Set<() => void>();
+function setToasts(next: Toast[]) {
+  toasts = next;
+  toastListeners.forEach((l) => l());
+}
+function subscribeToasts(l: () => void) {
+  toastListeners.add(l);
+  return () => void toastListeners.delete(l);
+}
+/** A short, non-blocking confirmation in the corner. Use only after the server confirmed. */
+export function pushToast(message: string) {
+  const id = nextToastId++;
+  setToasts([...toasts.slice(-2), { id, message }]);
+  setTimeout(() => setToasts(toasts.filter((t) => t.id !== id)), 4000);
+}
+
+function SuccessToasts() {
+  const list = useSyncExternalStore(subscribeToasts, () => toasts, () => toasts);
+  return (
+    <div
+      aria-live="polite"
+      role="status"
+      className="pointer-events-none fixed inset-x-0 bottom-4 z-[70] flex flex-col items-center gap-2 px-4 sm:inset-x-auto sm:right-6 sm:items-end"
+    >
+      {list.map((t) => (
+        <div
+          key={t.id}
+          className="pointer-events-auto flex items-center gap-2.5 rounded-xl border border-border bg-surface px-4 py-2.5 text-sm font-medium text-ink shadow-overlay animate-scale-in"
+        >
+          <span className="flex size-5 items-center justify-center rounded-full bg-success-soft" aria-hidden>
+            <svg viewBox="0 0 24 24" className="size-3.5 text-success" fill="none">
+              <path d="M5 12.5l4.5 4.5L19 7.5" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
+          {t.message}
+          <button
+            type="button"
+            className="ml-1 rounded p-0.5 text-ink-subtle hover:text-ink"
+            aria-label="Dismiss"
+            onClick={() => setToasts(toasts.filter((x) => x.id !== t.id))}
+          >
+            <svg viewBox="0 0 24 24" className="size-3.5" fill="none" aria-hidden>
+              <path d="M7 7l10 10M17 7L7 17" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function SuccessCheck() {

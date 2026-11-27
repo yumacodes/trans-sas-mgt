@@ -15,6 +15,7 @@ import {
   ChevronRight,
   RefreshCw,
   Search,
+  Download,
   MoreHorizontal,
   X,
 } from 'lucide-react';
@@ -30,11 +31,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { NativeSelect } from '@/components/ui/native-select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { errorMessage } from '@/lib/api';
+import { errorMessage, request, type QueryValue } from '@/lib/api';
+import { downloadRowsExcel, type ExportColumn, type ExportValue } from '@/lib/exportExcel';
 import { formatCount } from '@/lib/format';
 import { isPendingId } from '@/lib/optimistic';
 import { cn } from '@/lib/utils';
 import { EmptyState, ErrorState } from './States';
+import { pushToast, reportFailure } from './OperationFeedback';
 import type { TableStateApi } from './useTableState';
 
 declare module '@tanstack/react-table' {
@@ -45,7 +48,22 @@ declare module '@tanstack/react-table' {
     align?: 'left' | 'right' | 'center';
     headerClassName?: string;
     cellClassName?: string;
+    /** Value written to Excel exports when the column id is not a field of the row. */
+    exportValue?: (row: TData) => ExportValue;
+    /** Header in exports when the column header is not plain text. */
+    exportHeader?: string;
+    /** Leave this column out of exports. */
+    noExport?: boolean;
   }
+}
+
+export interface ExportAllConfig {
+  /** File name without extension. */
+  filename: string;
+  /** List endpoint the table reads, e.g. "/sales". */
+  path: string;
+  /** The same filters, search and sort the table is showing. */
+  query: Record<string, QueryValue>;
 }
 
 export interface RowAction {
@@ -94,6 +112,8 @@ interface DataTableProps<T> {
   /** Optional label for screen readers describing the table. */
   caption?: string;
   compact?: boolean;
+  /** Adds an "Export" button that downloads every row matching the current filters. */
+  exportAll?: ExportAllConfig;
 }
 
 const PAGE_SIZES = [10, 25, 50, 100];
@@ -113,7 +133,26 @@ export function DataTable<T>({
   emptyAction,
   caption,
   compact,
+  exportAll,
 }: DataTableProps<T>) {
+  const [exporting, setExporting] = useState(false);
+  const runExport = async () => {
+    if (!exportAll || exporting) return;
+    setExporting(true);
+    try {
+      const all = await fetchAllRows<T>(exportAll);
+      await downloadRowsExcel(exportAll.filename, all.rows, exportColumns(columns));
+      pushToast(
+        all.truncated
+          ? `Exported the first ${formatCount(all.rows.length)} rows. Narrow the filters to export the rest.`
+          : `Exported ${formatCount(all.rows.length)} ${all.rows.length === 1 ? 'row' : 'rows'}`,
+      );
+    } catch (error) {
+      reportFailure(errorMessage(error) || "We couldn't prepare that download. Try again in a moment.");
+    } finally {
+      setExporting(false);
+    }
+  };
   const rows = useMemo(() => result.data?.data ?? [], [result.data]);
   const meta = result.data?.meta;
 
@@ -125,7 +164,14 @@ export function DataTable<T>({
             {
               id: '_actions',
               header: () => <span className="sr-only">Actions</span>,
-              meta: { align: 'right' as const, cellClassName: 'w-12' },
+              // Pinned to the right edge so the row menu stays reachable when a wide table
+              // scrolls sideways on a small screen.
+              meta: {
+                align: 'right' as const,
+                noExport: true,
+                headerClassName: 'sticky right-0 bg-surface',
+                cellClassName: 'w-12 sticky right-0 bg-surface/95 backdrop-blur-sm',
+              },
               cell: ({ row }) => <RowMenu actions={rowActions(row.original)} />,
             },
           ]
@@ -190,6 +236,18 @@ export function DataTable<T>({
             {state.hasActiveFilters && (
               <Button variant="ghost" size="sm" onClick={state.clearFilters}>
                 <X aria-hidden /> Clear
+              </Button>
+            )}
+            {exportAll && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => void runExport()}
+                loading={exporting}
+                disabled={!meta || meta.total === 0}
+                title="Download every row matching the current filters as an Excel file"
+              >
+                <Download aria-hidden /> Export
               </Button>
             )}
             <Button
@@ -392,6 +450,92 @@ export function DataTable<T>({
       )}
     </div>
   );
+}
+
+const EXPORT_PAGE_SIZE = 100;
+const EXPORT_MAX_PAGES = 50;
+
+/** Every row matching the table's query, page by page (the API serves at most 100 a page). */
+async function fetchAllRows<T>({ path, query }: ExportAllConfig): Promise<{ rows: T[]; truncated: boolean }> {
+  const rows: T[] = [];
+  for (let page = 1; page <= EXPORT_MAX_PAGES; page++) {
+    const res = await request<T[]>('GET', path, { query: { ...query, page, pageSize: EXPORT_PAGE_SIZE } });
+    rows.push(...res.data);
+    const pageCount = res.meta?.pageCount ?? 1;
+    if (page >= pageCount) return { rows, truncated: false };
+  }
+  return { rows, truncated: true };
+}
+
+const NUMERIC = /^-?\d+(\.\d+)?$/;
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}(T[\d:.]+(Z|[+-]\d{2}:?\d{2})?)?$/;
+
+/** A row field as a spreadsheet value: amounts as numbers, dates as dates, references by name. */
+function autoValue(value: unknown): ExportValue {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'number' || typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    if (NUMERIC.test(value) && value.length < 16) return Number(value);
+    if (ISO_DATE.test(value)) {
+      const d = new Date(value.length === 10 ? `${value}T00:00:00` : value);
+      return Number.isNaN(d.getTime()) ? value : d;
+    }
+    return value;
+  }
+  if (Array.isArray(value)) {
+    const parts = value.map(autoValue).filter((v) => v !== null && v !== '');
+    return parts.length ? parts.map(String).join(', ') : null;
+  }
+  if (typeof value === 'object') {
+    const o = value as Record<string, unknown>;
+    if (typeof o.number === 'string') return o.number;
+    if (typeof o.name === 'string') return o.name;
+    if (typeof o.fullName === 'string') return o.fullName;
+  }
+  return null;
+}
+
+/** Row fields to try when a column's id is a display name rather than a field. */
+const FIELD_ALIASES: Record<string, string[]> = {
+  items: ['itemCount', 'items'],
+  amount: ['amount', 'subtotal'],
+  vat: ['vatAmount'],
+  tax: ['taxAmount'],
+  email: ['email', 'customerEmail', 'emailedAt'],
+  client: ['client', 'customerName'],
+  contact: ['contactPerson', 'contactName', 'customerEmail', 'email', 'phone'],
+  location: ['address', 'city', 'location'],
+  actor: ['actor', 'actorName'],
+  purchases: ['purchaseCount', 'purchases'],
+  onHand: ['quantityOnHand'],
+  reserved: ['quantityReserved'],
+  available: ['quantityAvailable'],
+};
+
+function fieldValue(row: Record<string, unknown>, id: string): ExportValue {
+  for (const key of [id, ...(FIELD_ALIASES[id] ?? [])]) {
+    if (row[key] !== undefined) {
+      const v = autoValue(row[key]);
+      if (v !== null) return v;
+    }
+  }
+  return null;
+}
+
+const titleCase = (id: string) => id.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (c) => c.toUpperCase());
+
+function exportColumns<T>(columns: ColumnDef<T>[]): ExportColumn<T>[] {
+  return columns
+    .filter((c) => c.id && c.id !== '_actions' && !c.meta?.noExport)
+    .map((c) => {
+      const id = c.id!;
+      const header = c.meta?.exportHeader ?? (typeof c.header === 'string' ? c.header : titleCase(id));
+      const pick = c.meta?.exportValue;
+      return {
+        header,
+        value: (row: T) => (pick ? pick(row) : fieldValue(row as Record<string, unknown>, id)),
+      };
+    });
 }
 
 function SearchInput({

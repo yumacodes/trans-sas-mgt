@@ -64,6 +64,24 @@ export function useUserOptions() {
 }
 
 /** Open password-reset requests; only fetched for people who can manage users. */
+/** Website requests still waiting for staff (draft proformas sent from the public site). */
+export function useWebsiteRequestCount() {
+  const { can } = useAuth();
+  return useQuery({
+    queryKey: [...qk.proformas, 'website-pending'],
+    queryFn: async ({ signal }) => {
+      const res = await request<unknown[]>('GET', '/proformas', {
+        query: { source: 'website', status: 'draft', page: 1, pageSize: 1 },
+        signal,
+      });
+      return res.meta?.total ?? res.data.length;
+    },
+    enabled: can('proformas.read'),
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
+  });
+}
+
 export function useResetRequests() {
   const { can } = useAuth();
   const allowed = can('users.manage');

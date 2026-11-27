@@ -11,6 +11,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { patchRecord } from '@/lib/optimistic';
 import { api } from '@/lib/api';
+import { DateRangeFilter } from '@/components/app/DateRangeFilter';
 import { useOperation } from '@/components/app/OperationFeedback';
 import { useAuth } from '@/auth/AuthProvider';
 import { useOpenParam } from '@/components/app/useOpenParam';
@@ -20,7 +21,6 @@ import { StatStrip, useTotal } from '@/components/app/StatStrip';
 import { ExpenseStatusBadge } from '@/components/app/StatusBadges';
 import { useTableState } from '@/components/app/useTableState';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { formatDate, formatMoney } from '@/lib/format';
 import { useListQuery } from '@/lib/queries';
 import { qk } from '@/lib/queryKeys';
@@ -148,6 +148,7 @@ export function ExpensesPage({ kind }: { kind: ExpenseKind }) {
         ]}
       />
       <DataTable
+        exportAll={{ filename: `expenses-${kind}`, path: '/expenses', query: { ...state.query, kind } }}
         columns={columns}
         result={result}
         state={state}
@@ -193,28 +194,14 @@ export function ExpensesPage({ kind }: { kind: ExpenseKind }) {
               onChange={(v) => state.setFilter('status', v)}
               options={EXPENSE_STATUSES.map((s) => ({ value: s, label: EXPENSE_STATUS_LABELS[s] }))}
             />
-            <label className="flex items-center gap-2 text-xs text-ink-muted">
-              From
-              <Input
-                type="date"
-                aria-label="From date"
-                className="h-10 w-auto"
-                value={state.filters.dateFrom ?? ''}
-                max={state.filters.dateTo || undefined}
-                onChange={(e) => state.setFilter('dateFrom', e.target.value || undefined)}
-              />
-            </label>
-            <label className="flex items-center gap-2 text-xs text-ink-muted">
-              To
-              <Input
-                type="date"
-                aria-label="To date"
-                className="h-10 w-auto"
-                value={state.filters.dateTo ?? ''}
-                min={state.filters.dateFrom || undefined}
-                onChange={(e) => state.setFilter('dateTo', e.target.value || undefined)}
-              />
-            </label>
+            <DateRangeFilter
+              from={state.filters.dateFrom}
+              to={state.filters.dateTo}
+              onChange={(from, to) => {
+                state.setFilter('dateFrom', from);
+                state.setFilter('dateTo', to);
+              }}
+            />
           </>
         }
         emptyTitle="Nothing recorded yet"

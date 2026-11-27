@@ -17,6 +17,7 @@ const ROUTES: Record<string, RouteWarmup> = {
   '/': { chunk: () => import('@/pages/DashboardPage') },
   '/clients': { chunk: () => import('@/pages/clients/ClientsPage'), list: { key: qk.clients, path: '/clients', sort: 'name:asc', permission: 'clients.read' } },
   '/proforma': { chunk: () => import('@/pages/proforma/ProformaPage'), list: { key: qk.proformas, path: '/proformas', sort: 'issueDate:desc', permission: 'proformas.read' } },
+  '/website-requests': { chunk: () => import('@/pages/proforma/ProformaPage'), list: { key: qk.proformas, path: '/proformas', sort: 'issueDate:desc', extra: { source: 'website' }, permission: 'proformas.read' } },
   '/tender-schedule': { chunk: () => import('@/pages/tenders/TendersPage'), list: { key: qk.tenders, path: '/tenders', sort: 'scheduleDate:desc', permission: 'tenders.read' } },
   '/sales': { chunk: () => import('@/pages/sales/SalesPage'), list: { key: qk.sales, path: '/sales', sort: 'saleDate:desc', permission: 'sales.read' } },
   '/waybills': { chunk: () => import('@/pages/waybills/WaybillsPage'), list: { key: qk.waybills, path: '/waybills', sort: 'deliveryDate:desc', permission: 'waybills.read' } },
@@ -38,10 +39,16 @@ const ROUTES: Record<string, RouteWarmup> = {
 };
 
 /** Warm one page: download its code and fetch the first page of its table. Never throws. */
-export function warmRoute(path: string, queryClient: QueryClient, can: (permission: Permission) => boolean) {
+export function warmRoute(
+  path: string,
+  queryClient: QueryClient,
+  can: (permission: Permission) => boolean,
+  withData = true,
+) {
   const route = path.startsWith('/reports/') ? { chunk: report } : ROUTES[path];
   if (!route) return;
   void route.chunk().catch(() => undefined);
+  if (!withData) return;
   const list = 'list' in route ? route.list : undefined;
   if (!list || !can(list.permission)) return;
   const query = { page: 1, pageSize: 25, sort: list.sort, q: undefined, ...list.extra };
@@ -53,15 +60,22 @@ export function warmRoute(path: string, queryClient: QueryClient, can: (permissi
     .catch(() => undefined);
 }
 
-/** After sign-in, warm every page the user can open, one at a time, when the browser is idle. */
+/**
+ * After sign-in, when the browser is idle, download the code of the pages the user can
+ * open, one at a time, and the first page of data for only the first few of them. Every
+ * other page's data is fetched when its sidebar entry is hovered or focused, so a slow
+ * branch connection isn't spent on lists nobody opens.
+ */
+const WARM_DATA_FOR = 4;
 export function warmAllRoutes(paths: string[], queryClient: QueryClient, can: (permission: Permission) => boolean) {
   const queue = [...paths];
+  let index = 0;
   const idle = (cb: () => void) =>
     'requestIdleCallback' in window ? window.requestIdleCallback(cb, { timeout: 2000 }) : setTimeout(cb, 300);
   const next = () => {
     const path = queue.shift();
     if (!path) return;
-    warmRoute(path, queryClient, can);
+    warmRoute(path, queryClient, can, index++ < WARM_DATA_FOR);
     idle(next);
   };
   idle(next);

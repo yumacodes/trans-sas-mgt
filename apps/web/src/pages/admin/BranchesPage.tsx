@@ -103,6 +103,7 @@ export default function BranchesPage() {
         }
       />
       <DataTable
+        exportAll={{ filename: 'branches', path: '/branches', query: state.query }}
         columns={columns}
         result={result}
         state={state}
@@ -285,8 +286,8 @@ function BranchFormDialog({
         },
       );
       onSaved();
-    } catch {
-      recovery.keepNextOpen();
+    } catch (error) {
+      recovery.keepNextOpen(error, form.setError);
       onOpenChange(true);
       // The error dialog already explained the failure.
     }

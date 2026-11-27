@@ -9,6 +9,7 @@ import {
   ClipboardCheck,
   FileSignature,
   FileText,
+  Globe,
   Gavel,
   LayoutDashboard,
   MessagesSquare,
@@ -26,6 +27,7 @@ import type { Permission } from '@tsm/shared';
 
 export const NAV_GROUPS = [
   'Overview',
+  'Sales & Delivery',
   'Records',
   'Communication',
   'Finance',
@@ -49,21 +51,30 @@ export interface NavItem {
   group?: NavGroup;
   /** Shows the number of open password-reset requests beside the label. */
   showsResetRequests?: boolean;
+  /** Shows the number of website requests still in draft beside the label. */
+  showsWebsiteRequests?: boolean;
   children?: NavItem[];
 }
 
 /** Sidebar structure (CLAUDE.md §8). Server-side authorization is enforced independently. */
 const ITEMS: NavItem[] = [
   { id: 'dashboard', group: 'Overview', label: 'Dashboard', icon: LayoutDashboard, to: '/', anyOf: ['dashboard.view'] },
-  { id: 'proforma', to: '/proforma', group: 'Overview', label: 'Proforma', icon: FileText, anyOf: ['proformas.read'] },
+  { id: 'proforma', to: '/proforma', group: 'Sales & Delivery', label: 'Proforma', icon: FileText, anyOf: ['proformas.read'] },
   {
-    id: 'tender-schedule', to: '/tender-schedule', group: 'Overview',
+    id: 'website-requests', to: '/website-requests', group: 'Sales & Delivery',
+    label: 'Website Requests',
+    icon: Globe,
+    anyOf: ['proformas.read'],
+    showsWebsiteRequests: true,
+  },
+  {
+    id: 'tender-schedule', to: '/tender-schedule', group: 'Sales & Delivery',
     label: 'Tender Price Schedule',
     icon: Gavel,
     anyOf: ['tenders.read'],
   },
-  { id: 'sales', to: '/sales', group: 'Overview', label: 'Sales', icon: ShoppingCart, anyOf: ['sales.read'] },
-  { id: 'waybill', to: '/waybills', group: 'Overview', label: 'Way Bill', icon: Truck, anyOf: ['waybills.read'] },
+  { id: 'sales', to: '/sales', group: 'Sales & Delivery', label: 'Sales', icon: ShoppingCart, anyOf: ['sales.read'] },
+  { id: 'waybill', to: '/waybills', group: 'Sales & Delivery', label: 'Way Bill', icon: Truck, anyOf: ['waybills.read'] },
   {
     id: 'stock-items', group: 'Records',
     label: 'Stock Items',
@@ -73,7 +84,7 @@ const ITEMS: NavItem[] = [
   },
   { id: 'clients', group: 'Records', label: 'Clients', icon: Users, to: '/clients', anyOf: ['clients.read'] },
   {
-    id: 'acceptance', to: '/acceptance-letters', group: 'Overview',
+    id: 'acceptance', to: '/acceptance-letters', group: 'Sales & Delivery',
     label: 'Acceptance Letter',
     icon: FileSignature,
     anyOf: ['acceptance.read'],
@@ -93,19 +104,27 @@ const ITEMS: NavItem[] = [
   { id: 'stock', group: 'Stock Management', label: 'Stock', icon: Boxes, to: '/stock', anyOf: ['inventory.read'] },
   { id: 'purchase', to: '/purchases', group: 'Stock Management', label: 'Purchase', icon: ShoppingBag, anyOf: ['purchases.read'] },
   { id: 'suppliers', to: '/suppliers', group: 'Stock Management', label: 'Suppliers', icon: Factory, anyOf: ['purchases.read'] },
-  { id: 'r-income', group: 'Reports', label: 'Income Statement', icon: BarChart3, to: '/reports/income-statement', anyOf: ['reports.financial'] },
-  { id: 'r-sales', group: 'Reports', label: 'Sales Report', icon: BarChart3, to: '/reports/sales', anyOf: ['reports.view'] },
-  { id: 'r-payment', group: 'Reports', label: 'Payment Report', icon: BarChart3, to: '/reports/payments', anyOf: ['reports.financial'] },
-  { id: 'r-expense', group: 'Reports', label: 'Expense Report', icon: BarChart3, to: '/reports/expenses', anyOf: ['reports.financial'] },
-  { id: 'r-tender', group: 'Reports', label: 'Tender Report', icon: BarChart3, to: '/reports/tenders', anyOf: ['reports.view'] },
-  { id: 'r-stock', group: 'Reports', label: 'Stock Report', icon: BarChart3, to: '/reports/stock', anyOf: ['reports.view'] },
-  { id: 'r-movement', group: 'Reports', label: 'Stock Movement Report', icon: BarChart3, to: '/reports/stock-movement', anyOf: ['reports.view'] },
-  { id: 'r-low-stock', group: 'Reports', label: 'Low-Stock Report', icon: BarChart3, to: '/reports/low-stock', anyOf: ['reports.view'] },
-  { id: 'r-purchase', group: 'Reports', label: 'Purchase Report', icon: BarChart3, to: '/reports/purchases', anyOf: ['reports.view'] },
-  { id: 'r-clients', group: 'Reports', label: 'Client Report', icon: BarChart3, to: '/reports/clients', anyOf: ['reports.view'] },
-  { id: 'r-outstanding', group: 'Reports', label: 'Outstanding Balances', icon: BarChart3, to: '/reports/outstanding-balances', anyOf: ['reports.financial'] },
-  { id: 'r-branch', group: 'Reports', label: 'Branch Performance', icon: BarChart3, to: '/reports/branch-performance', anyOf: ['reports.view'] },
-  { id: 'r-tax', group: 'Reports', label: 'Tax Summary', icon: BarChart3, to: '/reports/tax-summary', anyOf: ['reports.financial'] },
+  {
+    id: 'reports', group: 'Reports',
+    label: 'Reports',
+    icon: BarChart3,
+    anyOf: ['reports.view', 'reports.financial'],
+    children: [
+      { id: 'r-income', label: 'Income Statement', to: '/reports/income-statement', anyOf: ['reports.financial'] },
+      { id: 'r-sales', label: 'Sales Report', to: '/reports/sales', anyOf: ['reports.view'] },
+      { id: 'r-payment', label: 'Payment Report', to: '/reports/payments', anyOf: ['reports.financial'] },
+      { id: 'r-expense', label: 'Expense Report', to: '/reports/expenses', anyOf: ['reports.financial'] },
+      { id: 'r-tender', label: 'Tender Report', to: '/reports/tenders', anyOf: ['reports.view'] },
+      { id: 'r-stock', label: 'Stock Report', to: '/reports/stock', anyOf: ['reports.view'] },
+      { id: 'r-movement', label: 'Stock Movement Report', to: '/reports/stock-movement', anyOf: ['reports.view'] },
+      { id: 'r-low-stock', label: 'Low-Stock Report', to: '/reports/low-stock', anyOf: ['reports.view'] },
+      { id: 'r-purchase', label: 'Purchase Report', to: '/reports/purchases', anyOf: ['reports.view'] },
+      { id: 'r-clients', label: 'Client Report', to: '/reports/clients', anyOf: ['reports.view'] },
+      { id: 'r-outstanding', label: 'Outstanding Balances', to: '/reports/outstanding-balances', anyOf: ['reports.financial'] },
+      { id: 'r-branch', label: 'Branch Performance', to: '/reports/branch-performance', anyOf: ['reports.view'] },
+      { id: 'r-tax', label: 'Tax Summary', to: '/reports/tax-summary', anyOf: ['reports.financial'] },
+    ],
+  },
   {
     id: 'admin', group: 'Administration',
     label: 'Admin',
