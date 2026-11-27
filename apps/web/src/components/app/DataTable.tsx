@@ -412,8 +412,11 @@ export function DataTable<T>({
                         key={cell.id}
                         className={cn(
                           cellPad,
-                          'min-w-0 align-middle text-ink [overflow-wrap:anywhere]',
-                          m?.align === 'right' && 'text-right tabular',
+                          'min-w-0 align-middle text-ink',
+                          // Figures (amounts, quantities, counts) stay on one line: "GHS 1,250.00"
+                          // must never break into "GHS 1,250.0" / "0". Text columns may still
+                          // wrap anywhere so long names and emails don't widen the table.
+                          m?.align === 'right' ? 'whitespace-nowrap text-right tabular' : '[overflow-wrap:anywhere]',
                           m?.align === 'center' && 'text-center',
                           m?.cellClassName,
                         )}
