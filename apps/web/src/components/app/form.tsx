@@ -5,6 +5,7 @@ import type { FieldValues, Path, UseFormSetError } from 'react-hook-form';
 import { Label } from '@/components/ui/label';
 import { ApiError, newIdempotencyKey } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { claimFieldError } from './OperationFeedback';
 
 interface FieldProps {
   label: string;
@@ -111,6 +112,7 @@ export function applyServerErrors<T extends FieldValues>(
     setError(field as Path<T>, { type: 'server', message }, { shouldFocus: !applied });
     applied = true;
   }
+  if (applied) claimFieldError(error);
   return applied;
 }
 

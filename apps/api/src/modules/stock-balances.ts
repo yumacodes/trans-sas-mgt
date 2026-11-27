@@ -1,19 +1,30 @@
 import { Router } from 'express';
 import type { Prisma } from '@prisma/client';
-import { stockBalanceListQuerySchema, type StockBalanceDto } from '@tsm/shared';
-import { getAuth, requirePermission } from '../middleware/auth';
+import {
+  stockAdjustmentInputSchema,
+  stockBalanceListQuerySchema,
+  stockTransferInputSchema,
+  type StockBalanceDto,
+  type StockOperationResultDto,
+} from '@tsm/shared';
+import { getAuth, requireAnyPermission, requirePermission } from '../middleware/auth';
+import { idempotent } from '../middleware/idempotency';
 import { orderBy, pageMeta, pageWindow } from '../lib/pagination';
-import { prisma } from '../lib/prisma';
+import { prisma, type Tx } from '../lib/prisma';
 import { ok } from '../lib/respond';
 import { iso } from '../lib/serialize';
 import { parse } from '../lib/validate';
 import { assertBranchAccess, branchWhere } from '../services/branch-scope';
-import { isLowStock, lowStockBalanceIds } from '../services/inventory';
+import { actorFrom } from '../services/audit';
+import { adjustStock, isLowStock, lowStockBalanceIds, transferStock } from '../services/inventory';
+import { stockItemOptions } from '../services/pickers';
 
 export const stockBalancesRouter = Router();
 
 export const balanceInclude = {
-  item: { select: { id: true, sku: true, name: true, unit: true, reorderLevel: true, isActive: true } },
+  item: {
+    select: { id: true, sku: true, name: true, unit: true, reorderLevel: true, isActive: true },
+  },
   branch: { select: { id: true, code: true, name: true } },
 } as const;
 
@@ -58,12 +69,71 @@ stockBalancesRouter.get('/', requirePermission('inventory.read'), async (req, re
       sku: (dir) => ({ item: { sku: dir } }),
       branch: (dir) => ({ branch: { name: dir } }),
       quantityOnHand: (dir) => ({ quantityOnHand: dir }),
+      // Reservations are not recorded yet, so available equals on hand.
+      available: (dir) => ({ quantityOnHand: dir }),
+      updatedAt: (dir) => ({ updatedAt: dir }),
     },
     { item: { name: 'asc' } },
   );
   const [rows, total] = await Promise.all([
-    prisma.stockBalance.findMany({ where, orderBy: sort, include: balanceInclude, ...pageWindow(query) }),
+    prisma.stockBalance.findMany({
+      where,
+      orderBy: sort,
+      include: balanceInclude,
+      ...pageWindow(query),
+    }),
     prisma.stockBalance.count({ where }),
   ]);
   ok(res, rows.map(toBalanceDto), pageMeta(query, total));
 });
+
+/* ---------- Adjustments & transfers ---------- */
+
+async function loadBalances(tx: Tx, keys: { itemId: string; branchId: string }[]) {
+  const rows = await tx.stockBalance.findMany({
+    where: { OR: keys.map((k) => ({ itemId: k.itemId, branchId: k.branchId })) },
+    include: balanceInclude,
+  });
+  return rows.map(toBalanceDto);
+}
+
+/** Approved, active items for the adjustment and transfer pickers. */
+stockBalancesRouter.get(
+  '/items',
+  requireAnyPermission('inventory.adjust', 'inventory.transfer'),
+  async (req, res) => {
+    ok(res, await stockItemOptions(req));
+  },
+);
+
+/** Correct one item's on-hand stock at a branch, with a reason (ledger: adjustment_in/out). */
+stockBalancesRouter.post(
+  '/adjustments',
+  requirePermission('inventory.adjust'),
+  idempotent,
+  async (req, res) => {
+    const ctx = getAuth(req);
+    const input = parse(stockAdjustmentInputSchema, req.body);
+    const result = await prisma.$transaction(async (tx) => {
+      const { reference, balanceKeys } = await adjustStock(tx, ctx, actorFrom(req), input);
+      return { reference, balances: await loadBalances(tx, balanceKeys) };
+    });
+    ok<StockOperationResultDto>(res, result, undefined, 201);
+  },
+);
+
+/** Move stock between two branches (ledger: transfer_out + transfer_in, shared reference). */
+stockBalancesRouter.post(
+  '/transfers',
+  requirePermission('inventory.transfer'),
+  idempotent,
+  async (req, res) => {
+    const ctx = getAuth(req);
+    const input = parse(stockTransferInputSchema, req.body);
+    const result = await prisma.$transaction(async (tx) => {
+      const { reference, balanceKeys } = await transferStock(tx, ctx, actorFrom(req), input);
+      return { reference, balances: await loadBalances(tx, balanceKeys) };
+    });
+    ok<StockOperationResultDto>(res, result, undefined, 201);
+  },
+);

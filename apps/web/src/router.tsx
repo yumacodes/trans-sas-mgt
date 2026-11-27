@@ -12,6 +12,9 @@ const ResetPasswordPage = lazy(() => import('@/pages/auth/ResetPasswordPage'));
 const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
 const ClientsPage = lazy(() => import('@/pages/clients/ClientsPage'));
 const ProformaPage = lazy(() => import('@/pages/proforma/ProformaPage'));
+const WebsiteRequestsPage = lazy(() =>
+  import('@/pages/proforma/ProformaPage').then((m) => ({ default: m.WebsiteRequestsPage })),
+);
 const TendersPage = lazy(() => import('@/pages/tenders/TendersPage'));
 const SalesPage = lazy(() => import('@/pages/sales/SalesPage'));
 const WaybillsPage = lazy(() => import('@/pages/waybills/WaybillsPage'));
@@ -69,18 +72,23 @@ export const routes: RouteObject[] = [
       {
         path: 'proforma',
         element: <RequirePermission anyOf={['proformas.read']} />,
-        children: [{ index: true, element: <ProformaPage />, handle: h('Proforma', 'Overview') }],
+        children: [{ index: true, element: <ProformaPage />, handle: h('Proforma', 'Sales & Delivery') }],
+      },
+      {
+        path: 'website-requests',
+        element: <RequirePermission anyOf={['proformas.read']} />,
+        children: [{ index: true, element: <WebsiteRequestsPage />, handle: h('Website Requests', 'Sales & Delivery') }],
       },
       { path: 'registered-clients', element: <Navigate to="/clients" replace /> },
       {
         path: 'sales',
         element: <RequirePermission anyOf={['sales.read']} />,
-        children: [{ index: true, element: <SalesPage />, handle: h('Sales', 'Overview') }],
+        children: [{ index: true, element: <SalesPage />, handle: h('Sales', 'Sales & Delivery') }],
       },
       {
         path: 'waybills',
         element: <RequirePermission anyOf={['waybills.read']} />,
-        children: [{ index: true, element: <WaybillsPage />, handle: h('Way Bill', 'Overview') }],
+        children: [{ index: true, element: <WaybillsPage />, handle: h('Way Bill', 'Sales & Delivery') }],
       },
       {
         path: 'purchases',
@@ -100,12 +108,12 @@ export const routes: RouteObject[] = [
       {
         path: 'tender-schedule',
         element: <RequirePermission anyOf={['tenders.read']} />,
-        children: [{ index: true, element: <TendersPage />, handle: h('Tender Price Schedule', 'Overview') }],
+        children: [{ index: true, element: <TendersPage />, handle: h('Tender Price Schedule', 'Sales & Delivery') }],
       },
       {
         path: 'acceptance-letters',
         element: <RequirePermission anyOf={['acceptance.read']} />,
-        children: [{ index: true, element: <AcceptancePage />, handle: h('Acceptance Letter', 'Overview') }],
+        children: [{ index: true, element: <AcceptancePage />, handle: h('Acceptance Letter', 'Sales & Delivery') }],
       },
       {
         path: 'expenses',

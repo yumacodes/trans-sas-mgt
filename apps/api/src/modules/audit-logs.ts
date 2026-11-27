@@ -16,6 +16,14 @@ auditLogsRouter.get('/', requirePermission('audit.read'), async (req, res) => {
     ...(query.entityType ? { entityType: query.entityType } : {}),
     ...(query.entityId ? { entityId: query.entityId } : {}),
     ...(query.actorId ? { actorId: query.actorId } : {}),
+    ...(query.dateFrom || query.dateTo
+      ? {
+          createdAt: {
+            ...(query.dateFrom ? { gte: new Date(`${query.dateFrom}T00:00:00Z`) } : {}),
+            ...(query.dateTo ? { lt: new Date(new Date(`${query.dateTo}T00:00:00Z`).getTime() + 86_400_000) } : {}),
+          },
+        }
+      : {}),
     ...(query.q
       ? {
           OR: [

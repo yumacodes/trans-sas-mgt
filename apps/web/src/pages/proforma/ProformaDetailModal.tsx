@@ -228,6 +228,15 @@ export function ProformaDetailModal({ proformaId, onOpenChange, onEdit, initialT
 
   const details = p && (
     <div className="space-y-5">
+      {p.source === 'website' && (
+        <p className="rounded-xl border border-info/25 bg-info-soft px-4 py-3 text-sm text-ink">
+          <strong className="font-semibold">Sent by the customer from the website</strong> on {formatDateTime(p.createdAt)}.{' '}
+          {p.status === 'draft'
+            ? 'Prices were filled in from Stock Items. Check prices, stock and delivery, then edit and issue it.'
+            : 'It is handled like any other proforma.'}
+          {!p.clientId && ' The customer is not linked to a client record yet: pick or add the client when you edit it.'}
+        </p>
+      )}
       <DetailList
         items={[
           { label: 'Customer', value: p.customerName },

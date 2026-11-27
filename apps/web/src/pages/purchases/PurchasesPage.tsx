@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Controller, useFieldArray, useForm } from 'react-hook-form';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
@@ -17,6 +17,7 @@ import {
   type SupplierDto,
 } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
+import { DateRangeFilter } from '@/components/app/DateRangeFilter';
 import { useKeepInput } from '@/components/app/useKeepInput';
 import { AttachmentsPanel } from '@/components/app/AttachmentsPanel';
 import { useOpenParam } from '@/components/app/useOpenParam';
@@ -59,7 +60,7 @@ function useSuppliers(enabled: boolean) {
 
 export default function PurchasesPage() {
   const { can } = useAuth();
-  const state = useTableState(['status', 'branchId'], { sort: 'purchaseDate:desc' });
+  const state = useTableState(['status', 'branchId', 'dateFrom', 'dateTo'], { sort: 'purchaseDate:desc' });
   const rowPdf = usePdfActions('/purchases');
   const del = useDeleteRecord<PurchaseDto>({
     path: '/purchases',
@@ -119,6 +120,7 @@ export default function PurchasesPage() {
         }
       />
       <DataTable
+        exportAll={{ filename: 'purchases', path: BASE, query: state.query }}
         columns={columns}
         result={result}
         state={state}
@@ -138,6 +140,14 @@ export default function PurchasesPage() {
         searchPlaceholder="Search PO number, supplier or their reference"
         filters={
           <>
+            <DateRangeFilter
+              from={state.filters.dateFrom}
+              to={state.filters.dateTo}
+              onChange={(from, to) => {
+                state.setFilter('dateFrom', from);
+                state.setFilter('dateTo', to);
+              }}
+            />
             <BranchFilter state={state} />
             <FilterSelect
               label="Status"
@@ -408,10 +418,21 @@ function ReceiveDialog({
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
 
+  const initialQuantities = useMemo(
+    () => Object.fromEntries(due.map((d) => [d.line.id, d.remaining.gt(0) ? d.remaining.toString() : '0'])),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [purchase.id, open],
+  );
+  // Asks before discarding edited quantities, a note or a changed date.
+  const isDirty =
+    note.trim() !== '' ||
+    date !== todayIso() ||
+    Object.entries(quantities).some(([id, q]) => (initialQuantities[id] ?? '') !== q);
+
   useEffect(() => {
     if (!open) return;
     // Start from "everything still due arrived"; people adjust what didn't.
-    setQuantities(Object.fromEntries(due.map((d) => [d.line.id, d.remaining.gt(0) ? d.remaining.toString() : '0'])));
+    setQuantities(initialQuantities);
     setDate(todayIso());
     setNote('');
     setError(null);
@@ -437,6 +458,7 @@ function ReceiveDialog({
     onOpenChange(false);
     try {
       await run(() => api.post<PurchaseDto>(`${BASE}/${purchase.id}/receive`, body, idem.keyFor(body)), {
+        success: (p) => `Goods received on ${p.number}. Stock updated.`,
         optimistic: () => {
           const arrived = new Map(items.map((i) => [i.purchaseItemId, i.quantity]));
           const updated = purchase.items.map((l) => ({
@@ -463,7 +485,7 @@ function ReceiveDialog({
     <FormDialog
       open={open}
       onOpenChange={onOpenChange}
-      isDirty={false}
+      isDirty={isDirty}
       size="lg"
       title={`Receive goods on ${purchase.number}`}
       description={`Stock at ${purchase.branch?.name ?? 'the receiving branch'} goes up by the quantities you enter.`}
@@ -557,7 +579,7 @@ function ReorderDialog({
     <FormDialog
       open={open}
       onOpenChange={onOpenChange}
-      isDirty={false}
+      isDirty={Boolean(supplierId)}
       size="sm"
       title="Draft from low stock"
       description="Creates a draft purchase for every item at or below its reorder level in your branch, topping each up to twice that level. You can edit it before ordering."
@@ -804,13 +826,13 @@ function PurchaseFormDialog({
                       />
                     </Field>
                     <Field label="Quantity" error={e?.quantity?.message} required>
-                      <Input inputMode="decimal" {...form.register(`items.${index}.quantity`)} />
+                      <Input inputMode="decimal" className="text-right tabular" {...form.register(`items.${index}.quantity`)} />
                     </Field>
                     <Field label="Unit" error={e?.unit?.message} required>
                       <Input {...form.register(`items.${index}.unit`)} />
                     </Field>
                     <Field label="Unit cost" error={e?.unitCost?.message} required>
-                      <Input inputMode="decimal" {...form.register(`items.${index}.unitCost`)} />
+                      <Input inputMode="decimal" className="text-right tabular" {...form.register(`items.${index}.unitCost`)} />
                     </Field>
                     <Field label="Amount">
                       <Input readOnly value={formatMoney(totals.amounts[index] ?? '0.00', currency)} className="bg-surface-muted text-right" />

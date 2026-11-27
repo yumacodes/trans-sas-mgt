@@ -9,6 +9,7 @@ import {
   saleInputSchema,
   type SaleDto,
   type SaleInput,
+  type StockBalanceDto,
 } from '@tsm/shared';
 import type { z } from 'zod';
 import { useAuth } from '@/auth/AuthProvider';
@@ -24,7 +25,8 @@ import { Input } from '@/components/ui/input';
 import { NativeSelect } from '@/components/ui/native-select';
 import { Textarea } from '@/components/ui/textarea';
 import { api } from '@/lib/api';
-import { formatMoney, todayIso } from '@/lib/format';
+import { formatMoney, formatQuantity, todayIso } from '@/lib/format';
+import { cn } from '@/lib/utils';
 import { insertRecord, patchRecord, pendingId } from '@/lib/optimistic';
 import { qk } from '@/lib/queryKeys';
 import { zodForm } from '@/lib/zodForm';
@@ -146,7 +148,7 @@ export function SaleFormDialog({ open, onOpenChange, onSaved, sale }: Props) {
             : api.post<SaleDto>('/sales', values, idem.keyFor(values)),
         {
           pending: isEdit ? 'Saving sale…' : 'Creating sale…',
-          success: isEdit ? 'Sale updated' : 'Sale created',
+          success: (s) => `Sale ${s.number} ${isEdit ? 'updated' : 'created'}`,
           optimistic: () => {
             const sums = calculateProformaTotals(values.items, 0, values.taxRate);
             const shown = {
@@ -198,8 +200,8 @@ export function SaleFormDialog({ open, onOpenChange, onSaved, sale }: Props) {
       void queryClient.invalidateQueries({ queryKey: qk.sales });
       void queryClient.invalidateQueries({ queryKey: qk.clients });
       onSaved?.(saved);
-    } catch {
-      recovery.keepNextOpen();
+    } catch (error) {
+      recovery.keepNextOpen(error, form.setError);
       onOpenChange(true);
       // The error dialog already explained the failure.
     }
@@ -323,13 +325,13 @@ export function SaleFormDialog({ open, onOpenChange, onSaved, sale }: Props) {
                       />
                     </Field>
                     <Field label="Quantity" error={e?.quantity?.message} required>
-                      <Input inputMode="decimal" {...form.register(`items.${index}.quantity`)} />
+                      <Input inputMode="decimal" className="text-right tabular" {...form.register(`items.${index}.quantity`)} />
                     </Field>
                     <Field label="Unit" error={e?.unit?.message} required>
                       <Input placeholder="pcs" {...form.register(`items.${index}.unit`)} />
                     </Field>
                     <Field label="Unit price" error={e?.unitPrice?.message} required hint={priceHint(lines[index]?.stockItemId)}>
-                      <Input inputMode="decimal" {...form.register(`items.${index}.unitPrice`)} />
+                      <Input inputMode="decimal" className="text-right tabular" {...form.register(`items.${index}.unitPrice`)} />
                     </Field>
                     <Field label="Amount">
                       <Input readOnly value={formatMoney(amount, currency)} className="bg-surface-muted text-right" />
@@ -346,6 +348,12 @@ export function SaleFormDialog({ open, onOpenChange, onSaved, sale }: Props) {
                         <Trash2 aria-hidden />
                       </Button>
                     </div>
+                    <StockAvailability
+                      stockItemId={lines[index]?.stockItemId ?? null}
+                      branchId={watched.branchId ?? null}
+                      quantity={lines[index]?.quantity}
+                      unit={lines[index]?.unit}
+                    />
                   </div>
                 );
               })}
@@ -387,5 +395,47 @@ export function SaleFormDialog({ open, onOpenChange, onSaved, sale }: Props) {
         </DialogFooter>
       </form>
     </FormDialog>
+  );
+}
+
+/**
+ * How much of the picked item is available, so a shortage shows while the sale is typed
+ * rather than when it is confirmed. Only for people who may see stock levels.
+ */
+function StockAvailability({
+  stockItemId,
+  branchId,
+  quantity,
+  unit,
+}: {
+  stockItemId: string | null;
+  branchId: string | null;
+  quantity: string | number | undefined;
+  unit: string | undefined;
+}) {
+  const { can } = useAuth();
+  const allowed = can('inventory.read') && Boolean(stockItemId);
+  const balances = useQuery({
+    queryKey: [...qk.stockBalances, 'for-sale', stockItemId, branchId],
+    queryFn: ({ signal }) =>
+      api.get<StockBalanceDto[]>(
+        '/stock-balances',
+        { itemId: stockItemId ?? '', ...(branchId ? { branchId } : {}), page: 1, pageSize: 100 },
+        signal,
+      ),
+    enabled: allowed,
+    staleTime: 30_000,
+  });
+  if (!allowed || !balances.data) return null;
+  const available = balances.data.reduce((sum, b) => sum + Number(b.quantityAvailable), 0);
+  const wanted = Number(quantity) || 0;
+  const where = branchId ? (balances.data[0]?.branch.name ?? 'this branch') : 'all branches';
+  const short = wanted > available;
+  return (
+    <p className={cn('col-span-full -mt-1 text-xs', short ? 'font-medium text-danger' : 'text-ink-muted')} role={short ? 'alert' : undefined}>
+      {short ? 'Not enough stock: ' : ''}
+      {formatQuantity(String(available))} {unit || ''} available at {where}
+      {!branchId && ' (choose a branch to check that branch)'}
+    </p>
   );
 }

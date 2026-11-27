@@ -183,6 +183,7 @@ export default function UsersPage() {
         </section>
       )}
       <DataTable
+        exportAll={{ filename: 'users', path: '/users', query: state.query }}
         columns={columns}
         result={result}
         state={state}

@@ -5,7 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/auth/AuthProvider';
 import { warmRoute } from '@/lib/prefetch';
 import { BRAND } from '@/lib/brand';
-import { useResetRequests } from '@/lib/queries';
+import { useResetRequests, useWebsiteRequestCount } from '@/lib/queries';
 import { cn, safeStorage } from '@/lib/utils';
 import { filterNav, NAV, NAV_GROUPS, type NavGroup, type NavItem } from './nav';
 
@@ -101,7 +101,7 @@ export function Sidebar({ mobileOpen, onMobileClose, rail, onExpandRail }: Sideb
         )}
         aria-label="Main navigation"
       >
-        <div className={cn('flex h-24 shrink-0 items-center gap-2 border-b border-border px-4', rail && 'lg:hidden')}>
+        <div className={cn('flex h-16 shrink-0 items-center gap-2 border-b border-border px-4', rail && 'lg:hidden')}>
           <Link to="/" className="block min-w-0 flex-1 rounded-lg" aria-label={`${company?.name ?? BRAND.fullName} home`}>
             <img
               src={company?.logoUrl ?? BRAND.logoSrc}
@@ -119,7 +119,7 @@ export function Sidebar({ mobileOpen, onMobileClose, rail, onExpandRail }: Sideb
           </button>
         </div>
 
-        <nav className={cn('scrollbar-slim mt-4 flex-1 overflow-y-auto overflow-x-hidden px-3 pb-3', rail && 'lg:mt-28')}>
+        <nav className={cn('scrollbar-slim mt-4 flex-1 overflow-y-auto overflow-x-hidden px-3 pb-3', rail && 'lg:mt-20')}>
           {sections.map(({ group, items: groupItems }) => (
             <NavSection key={group ?? 'top'} group={group} rail={rail}>
               {groupItems.map((item) => (
@@ -191,7 +191,9 @@ function NavEntry({ item, depth, expanded, onToggle, pathname, rail, onExpandRai
   const { can } = useAuth();
   const Icon = item.icon;
   const resetCount = useResetRequests().data?.length ?? 0;
-  const pending = item.showsResetRequests ? resetCount : 0;
+  const websiteCount = useWebsiteRequestCount().data ?? 0;
+  const pending = item.showsResetRequests ? resetCount : item.showsWebsiteRequests ? websiteCount : 0;
+  const pendingLabel = item.showsWebsiteRequests ? 'website requests waiting' : 'password reset requests';
   const parentPending = item.children?.some((c) => c.showsResetRequests) ? resetCount : 0;
   const indent = depth === 0 ? 'pl-3' : depth === 1 ? 'pl-10' : 'pl-14';
   const base = cn(
@@ -295,7 +297,7 @@ function NavEntry({ item, depth, expanded, onToggle, pathname, rail, onExpandRai
         {Icon && <Icon className="size-[18px] shrink-0" aria-hidden />}
         <span className={cn('truncate', rail && 'lg:hidden')}>{item.label}</span>
         <span className={cn('contents', rail && 'lg:hidden')}>
-          <CountBadge count={pending} label="password reset requests" />
+          <CountBadge count={pending} label={pendingLabel} />
         </span>
       </NavLink>
     </li>

@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
-import { Pencil } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowLeftRight, Pencil, SlidersHorizontal } from 'lucide-react';
 import {
   STOCK_MOVEMENT_LABELS,
   TRACKING_MODE_LABELS,
@@ -24,6 +25,11 @@ import { useBranchOptions, useListQuery } from '@/lib/queries';
 import { qk } from '@/lib/queryKeys';
 import { cn } from '@/lib/utils';
 import { StockItemImageManager } from './StockItemImages';
+import { StockAdjustDialog } from './StockAdjustDialog';
+import { StockTransferDialog } from './StockTransferDialog';
+import type { StockTarget } from './stockOperations';
+
+type StockDialog = { kind: 'adjust' | 'transfer'; open: boolean; target: StockTarget };
 
 interface Props {
   itemId: string | null;
@@ -42,6 +48,10 @@ export function StockItemDetailModal({ itemId, onOpenChange, onEdit, menu }: Pro
     enabled: Boolean(itemId),
   });
   const item = query.data;
+  const [stockDialog, setStockDialog] = useState<StockDialog | null>(null);
+  const openStock = (kind: StockDialog['kind'], target: StockTarget) =>
+    setStockDialog({ kind, open: true, target });
+  const setStockOpen = (open: boolean) => setStockDialog((d) => (d ? { ...d, open } : d));
 
   const tabs: RecordTab[] = item
     ? [
@@ -105,7 +115,7 @@ export function StockItemDetailModal({ itemId, onOpenChange, onEdit, menu }: Pro
               {
                 value: 'balances',
                 label: 'Stock by branch',
-                content: <BranchBalances item={item} />,
+                content: <BranchBalances item={item} onAction={openStock} />,
               },
               { value: 'movements', label: 'Movement history', content: <Movements item={item} /> },
             ]
@@ -123,29 +133,56 @@ export function StockItemDetailModal({ itemId, onOpenChange, onEdit, menu }: Pro
     : [];
 
   return (
-    <RecordModal
-      open={Boolean(itemId)}
-      onOpenChange={onOpenChange}
-      title={item?.name ?? 'Stock item'}
-      reference={item?.sku}
-      status={item && <ActiveBadge active={item.isActive} />}
-      loading={query.isLoading}
-      error={query.isError ? errorMessage(query.error) : null}
-      onRetry={() => void query.refetch()}
-      tabs={tabs}
-      menu={item && menu ? menu(item) : []}
-      actions={
-        item && can('stock_items.update') ? (
-          <Button variant="secondary" onClick={() => onEdit(item)}>
-            <Pencil aria-hidden /> Edit
-          </Button>
-        ) : undefined
-      }
-    />
+    <>
+      <RecordModal
+        open={Boolean(itemId)}
+        onOpenChange={onOpenChange}
+        title={item?.name ?? 'Stock item'}
+        reference={item?.sku}
+        status={item && <ActiveBadge active={item.isActive} />}
+        loading={query.isLoading}
+        error={query.isError ? errorMessage(query.error) : null}
+        onRetry={() => void query.refetch()}
+        tabs={tabs}
+        menu={item && menu ? menu(item) : []}
+        actions={
+          item && can('stock_items.update') ? (
+            <Button variant="secondary" onClick={() => onEdit(item)}>
+              <Pencil aria-hidden /> Edit
+            </Button>
+          ) : undefined
+        }
+      />
+      <StockAdjustDialog
+        open={stockDialog?.kind === 'adjust' && stockDialog.open}
+        target={stockDialog?.kind === 'adjust' ? stockDialog.target : null}
+        onOpenChange={setStockOpen}
+      />
+      <StockTransferDialog
+        open={stockDialog?.kind === 'transfer' && stockDialog.open}
+        target={stockDialog?.kind === 'transfer' ? stockDialog.target : null}
+        onOpenChange={setStockOpen}
+      />
+    </>
   );
 }
 
-function BranchBalances({ item }: { item: StockItemDto }) {
+function BranchBalances({
+  item,
+  onAction,
+}: {
+  item: StockItemDto;
+  onAction: (kind: 'adjust' | 'transfer', target: StockTarget) => void;
+}) {
+  const { can } = useAuth();
+  const canAdjust = can('inventory.adjust');
+  const canTransfer = can('inventory.transfer');
+  const target = (branchId?: string): StockTarget => ({
+    itemId: item.id,
+    itemName: item.name,
+    unit: item.unit,
+    branchId,
+  });
   const query = useQuery({
     queryKey: [...qk.stockItems, 'balances', item.id],
     queryFn: ({ signal }) =>
@@ -159,7 +196,14 @@ function BranchBalances({ item }: { item: StockItemDto }) {
     return (
       <EmptyState
         title="No stock recorded"
-        description="Quantities appear here once goods are received or an opening balance is recorded."
+        description="Quantities appear here once goods are received, an opening balance is recorded, or stock is adjusted into a branch."
+        action={
+          canAdjust && item.isActive ? (
+            <Button variant="secondary" onClick={() => onAction('adjust', target())}>
+              <SlidersHorizontal aria-hidden /> Adjust stock
+            </Button>
+          ) : undefined
+        }
       />
     );
   return (
@@ -183,6 +227,11 @@ function BranchBalances({ item }: { item: StockItemDto }) {
             <th scope="col" className="px-3 py-2 text-left font-semibold">
               Status
             </th>
+            {(canAdjust || canTransfer) && (
+              <th scope="col" className="px-3 py-2 text-right font-semibold">
+                <span className="sr-only">Actions</span>
+              </th>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -199,6 +248,32 @@ function BranchBalances({ item }: { item: StockItemDto }) {
               <td className="px-3 py-2">
                 {b.isLowStock ? <LowStockBadge /> : <span className="text-ink-subtle">OK</span>}
               </td>
+              {(canAdjust || canTransfer) && (
+                <td className="px-3 py-1.5 text-right">
+                  <div className="inline-flex gap-1">
+                    {canAdjust && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        aria-label={`Adjust stock at ${b.branch.name}`}
+                        onClick={() => onAction('adjust', target(b.branch.id))}
+                      >
+                        <SlidersHorizontal aria-hidden /> Adjust
+                      </Button>
+                    )}
+                    {canTransfer && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        aria-label={`Transfer stock from ${b.branch.name}`}
+                        onClick={() => onAction('transfer', target(b.branch.id))}
+                      >
+                        <ArrowLeftRight aria-hidden /> Transfer
+                      </Button>
+                    )}
+                  </div>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>

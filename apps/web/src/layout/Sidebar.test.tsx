@@ -9,7 +9,10 @@ import { filterNav, NAV } from './nav';
 
 let auth: AuthContextValue = fakeAuth();
 vi.mock('@/auth/AuthProvider', () => ({ useAuth: () => auth }));
-vi.mock('@/lib/queries', () => ({ useResetRequests: () => ({ data: [{ id: 'r1' }, { id: 'r2' }] }) }));
+vi.mock('@/lib/queries', () => ({
+  useResetRequests: () => ({ data: [{ id: 'r1' }, { id: 'r2' }] }),
+  useWebsiteRequestCount: () => ({ data: 0 }),
+}));
 const { Sidebar } = await import('./Sidebar');
 
 function renderSidebar(permissions: Permission[], path = '/') {

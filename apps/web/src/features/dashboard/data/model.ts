@@ -35,8 +35,21 @@ export interface KpiDef {
 
 const change = (now: number, before: number) => (before > 0 ? ((now - before) / before) * 100 : null);
 
-export function toKpis(o: DashboardOverviewDto, range: RangeKey): KpiDef[] {
+/** A list-page link with the given filters; empty values are left out. */
+export function listLink(path: string, filters: Record<string, string | undefined>): string {
+  const params = new URLSearchParams();
+  for (const [name, value] of Object.entries(filters)) if (value) params.set(name, value);
+  const qs = params.toString();
+  return qs ? `${path}?${qs}` : path;
+}
+
+/**
+ * KPI cards link to the records behind them, filtered to the dashboard's period
+ * (`dateFrom` / `dateTo`) and branch, so "Sales this month" opens this month's sales.
+ */
+export function toKpis(o: DashboardOverviewDto, range: RangeKey, branchId?: string): KpiDef[] {
   const kpis: KpiDef[] = [];
+  const period = { dateFrom: o.period.from, dateTo: o.period.to, branchId };
   const recent = (key: 'sales' | 'payments') => (o.monthly ?? []).slice(-6).map((m) => Number(m[key]));
   if (o.sales) {
     const now = Number(o.sales.value);
@@ -51,7 +64,7 @@ export function toKpis(o: DashboardOverviewDto, range: RangeKey): KpiDef[] {
       caption: before > 0 ? 'vs the same days last period' : 'Confirmed sales, including tax',
       trend: recent('sales'),
       tone: 'var(--color-chart-navy)',
-      to: '/sales?status=confirmed',
+      to: listLink('/sales', { status: 'confirmed', ...period }),
     });
   }
   if (o.payments) {
@@ -67,7 +80,7 @@ export function toKpis(o: DashboardOverviewDto, range: RangeKey): KpiDef[] {
       caption: before > 0 ? 'vs the same days last period' : 'Money received from customers',
       trend: recent('payments'),
       tone: 'var(--color-info)',
-      to: '/payments',
+      to: listLink('/payments', { status: 'posted', ...period }),
     });
   }
   if (o.outstanding) {
@@ -81,7 +94,8 @@ export function toKpis(o: DashboardOverviewDto, range: RangeKey): KpiDef[] {
       caption: o.outstanding.overdueCount > 0 ? `${o.outstanding.overdueCount} sale(s) overdue` : 'Nothing overdue',
       trend: [],
       tone: '#5b4bd1',
-      to: '/reports/outstanding-balances',
+      // Outstanding balances are as at today, whatever the period.
+      to: listLink('/reports/outstanding-balances', { branchId }),
     });
   }
   if (o.inventory) {

@@ -120,7 +120,7 @@ describe('public website routes', () => {
 
     const notified = db.notification.createMany.mock.calls[0]![0].data;
     expect(notified).toHaveLength(2);
-    expect(notified[0]).toMatchObject({ type: 'website_request', link: '/proforma?open=p1' });
+    expect(notified[0]).toMatchObject({ type: 'website_request', link: '/website-requests?open=p1' });
   });
 
   it('refuses products that are not listed on the website', async () => {
@@ -142,5 +142,57 @@ describe('public website routes', () => {
     const res = await request(app).post('/api/v1/public/requests').send({ ...validBody, website: 'http://spam' });
     expect(res.status).toBe(400);
     expect(db.proforma.create).not.toHaveBeenCalled();
+  });
+
+  it("records the buyer's tender / PO reference and TIN on the draft", async () => {
+    db.stockItem.findMany.mockResolvedValue([item('COUCH-1', '1500.00'), item('LAMP', '820.50')]);
+    const res = await request(app)
+      .post('/api/v1/public/requests')
+      .send({ ...validBody, reference: 'LPO-118', taxId: 'C0001234567' });
+    expect(res.status).toBe(201);
+    const notes = db.proforma.create.mock.calls[0]![0].data.notes as string;
+    expect(notes).toContain('LPO-118');
+    expect(notes).toContain('C0001234567');
+  });
+});
+
+describe('public contact enquiries', () => {
+  const enquiry = {
+    submissionKey: KEY,
+    name: 'Kofi Boateng',
+    email: 'kofi@example.com',
+    topic: 'sourcing',
+    subject: 'Ultrasound gel',
+    message: 'Do you stock 5 L ultrasound gel?',
+  };
+
+  it('notifies staff with the whole message and returns a reference', async () => {
+    const res = await request(app).post('/api/v1/public/enquiries').set('Origin', SITE).send(enquiry);
+    expect(res.status).toBe(201);
+    expect(res.body.data.reference).toMatch(/^ENQ-[A-Z0-9]{6}$/);
+    const notified = db.notification.createMany.mock.calls[0]![0].data;
+    expect(notified).toHaveLength(2);
+    expect(notified[0]).toMatchObject({ type: 'website_enquiry' });
+    expect(notified[0].body).toContain('Do you stock 5 L ultrasound gel?');
+    expect(notified[0].dedupeKey).toBe(`website-enquiry:${res.body.data.reference}`);
+  });
+
+  it('gives a resent message the same reference', async () => {
+    const a = await request(app).post('/api/v1/public/enquiries').send(enquiry);
+    const b = await request(app).post('/api/v1/public/enquiries').send(enquiry);
+    expect(a.body.data.reference).toBe(b.body.data.reference);
+  });
+
+  it('rejects a message without the required fields', async () => {
+    const res = await request(app).post('/api/v1/public/enquiries').send({ ...enquiry, message: '', email: 'x' });
+    expect(res.status).toBe(422);
+    expect(res.body.error.fields).toHaveProperty('message');
+    expect(res.body.error.fields).toHaveProperty('email');
+    expect(db.notification.createMany).not.toHaveBeenCalled();
+  });
+
+  it('refuses the honeypot', async () => {
+    const res = await request(app).post('/api/v1/public/enquiries').send({ ...enquiry, website: 'x' });
+    expect(res.status).toBe(400);
   });
 });

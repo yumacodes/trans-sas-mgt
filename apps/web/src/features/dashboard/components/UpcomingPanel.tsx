@@ -2,7 +2,7 @@ import { Link } from 'react-router';
 import type { DashboardOverviewDto } from '@tsm/shared';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/app/States';
-import { formatDate } from '@/lib/format';
+import { formatDate, todayIso } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 type Item = DashboardOverviewDto['upcoming'][number];
@@ -15,7 +15,8 @@ const KIND: Record<Item['kind'], { label: string; style: string }> = {
 
 /** Tender deadlines, payments falling due and expected deliveries over the next two weeks. */
 export function UpcomingPanel({ items }: { items: Item[] }) {
-  const today = new Date().toISOString().slice(0, 10);
+  // Local calendar date: toISOString() would give UTC's date, a day off near midnight.
+  const today = todayIso();
   return (
     <Card className="flex flex-col p-6">
       <h2 className="text-lg font-semibold tracking-tight text-ink">Coming up</h2>

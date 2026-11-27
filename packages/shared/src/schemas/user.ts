@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { Permission } from '../permissions';
-import { booleanQuery, listQuerySchema, optionalPhone, requiredText, uuid } from './common';
+import { booleanQuery, isoDate, listQuerySchema, optionalPhone, requiredText, uuid } from './common';
 import type { BranchRef } from './branch';
 import { usernameSchema } from './auth';
 
@@ -96,6 +96,9 @@ export const auditListQuerySchema = listQuerySchema.extend({
   entityType: z.string().trim().max(60).optional(),
   entityId: z.string().trim().max(60).optional(),
   actorId: uuid.optional(),
+  /** Local calendar days; the API compares them in UTC, which is how timestamps are stored. */
+  dateFrom: isoDate.optional(),
+  dateTo: isoDate.optional(),
 });
 
 export interface UserOptionDto {

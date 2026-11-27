@@ -1,5 +1,5 @@
 import { Link, useLocation, useMatches } from 'react-router';
-import { ChevronRight, LogOut, Menu, PanelLeftClose, PanelLeftOpen, UserCog } from 'lucide-react';
+import { ChevronRight, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Search, UserCog } from 'lucide-react';
 import { useAuth } from '@/auth/AuthProvider';
 import { useSignOutConfirm } from '@/auth/useSignOutConfirm';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -14,6 +14,8 @@ import {
 import { RangeSelector } from '@/features/dashboard/components/Toolbar';
 import { useDashboardRange } from '@/features/dashboard/rangeStore';
 import { initials } from '@/lib/utils';
+import { CommandPalette, openSearch, SEARCH_SHORTCUT } from './CommandPalette';
+import { filterNav, NAV, type NavItem } from './nav';
 import { NotificationBell } from './NotificationBell';
 
 export interface RouteHandle {
@@ -40,16 +42,19 @@ export function Topbar({
   rail: boolean;
   onToggleRail: () => void;
 }) {
-  const { me } = useAuth();
+  const { me, canAny } = useAuth();
   const { requestSignOut, signOutDialog } = useSignOutConfirm();
   const handle = useRouteTitle();
   const user = me?.user;
   const { pathname } = useLocation();
   const [range, setRange] = useDashboardRange();
   const showRange = pathname === '/';
+  const sectionLink = handle?.section ? firstPageIn(handle.section, filterNav(NAV, canAny)) : undefined;
+  // Pages that share one route (every report) take their name from the sidebar entry.
+  const title = (pathname.startsWith('/reports/') && navLabel(pathname, NAV)) || handle?.title || '';
 
   return (
-    <header className="sticky top-0 z-30 flex h-24 min-w-0 shrink-0 items-center gap-2 sm:gap-3 border-b border-border bg-surface/95 px-4 backdrop-blur-md sm:px-6">
+    <header className="sticky top-0 z-30 flex h-16 min-w-0 shrink-0 items-center gap-2 sm:gap-3 border-b border-border bg-surface/95 px-4 backdrop-blur-md sm:px-6">
       <button
         type="button"
         onClick={onOpenNav}
@@ -73,20 +78,42 @@ export function Topbar({
         <ol className="flex items-center gap-2 text-sm">
           {handle?.section && (
             <>
-              <li className="hidden truncate text-ink-subtle sm:block">{handle.section}</li>
+              <li className="hidden truncate text-ink-subtle sm:block">
+                {sectionLink && sectionLink !== pathname ? (
+                  <Link to={sectionLink} className="rounded hover:text-ink hover:underline">
+                    {handle.section}
+                  </Link>
+                ) : (
+                  handle.section
+                )}
+              </li>
               <li className="hidden text-ink-subtle sm:block" aria-hidden>
                 <ChevronRight className="size-3.5" />
               </li>
             </>
           )}
           <li className="truncate font-semibold text-ink" aria-current="page">
-            {handle?.title ?? ''}
+            {title}
           </li>
         </ol>
       </nav>
 
       {showRange && <RangeSelector value={range} onChange={setRange} />}
 
+      {user && (
+        <button
+          type="button"
+          onClick={openSearch}
+          className="flex h-10 items-center gap-2 rounded-full border border-border px-3 text-sm text-ink-subtle transition-colors hover:bg-surface-muted hover:text-ink md:w-56"
+          aria-label={`Search (${SEARCH_SHORTCUT})`}
+          aria-keyshortcuts="Control+K Meta+K"
+        >
+          <Search className="size-4 shrink-0" aria-hidden />
+          <span className="hidden flex-1 text-left md:block">Search…</span>
+          <kbd className="hidden rounded border border-border px-1 text-[10px] md:block">{SEARCH_SHORTCUT}</kbd>
+        </button>
+      )}
+      {user && <CommandPalette />}
 
       {user && <NotificationBell />}
 
@@ -134,4 +161,24 @@ export function Topbar({
       {signOutDialog}
     </header>
   );
+}
+
+/** The first page the user can open in a sidebar section, so the breadcrumb section is a link. */
+function firstPageIn(section: string, items: NavItem[]): string | undefined {
+  for (const item of items) {
+    if (item.group !== section && item.label !== section) continue;
+    if (item.to) return item.to;
+    const child = item.children?.find((c) => c.to);
+    if (child?.to) return child.to;
+  }
+  return undefined;
+}
+
+function navLabel(path: string, items: NavItem[]): string | undefined {
+  for (const item of items) {
+    if (item.to === path) return item.label;
+    const child = item.children && navLabel(path, item.children);
+    if (child) return child;
+  }
+  return undefined;
 }

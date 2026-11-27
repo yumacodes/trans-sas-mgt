@@ -195,3 +195,105 @@ export interface StockMovementDto {
 export const stockMovementListQuerySchema = listQuerySchema.extend({
   branchId: uuid.optional(),
 });
+
+/* ---------- Adjustments & transfers ---------- */
+
+/**
+ * Why on-hand stock is corrected outside a purchase, sale or delivery. Each reason fixes
+ * the direction it may be used in, so a "damaged" write-off can't add stock.
+ */
+export const STOCK_ADJUSTMENT_REASONS = [
+  'count_correction',
+  'damaged',
+  'expired',
+  'lost_stolen',
+  'found',
+  'other',
+] as const;
+export type StockAdjustmentReason = (typeof STOCK_ADJUSTMENT_REASONS)[number];
+
+export const STOCK_ADJUSTMENT_REASON_LABELS: Record<StockAdjustmentReason, string> = {
+  count_correction: 'Stock count correction',
+  damaged: 'Damaged',
+  expired: 'Expired',
+  lost_stolen: 'Lost or stolen',
+  found: 'Found / recovered',
+  other: 'Other (describe in the note)',
+};
+
+export const STOCK_ADJUSTMENT_DIRECTIONS = ['increase', 'decrease'] as const;
+export type StockAdjustmentDirection = (typeof STOCK_ADJUSTMENT_DIRECTIONS)[number];
+
+/** Directions each reason allows. */
+export const STOCK_ADJUSTMENT_REASON_DIRECTIONS: Record<StockAdjustmentReason, readonly StockAdjustmentDirection[]> = {
+  count_correction: ['increase', 'decrease'],
+  damaged: ['decrease'],
+  expired: ['decrease'],
+  lost_stolen: ['decrease'],
+  found: ['increase'],
+  other: ['increase', 'decrease'],
+};
+
+const stockQuantity = z
+  .union([z.string(), z.number()])
+  .transform((v) => String(v).trim())
+  .refine((v) => /^\d{1,12}(\.\d{1,3})?$/.test(v) && Number(v) > 0, 'Enter a quantity greater than zero.');
+
+export const stockAdjustmentInputSchema = z
+  .object({
+    itemId: z.string().uuid('Choose an item.'),
+    branchId: z.string().uuid('Choose a branch.'),
+    direction: z.enum(STOCK_ADJUSTMENT_DIRECTIONS, { errorMap: () => ({ message: 'Choose increase or decrease.' }) }),
+    quantity: stockQuantity,
+    reason: z.enum(STOCK_ADJUSTMENT_REASONS, { errorMap: () => ({ message: 'Choose a reason.' }) }),
+    /** Only used for increases; decreases are costed at the item's current cost. */
+    unitCost: optionalMoneyString('Unit cost'),
+    note: optionalText(500),
+  })
+  .superRefine((v, ctx) => {
+    if (v.reason === 'other' && !v.note) {
+      ctx.addIssue({ code: 'custom', path: ['note'], message: 'Describe the reason for this adjustment.' });
+    }
+    if (!STOCK_ADJUSTMENT_REASON_DIRECTIONS[v.reason].includes(v.direction)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['reason'],
+        message:
+          v.direction === 'increase'
+            ? `"${STOCK_ADJUSTMENT_REASON_LABELS[v.reason]}" can only remove stock.`
+            : `"${STOCK_ADJUSTMENT_REASON_LABELS[v.reason]}" can only add stock.`,
+      });
+    }
+  });
+export type StockAdjustmentInput = z.input<typeof stockAdjustmentInputSchema>;
+
+export const stockTransferInputSchema = z
+  .object({
+    fromBranchId: z.string().uuid('Choose the branch the stock leaves.'),
+    toBranchId: z.string().uuid('Choose the branch receiving the stock.'),
+    items: z
+      .array(z.object({ itemId: z.string().uuid('Choose an item.'), quantity: stockQuantity }))
+      .min(1, 'Add at least one item.')
+      .max(100, 'Transfer up to 100 items at a time.'),
+    note: optionalText(500),
+  })
+  .superRefine((v, ctx) => {
+    if (v.fromBranchId && v.fromBranchId === v.toBranchId) {
+      ctx.addIssue({ code: 'custom', path: ['toBranchId'], message: 'Choose a different branch from the one the stock leaves.' });
+    }
+    const seen = new Set<string>();
+    v.items.forEach((line, index) => {
+      if (!line.itemId) return;
+      if (seen.has(line.itemId)) {
+        ctx.addIssue({ code: 'custom', path: ['items', index, 'itemId'], message: 'This item is already on the transfer.' });
+      }
+      seen.add(line.itemId);
+    });
+  });
+export type StockTransferInput = z.input<typeof stockTransferInputSchema>;
+
+/** Result of an adjustment or transfer: its reference and the balances it changed. */
+export interface StockOperationResultDto {
+  reference: string;
+  balances: StockBalanceDto[];
+}

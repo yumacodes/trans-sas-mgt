@@ -1,15 +1,21 @@
+import { createHash } from 'node:crypto';
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { Prisma } from '@prisma/client';
 import {
   calculateProformaTotals,
   PROFORMA_CURRENCIES,
+  WEBSITE_ENQUIRY_TOPIC_LABELS,
+  websiteEnquirySchema,
   websiteRequestSchema,
   type ProformaCurrency,
+  type WebsiteEnquiryReceiptDto,
   type WebsiteProductDto,
   type WebsiteRequestReceiptDto,
 } from '@tsm/shared';
 import { AppError } from '../lib/errors';
+import { logger } from '../lib/logger';
+import { emailConfigured, sendEmail } from '../services/email';
 import { prisma, type Tx } from '../lib/prisma';
 import { created, ok } from '../lib/respond';
 import { parse } from '../lib/validate';
@@ -154,6 +160,8 @@ websiteRouter.post('/requests', requestLimiter, async (req, res) => {
       const notes = [
         'Request from the website. Check prices and availability before issuing.',
         `Contact: ${input.name}${input.organisation ? ` (${input.organisation})` : ''}`,
+        input.reference ? `Customer reference (tender / PO): ${input.reference}` : '',
+        input.taxId ? `Customer TIN: ${input.taxId}` : '',
         `Fulfilment: ${input.delivery === 'delivery' ? 'deliver to the address above' : 'customer will pick up in Accra'}`,
         input.notes ? `\nCustomer's note:\n${input.notes}` : '',
       ]
@@ -208,7 +216,7 @@ websiteRouter.post('/requests', requestLimiter, async (req, res) => {
         type: 'website_request',
         title: `New website request from ${customerName}`,
         body: `${proforma.number}: ${lines.length} product${lines.length === 1 ? '' : 's'}. Check the prices, then issue it.`,
-        link: `/proforma?open=${proforma.id}`,
+        link: `/website-requests?open=${proforma.id}`,
         dedupeKey: `website-request:${proforma.id}`,
       });
       return { reference: proforma.number };
@@ -222,4 +230,69 @@ websiteRouter.post('/requests', requestLimiter, async (req, res) => {
     }
     throw err;
   }
+});
+
+/* ---------- Contact-form enquiries ---------- */
+
+const enquiryLimiter = rateLimit({
+  windowMs: 60 * 60_000,
+  limit: 10,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  handler: (_req, _res, next) =>
+    next(new AppError('RATE_LIMITED', 'Too many messages have been sent from here in the last hour. Call or WhatsApp us instead.')),
+});
+
+/** A short reference derived from the submission key, so a resend gets the same one back. */
+function enquiryReference(submissionKey: string): string {
+  const digest = createHash('sha256').update(submissionKey).digest('base64url').replace(/[^A-Za-z0-9]/g, '');
+  return `ENQ-${digest.slice(0, 6).toUpperCase()}`;
+}
+
+/**
+ * The contact form. There is no enquiry table: staff who handle requests are notified in the
+ * app (the notification carries the whole message, once per person thanks to the dedupe key),
+ * and the company inbox gets a copy when email is configured. The visitor is told it arrived
+ * only after the notification is stored.
+ */
+websiteRouter.post('/enquiries', enquiryLimiter, async (req, res) => {
+  const input = parse(websiteEnquirySchema, req.body);
+  if (input.website) throw new AppError('BAD_REQUEST', 'We could not accept this message.');
+
+  const reference = enquiryReference(input.submissionKey);
+  const topic = WEBSITE_ENQUIRY_TOPIC_LABELS[input.topic];
+  const from = `${input.name}${input.organisation ? ` (${input.organisation})` : ''}`;
+  const contact = [input.email, input.phone].filter(Boolean).join(' · ');
+  const subject = input.subject ? `${topic}: ${input.subject}` : topic;
+  const message = input.message.length > 1500 ? `${input.message.slice(0, 1500)}…` : input.message;
+
+  await prisma.$transaction(async (tx) => {
+    await notifyPermission(tx, 'proformas.manage', null, null, {
+      type: 'website_enquiry',
+      title: `Website message from ${from}`,
+      body: `${reference} · ${subject}\n${contact}\n\n${message}`,
+      dedupeKey: `website-enquiry:${reference}`,
+    });
+    await recordAudit(tx, { actorId: null, requestId: req.id ? String(req.id) : undefined }, {
+      action: 'website.enquiry',
+      entityType: 'website_enquiry',
+      entityId: reference,
+      summary: `Website message ${reference} from ${from} (${topic})`,
+    });
+  });
+
+  // The inbox copy is a convenience: the message is already stored for staff, so a mail
+  // failure is logged rather than shown to the visitor as a failed send.
+  if (emailConfigured()) {
+    const company = await prisma.companyProfile.findFirst({ select: { email: true } });
+    if (company?.email) {
+      sendEmail({
+        to: company.email,
+        subject: `[Website] ${subject} (${reference})`,
+        text: `From: ${from}\nEmail: ${input.email}${input.phone ? `\nPhone: ${input.phone}` : ''}\n\n${input.message}`,
+      }).catch((err) => logger.warn({ err, reference }, 'website enquiry email copy failed'));
+    }
+  }
+
+  created(res, { reference } satisfies WebsiteEnquiryReceiptDto);
 });

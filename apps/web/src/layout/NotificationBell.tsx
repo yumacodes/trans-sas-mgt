@@ -20,12 +20,14 @@ export function NotificationBell() {
     queryKey: [...qk.notifications, 'unread'],
     queryFn: ({ signal }) => api.get<{ count: number }>('/notifications/unread-count', undefined, signal),
     refetchInterval: POLL_MS,
+    refetchOnWindowFocus: true,
   });
   const list = useQuery({
     queryKey: [...qk.notifications, 'list'],
     queryFn: ({ signal }) =>
       request<NotificationDto[]>('GET', '/notifications', { query: { page: 1, pageSize: 20 }, signal }),
     refetchInterval: POLL_MS,
+    refetchOnWindowFocus: true,
   });
   const count = unread.data?.count ?? 0;
   const items = list.data?.data ?? [];

@@ -3,6 +3,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { Pencil, Plus, FileDown } from 'lucide-react';
 import { TENDER_STATUSES, TENDER_STATUS_LABELS, type TenderDto } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
+import { DateRangeFilter } from '@/components/app/DateRangeFilter';
 import { useOpenParam } from '@/components/app/useOpenParam';
 import { BranchFilter } from '@/components/app/BranchControls';
 import { CellLink, DataTable, FilterSelect } from '@/components/app/DataTable';
@@ -10,7 +11,6 @@ import { PageHeader } from '@/components/app/PageHeader';
 import { TenderStatusBadge } from '@/components/app/StatusBadges';
 import { useTableState } from '@/components/app/useTableState';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { formatDate, formatMoney } from '@/lib/format';
 import { useListQuery } from '@/lib/queries';
 import { qk } from '@/lib/queryKeys';
@@ -81,6 +81,7 @@ export default function TendersPage() {
         }
       />
       <DataTable
+        exportAll={{ filename: 'tender-price-schedules', path: '/tenders', query: state.query }}
         columns={columns}
         result={result}
         state={state}
@@ -107,28 +108,14 @@ export default function TendersPage() {
               onChange={(v) => state.setFilter('status', v)}
               options={TENDER_STATUSES.map((s) => ({ value: s, label: TENDER_STATUS_LABELS[s] }))}
             />
-            <label className="flex items-center gap-2 text-xs text-ink-muted">
-              From
-              <Input
-                type="date"
-                aria-label="From date"
-                className="h-10 w-auto"
-                value={state.filters.dateFrom ?? ''}
-                max={state.filters.dateTo || undefined}
-                onChange={(e) => state.setFilter('dateFrom', e.target.value || undefined)}
-              />
-            </label>
-            <label className="flex items-center gap-2 text-xs text-ink-muted">
-              To
-              <Input
-                type="date"
-                aria-label="To date"
-                className="h-10 w-auto"
-                value={state.filters.dateTo ?? ''}
-                min={state.filters.dateFrom || undefined}
-                onChange={(e) => state.setFilter('dateTo', e.target.value || undefined)}
-              />
-            </label>
+            <DateRangeFilter
+              from={state.filters.dateFrom}
+              to={state.filters.dateTo}
+              onChange={(from, to) => {
+                state.setFilter('dateFrom', from);
+                state.setFilter('dateTo', to);
+              }}
+            />
           </>
         }
         emptyTitle="No price schedules yet"

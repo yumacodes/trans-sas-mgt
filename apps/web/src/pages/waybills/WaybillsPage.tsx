@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Controller, useFieldArray, useForm } from 'react-hook-form';
-import { useNavigate, useSearchParams } from 'react-router';
+import { useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { Ban, CheckCircle2, FileDown, FileSignature, Pencil, Plus, Printer, Send, Trash2 } from 'lucide-react';
@@ -13,6 +13,7 @@ import {
   type WaybillInput,
 } from '@tsm/shared';
 import { useAuth } from '@/auth/AuthProvider';
+import { DateRangeFilter } from '@/components/app/DateRangeFilter';
 import { useKeepInput } from '@/components/app/useKeepInput';
 import { AttachmentsPanel } from '@/components/app/AttachmentsPanel';
 import { DocumentEmailComposer } from '@/components/app/DocumentEmailComposer';
@@ -38,14 +39,14 @@ import { insertRecord, patchRecord, pendingId } from '@/lib/optimistic';
 import { useListQuery } from '@/lib/queries';
 import { qk } from '@/lib/queryKeys';
 import { zodForm } from '@/lib/zodForm';
+import { useOpenParam } from '@/components/app/useOpenParam';
 import { useDeleteRecord } from '@/components/app/useDeleteRecord';
 
 const BASE = '/waybills';
 
 export default function WaybillsPage() {
   const { can } = useAuth();
-  const [params, setParams] = useSearchParams();
-  const state = useTableState(['status', 'branchId'], { sort: 'deliveryDate:desc' });
+  const state = useTableState(['status', 'branchId', 'dateFrom', 'dateTo'], { sort: 'deliveryDate:desc' });
   const rowPdf = usePdfActions('/waybills');
   const del = useDeleteRecord<WaybillDto>({
     path: '/waybills',
@@ -55,18 +56,10 @@ export default function WaybillsPage() {
     allowed: (w) => canManage && (w.status === 'draft' || w.status === 'cancelled'),
   });
   const result = useListQuery<WaybillDto>(qk.waybills, BASE, state.query);
-  const [viewId, setViewId] = useState<string | null>(params.get('open'));
+  const [viewId, setViewId, closeView] = useOpenParam();
   const [form, setForm] = useState<{ open: boolean; waybill: WaybillDto | null }>({ open: false, waybill: null });
   const canManage = can('waybills.manage');
 
-  const closeView = () => {
-    setViewId(null);
-    if (params.has('open')) {
-      const next = new URLSearchParams(params);
-      next.delete('open');
-      setParams(next, { replace: true });
-    }
-  };
 
   const columns: ColumnDef<WaybillDto>[] = [
     {
@@ -103,6 +96,7 @@ export default function WaybillsPage() {
         actions={newButton()}
       />
       <DataTable
+        exportAll={{ filename: 'waybills', path: BASE, query: state.query }}
         columns={columns}
         result={result}
         state={state}
@@ -122,6 +116,14 @@ export default function WaybillsPage() {
         searchPlaceholder="Search waybill, recipient or sale"
         filters={
           <>
+            <DateRangeFilter
+              from={state.filters.dateFrom}
+              to={state.filters.dateTo}
+              onChange={(from, to) => {
+                state.setFilter('dateFrom', from);
+                state.setFilter('dateTo', to);
+              }}
+            />
             <BranchFilter state={state} />
             <FilterSelect
               label="Status"
@@ -479,8 +481,8 @@ function WaybillFormDialog({
       );
       idem.reset();
       void queryClient.invalidateQueries({ queryKey: qk.waybills });
-    } catch {
-      recovery.keepNextOpen();
+    } catch (error) {
+      recovery.keepNextOpen(error, form.setError);
       onOpenChange(true);
       // The error dialog already explained the failure.
     }
@@ -587,7 +589,7 @@ function WaybillFormDialog({
                       )}
                     </Field>
                     <Field label="Quantity" error={e?.quantity?.message} required>
-                      <Input inputMode="decimal" {...form.register(`items.${index}.quantity`)} />
+                      <Input inputMode="decimal" className="text-right tabular" {...form.register(`items.${index}.quantity`)} />
                     </Field>
                     <Field label="Unit" error={e?.unit?.message} required>
                       <Input readOnly={linked} {...form.register(`items.${index}.unit`)} />

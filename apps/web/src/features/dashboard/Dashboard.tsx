@@ -30,7 +30,19 @@ export default function Dashboard() {
   const [range] = useDashboardRange();
   const [params, setParams] = useSearchParams();
   const branches = useBranchOptions();
-  const branchId = params.get('branch') ?? undefined;
+  // `branch` is the older name, still read so existing links keep working.
+  const branchId = params.get('branchId') ?? params.get('branch') ?? undefined;
+  const setBranch = (v: string | undefined) =>
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete('branch');
+        if (v) next.set('branchId', v);
+        else next.delete('branchId');
+        return next;
+      },
+      { replace: true },
+    );
   const branchName = branches.data?.find((b) => b.id === branchId)?.name;
   // Fixed for the lifetime of the page so relative times and the date don't drift on re-render.
   const [now] = useState(() => Date.now());
@@ -40,7 +52,7 @@ export default function Dashboard() {
     queryFn: ({ signal }) => api.get<DashboardOverviewDto>('/dashboard/overview', { range, branchId }, signal),
   });
   const o = query.data;
-  const kpis = useMemo(() => (o ? toKpis(o, range) : []), [o, range]);
+  const kpis = useMemo(() => (o ? toKpis(o, range, branchId) : []), [o, range, branchId]);
   const monthly = useMemo(() => (o ? toMonthly(o) : []), [o]);
   const inventory = useMemo(() => (o ? toInventory(o) : []), [o]);
 
@@ -77,7 +89,7 @@ export default function Dashboard() {
               label="Branch"
               allLabel="All branches"
               value={branchId}
-              onChange={(v) => setParams(v ? { branch: v } : {}, { replace: true })}
+              onChange={setBranch}
               options={(branches.data ?? []).map((b) => ({ value: b.id, label: b.name }))}
             />
           )}

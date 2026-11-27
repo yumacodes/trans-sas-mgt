@@ -41,6 +41,10 @@ export const websiteRequestSchema = z.object({
     .regex(/^[+()\d\s.-]{7,40}$/, 'Enter a phone number we can reach you on.'),
   delivery: z.enum(WEBSITE_DELIVERY_METHODS),
   address: optionalText(500),
+  /** The buyer's own tender, LPO or purchase-order reference, if they have one. */
+  reference: optionalText(80),
+  /** Taxpayer Identification Number (TIN) to print on the proforma. */
+  taxId: optionalText(40),
   notes: optionalText(2000),
   items: z
     .array(websiteRequestLineSchema)
@@ -57,6 +61,48 @@ export type WebsiteRequestInput = z.input<typeof websiteRequestSchema>;
 
 export interface WebsiteRequestReceiptDto {
   /** The draft proforma's number, given to the customer as their reference. */
+  reference: string;
+}
+
+export const WEBSITE_ENQUIRY_TOPICS = ['general', 'quotation', 'sourcing', 'repairs', 'tender', 'other'] as const;
+export type WebsiteEnquiryTopic = (typeof WEBSITE_ENQUIRY_TOPICS)[number];
+export const WEBSITE_ENQUIRY_TOPIC_LABELS: Record<WebsiteEnquiryTopic, string> = {
+  general: 'General enquiry',
+  quotation: 'Quotation',
+  sourcing: 'Sourcing a product',
+  repairs: 'Repairs & servicing',
+  tender: 'Tender',
+  other: 'Other',
+};
+
+/** A message from the website's contact form. Staff are notified; nothing else is created. */
+export const websiteEnquirySchema = z.object({
+  submissionKey: z.string().regex(/^[A-Za-z0-9_-]{16,100}$/, 'Invalid submission key.'),
+  name: requiredText('Your name', 120),
+  organisation: optionalText(160),
+  email: z
+    .string({ required_error: 'Enter your email address.' })
+    .trim()
+    .toLowerCase()
+    .max(254)
+    .email('Enter an email address like name@example.com.'),
+  phone: z
+    .string()
+    .trim()
+    .regex(/^[+()\d\s.-]{7,40}$/, 'Enter a phone number we can reach you on.')
+    .optional()
+    .or(z.literal('').transform(() => undefined)),
+  topic: z.enum(WEBSITE_ENQUIRY_TOPICS).default('general'),
+  /** Free-text subject, e.g. "Sourcing: ultrasound gel". */
+  subject: optionalText(160),
+  message: requiredText('Your message', 4000),
+  /** Honeypot. */
+  website: z.string().max(200).optional(),
+});
+export type WebsiteEnquiryInput = z.input<typeof websiteEnquirySchema>;
+
+export interface WebsiteEnquiryReceiptDto {
+  /** Short reference the visitor can quote, e.g. "ENQ-7F3K2Q". */
   reference: string;
 }
 

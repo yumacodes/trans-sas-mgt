@@ -174,7 +174,7 @@ branchesRouter.patch('/:id/status', requirePermission('branches.manage'), async 
       });
       if (stocked > 0) {
         throw invalidState(
-          `This branch still holds stock for ${stocked} item(s). Transfer or adjust the stock to zero before deactivating it.`,
+          `This branch still holds stock for ${stocked} item(s). Move it with Stock Management → Stock → Transfer, or bring it to zero with Adjust stock, then deactivate the branch.`,
         );
       }
     }

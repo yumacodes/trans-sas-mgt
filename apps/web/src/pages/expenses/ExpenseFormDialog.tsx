@@ -141,8 +141,8 @@ export function ExpenseFormDialog({ kind, open, onOpenChange, expense }: Props) 
       );
       idem.reset();
       void queryClient.invalidateQueries({ queryKey: qk.expenses });
-    } catch {
-      recovery.keepNextOpen();
+    } catch (error) {
+      recovery.keepNextOpen(error, form.setError);
       onOpenChange(true);
       // The error dialog already explained the failure.
     }

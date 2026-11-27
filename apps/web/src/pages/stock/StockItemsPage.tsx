@@ -236,6 +236,7 @@ export default function StockItemsPage() {
         ]}
       />
       <DataTable
+        exportAll={{ filename: 'stock-items', path: '/stock-items', query: state.query }}
         columns={columns}
         result={result}
         state={state}

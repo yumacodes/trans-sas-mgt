@@ -115,8 +115,8 @@ export function ClientFormDialog({ open, onOpenChange, client, onSaved }: Props)
       void queryClient.invalidateQueries({ queryKey: qk.clients });
       void queryClient.invalidateQueries({ queryKey: qk.dashboard });
       onSaved?.(saved);
-    } catch {
-      recovery.keepNextOpen();
+    } catch (error) {
+      recovery.keepNextOpen(error, form.setError);
       onOpenChange(true);
       // The error dialog already explained the failure.
     }

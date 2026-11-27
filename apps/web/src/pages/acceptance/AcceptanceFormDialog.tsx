@@ -174,8 +174,8 @@ export function AcceptanceFormDialog({ open, onOpenChange, letter, onSaved }: Pr
       void queryClient.invalidateQueries({ queryKey: qk.acceptanceLetters });
       void queryClient.invalidateQueries({ queryKey: qk.clients });
       onSaved?.(saved);
-    } catch {
-      recovery.keepNextOpen();
+    } catch (error) {
+      recovery.keepNextOpen(error, form.setError);
       onOpenChange(true);
       // The error dialog already explained the failure.
     }
